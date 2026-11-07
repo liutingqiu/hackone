@@ -2580,12 +2580,18 @@ function exportCellSize(){
 }
 function exportPNG(){
   if (!S.cells || !S.used.length){ toast('先生成网格'); return; }
-  const cs = exportCellSize();
+  const maxExportPixels = matchMedia('(max-width: 700px)').matches ? 12e6 : 32e6;
+  let cs = exportCellSize();
   const padL = 54, padT = 96, padR = 26, padB = 24;
   const legendRow = 20;
   const legendH = 56 + S.used.length * legendRow;
+  while (cs > 8 && (padL + S.gw*cs + padR) * (padT + S.gh*cs + padB + legendH) > maxExportPixels) cs -= 2;
   const W = padL + S.gw*cs + padR;
   const H = padT + S.gh*cs + padB + legendH;
+  if (W * H > maxExportPixels){
+    toast('导出图片尺寸过大，请降低图纸格数后再导出');
+    return;
+  }
 
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
@@ -2680,6 +2686,7 @@ function exportPNG(){
 const A4_PAGE_W = 1240;
 const A4_PAGE_H = 1754;
 const A4_MARGIN = 64;
+const MAX_A4_PRINT_PAGES = 16;
 
 function a4Canvas(){ const cv = document.createElement('canvas'); cv.width = A4_PAGE_W; cv.height = A4_PAGE_H; return cv; }
 function a4CropMarks(c){
@@ -2821,6 +2828,12 @@ function buildA4Pages(){
 }
 function exportA4(){
   if (!S.cells || !S.used.length){ toast('先生成网格'); return; }
+  const pageCount = 1 + boardCols()*boardRows();
+  const pageLimit = matchMedia('(max-width: 700px)').matches ? 8 : MAX_A4_PRINT_PAGES;
+  if (pageCount > pageLimit){
+    toast(`共 ${pageCount} 页，超过当前设备的 A4 导出上限（${pageLimit} 页）；请缩小图纸后重试`);
+    return;
+  }
   const pages = buildA4Pages();
   if (!pages.length){ toast('没有可导出的内容'); return; }
   const win = window.open('', '_blank');
@@ -3229,8 +3242,14 @@ renderProgress();
 <script>
 /* [hackone] 多画布管理：IndexedDB 持久化 + 切换 */
 (function(){
-  var DOCS = window.__DOCS = { list: [], activeId: null, db: null, dirty: false, ready: false };
+  var DOCS = window.__DOCS = { list: [], activeId: null, db: null, dirty: false, ready: false,
+    applying: false, saving: false, revision: 0, pending: [], saveQueue: [], failedSaves: {}, saveErrorShown: false };
   var $ = function(id){ return document.getElementById(id); };
+  var legacyDocRaw = '', legacyProgressRaw = '';
+  try {
+    legacyDocRaw = localStorage.getItem('hackone:doc:v1') || '';
+    legacyProgressRaw = localStorage.getItem('hackone:progress:v1') || '';
+  } catch(e){}
   function now(){ return Date.now(); }
   function newId(){ return 'd' + now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function esc(t){ return String(t).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
@@ -3252,7 +3271,14 @@ renderProgress();
       var r = fn(s);
       t.oncomplete = function(){ res(r ? r.result : undefined); };
       t.onerror = function(){ rej(t.error); };
+      t.onabort = function(){ rej(t.error || new Error('transaction-aborted')); };
     });
+  }
+
+  function markDirty(){
+    if (!DOCS.ready || !DOCS.activeId || DOCS.applying) return;
+    DOCS.dirty = true;
+    DOCS.revision++;
   }
 
   function autoName(){
@@ -3303,13 +3329,37 @@ renderProgress();
       updatedAt: now()
     };
   }
+  function flushSaveQueue(){
+    if (DOCS.saving || !DOCS.saveQueue.length) return;
+    var item = DOCS.saveQueue.shift();
+    DOCS.saving = true;
+    tx('readwrite', function(st){ return st.put(item.rec); }).then(function(){
+      delete DOCS.failedSaves[item.rec.id];
+      DOCS.saveErrorShown = false;
+      if (DOCS.activeId === item.rec.id && DOCS.revision === item.revision) DOCS.dirty = false;
+    }).catch(function(){
+      DOCS.failedSaves[item.rec.id] = item.rec;
+      if (!DOCS.saveErrorShown){
+        DOCS.saveErrorShown = true;
+        if (window.toast) toast('画布保存失败，请导出图纸备份');
+      }
+    }).then(function(){ DOCS.saving = false; flushSaveQueue(); });
+  }
   function saveActive(){
-    if (!DOCS.ready || !DOCS.activeId) return;
-    var rec = snap();
-    if (!rec) return;
-    DOCS.dirty = false;
-    for (var i = 0; i < DOCS.list.length; i++) if (DOCS.list[i].id === rec.id){ DOCS.list[i] = rec; break; }
-    tx('readwrite', function(st){ return st.put(rec); }).catch(function(){});
+    if (!DOCS.ready) return;
+    Object.keys(DOCS.failedSaves).forEach(function(id){
+      DOCS.saveQueue.push({ rec: DOCS.failedSaves[id], revision: -1 });
+    });
+    if (DOCS.activeId && DOCS.dirty){
+      var rec = snap();
+      if (rec){
+        var revision = DOCS.revision;
+        for (var i = 0; i < DOCS.list.length; i++) if (DOCS.list[i].id === rec.id){ DOCS.list[i] = rec; break; }
+        DOCS.saveQueue.push({ rec: rec, revision: revision });
+        DOCS.dirty = false;
+      }
+    }
+    flushSaveQueue();
   }
 
   function renderList(){
@@ -3334,6 +3384,8 @@ renderProgress();
 
   function applyDoc(d, focus){
     if (!d) return;
+    DOCS.applying = true;
+    try {
     if (S.palOpen) closePalette();
     S.brandId = d.brandId || S.brandId;
     if ($('brand')) $('brand').value = S.brandId;
@@ -3351,6 +3403,7 @@ renderProgress();
     if ($('srcInfo')) $('srcInfo').textContent = d.name || '';
     renderProgress(); renderList(); requestDraw();
     if (focus !== false) fit();
+    } finally { DOCS.applying = false; }
   }
 
   function createDoc(w, h, name){
@@ -3383,6 +3436,8 @@ renderProgress();
     if (!d) return;
     if (!confirm('删除「' + (d.name || '画布') + '」？删了找不回来')) return;
     tx('readwrite', function(st){ return st.delete(id); }).catch(function(){});
+    delete DOCS.failedSaves[id];
+    DOCS.saveQueue = DOCS.saveQueue.filter(function(item){ return item.rec.id !== id; });
     DOCS.list = DOCS.list.filter(function(x){ return x.id !== id; });
     if (DOCS.activeId === id){
       DOCS.activeId = null;
@@ -3406,6 +3461,8 @@ renderProgress();
     };
     DOCS.list.push(rec);
     DOCS.activeId = rec.id;
+    if (!DOCS.ready) DOCS.pending.push(rec);
+    else markDirty();
     renderList();
     saveActive();
   }
@@ -3425,7 +3482,7 @@ renderProgress();
       done = true;
       if (save){
         var v = inp.value.trim();
-        if (v) d.name = v;
+        if (v && v !== d.name){ d.name = v; markDirty(); }
       }
       renderList();
       if (save) saveActive();
@@ -3457,6 +3514,17 @@ renderProgress();
   /* ---- 钩子：导入 / 新建 / 自动保存 ---- */
   window.__docBeforeImport = function(){ saveActive(); };
   window.__docAfterImport = function(name){ commitFromState(name); };
+  window.__markDocDirty = markDirty;
+
+  ['pushHist', 'resizeTo', 'flipGrid', 'applyLimit', 'buildPalette', 'installDoc', 'undo', 'redo'].forEach(function(key){
+    var original = window[key];
+    if (typeof original !== 'function') return;
+    window[key] = function(){
+      var result = original.apply(null, arguments);
+      if (result !== false) markDirty();
+      return result;
+    };
+  });
 
   var origNewBlank = window.newBlank;
   if (typeof origNewBlank === 'function'){
@@ -3468,7 +3536,6 @@ renderProgress();
   var origDraw = window.requestDraw;
   if (typeof origDraw === 'function'){
     window.requestDraw = function(){
-      if (DOCS.ready && DOCS.activeId) DOCS.dirty = true;
       return origDraw.apply(null, arguments);
     };
   }
@@ -3477,7 +3544,7 @@ renderProgress();
     window.saveProgress = function(){
       if (DOCS.ready && DOCS.activeId){
         var d = activeDoc();
-        if (d){ d.progress = Uint8Array.from(S.progress || []); DOCS.dirty = true; }
+        if (d){ d.progress = Uint8Array.from(S.progress || []); markDirty(); }
       }
       return origSaveProgress.apply(null, arguments);
     };
@@ -3496,29 +3563,62 @@ renderProgress();
     }).then(function(rows){
       DOCS.list = rows;
       DOCS.ready = true;
+      var pending = DOCS.pending.splice(0);
+      if (pending.length) DOCS.list = DOCS.list.concat(pending);
       if (!DOCS.list.length){
         try {
-          var raw = localStorage.getItem('hackone:doc:v1');
+          var raw = legacyDocRaw;
           if (raw){
             var d = JSON.parse(raw);
-            if (d && d.base && d.gw && d.gh && d.base.length === d.gw * d.gh){
-              DOCS.list.push({ id: newId(), name: '上次的图纸', gw: d.gw, gh: d.gh,
-                base: Int16Array.from(d.base), progress: new Uint8Array(Math.ceil(d.gw * d.gh / 8)),
-                brandId: d.brandId, codeSys: d.codeSys, maxColors: d.maxColors || 0, updatedAt: now() });
+            if (d && Array.isArray(d.base) && Number.isInteger(d.gw) && Number.isInteger(d.gh) &&
+                d.gw >= 1 && d.gw <= 400 && d.gh >= 1 && d.gh <= 400 && d.base.length === d.gw * d.gh){
+              var palette = BRANDS[d.brandId || S.brandId];
+              var valid = !!palette && d.base.every(function(v){ return Number.isInteger(v) && v >= -1 && v < palette.colors.length; });
+              if (valid){
+                var migrated = { id: newId(), name: '上次的图纸', gw: d.gw, gh: d.gh,
+                  base: Int16Array.from(d.base), progress: legacyProgress(d, legacyProgressRaw),
+                  brandId: d.brandId, codeSys: d.codeSys, maxColors: d.maxColors || 0, updatedAt: now() };
+                DOCS.list.push(migrated);
+                if (DOCS.db) tx('readwrite', function(st){ return st.put(migrated); }).catch(function(){
+                  if (window.toast) toast('旧画布迁移失败，请导出图纸备份');
+                });
+              }
             }
           }
         } catch (e) {}
       }
-      if (DOCS.list.length){
+      if (pending.length){
+        pending.forEach(function(rec){
+          if (DOCS.db) tx('readwrite', function(st){ return st.put(rec); }).catch(function(){
+            if (window.toast) toast('画布未能写入本地存储，请导出图纸备份');
+          });
+        });
+        applyDoc(pending[pending.length - 1]);
+      } else if (DOCS.list.length){
         DOCS.list.sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); });
         applyDoc(DOCS.list[0]);
       } else if (S.cells){
         commitFromState('画布 1');
       }
       renderList();
-      setInterval(function(){ if (DOCS.dirty) saveActive(); }, 1500);
-      window.addEventListener('beforeunload', function(){ if (DOCS.dirty) saveActive(); });
+      setInterval(function(){ if (DOCS.dirty || Object.keys(DOCS.failedSaves).length) saveActive(); }, 1500);
+      window.addEventListener('beforeunload', function(){ if (DOCS.dirty || Object.keys(DOCS.failedSaves).length) saveActive(); });
     });
+  }
+
+  function legacyProgress(d, raw){
+    var count = d.gw * d.gh, bytes = Math.ceil(count / 8), empty = new Uint8Array(bytes);
+    try {
+      if (!Array.isArray(d.cells) || d.cells.length !== count || !raw) return empty;
+      var saved = JSON.parse(raw), h = 2166136261;
+      h = Math.imul(h ^ d.gw, 16777619);
+      h = Math.imul(h ^ d.gh, 16777619);
+      for (var i = 0; i < count; i++) h = Math.imul(h ^ (d.cells[i] + 1), 16777619);
+      if (saved && saved.patternHash === (h >>> 0).toString(16) && Array.isArray(saved.bitmask) && saved.bitmask.length === bytes){
+        return Uint8Array.from(saved.bitmask);
+      }
+    } catch(e){}
+    return empty;
   }
   boot();
 })();
@@ -3724,11 +3824,22 @@ renderProgress();
     return out.join('.');
   }
   function unrle(str, len){
-    var out = new Int32Array(len), k = 0;
-    str.split('.').forEach(function(seg){
-      var p = seg.split(':'), v = parseInt(p[0], 36) - 1, n = parseInt(p[1], 36);
-      for (var i = 0; i < n && k < len; i++) out[k++] = v;
-    });
+    if (!Number.isInteger(len) || len < 1 || len > 160000 || typeof str !== 'string' || str.length > 4000000){
+      throw new Error('invalid-size');
+    }
+    var out = new Int32Array(len), k = 0, segments = str.split('.');
+    if (segments.length > len) throw new Error('invalid-rle');
+    for (var j = 0; j < segments.length; j++){
+      var m = /^([0-9a-z]+):([0-9a-z]+)$/.exec(segments[j]);
+      if (!m) throw new Error('invalid-rle');
+      var v = parseInt(m[1], 36) - 1, n = parseInt(m[2], 36);
+      if (!Number.isSafeInteger(v) || v < -1 || v >= 2048 || !Number.isSafeInteger(n) || n < 1 || n > 60000 || k + n > len){
+        throw new Error('invalid-rle');
+      }
+      out.fill(v, k, k + n);
+      k += n;
+    }
+    if (k !== len) throw new Error('invalid-rle');
     return out;
   }
   function b64url(bytes){
@@ -3743,6 +3854,23 @@ renderProgress();
     for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return bytes;
   }
+  var MAX_PACKED_CODE = 6000000, MAX_PACKED_RAW = 4000000;
+  async function readTextBounded(stream, maxBytes){
+    if (!stream) throw new Error('missing-body');
+    var reader = stream.getReader(), chunks = [], size = 0;
+    try {
+      while (true){
+        var part = await reader.read();
+        if (part.done) break;
+        size += part.value.byteLength;
+        if (size > maxBytes){ await reader.cancel(); throw new Error('document-too-large'); }
+        chunks.push(part.value);
+      }
+    } finally { reader.releaseLock(); }
+    var bytes = new Uint8Array(size), offset = 0;
+    chunks.forEach(function(chunk){ bytes.set(chunk, offset); offset += chunk.byteLength; });
+    return new TextDecoder('utf-8', { fatal:true }).decode(bytes);
+  }
   async function packDoc(){
     var raw = rle(S.base) + '|' + [S.gw, S.gh, S.brandId, S.codeSys, S.maxColors].join(',');
     if (window.CompressionStream){
@@ -3756,22 +3884,50 @@ renderProgress();
     return 'r' + b64url(new TextEncoder().encode(raw));
   }
   async function unpackDoc(code){
+    if (typeof code !== 'string' || code.length < 2 || code.length > MAX_PACKED_CODE){
+      throw new Error('document-too-large');
+    }
     var raw;
     if (code[0] === 'z'){
       var bytes = unb64url(code.slice(1));
       var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-      raw = await new Response(stream).text();
+      raw = await readTextBounded(stream, MAX_PACKED_RAW);
     } else {
-      raw = new TextDecoder().decode(unb64url(code.slice(1)));
+      var plain = unb64url(code.slice(1));
+      if (plain.byteLength > MAX_PACKED_RAW) throw new Error('document-too-large');
+      raw = new TextDecoder('utf-8', { fatal:true }).decode(plain);
     }
     var k = raw.lastIndexOf('|');
+    if (k < 1) throw new Error('invalid-document');
     var r = raw.slice(0, k), meta = raw.slice(k + 1).split(',');
     var w = +meta[0], h = +meta[1];
+    if (!Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1 || w > 400 || h > 400 || w*h > 160000){
+      throw new Error('invalid-size');
+    }
+    var brand = BRANDS[meta[2]];
+    if (!brand) throw new Error('invalid-brand');
     var base = unrle(r, w * h);
-    if (!w || !h || base.length !== w * h) throw new Error('bad');
-    return { w: w, h: h, base: base, brand: meta[2], code: meta[3], max: +meta[4] || 0 };
+    var max = meta[4] ? +meta[4] : 0;
+    if (!Number.isInteger(max) || max < 0 || max > brand.colors.length) throw new Error('invalid-limit');
+    for (var i = 0; i < base.length; i++) if (base[i] >= brand.colors.length) throw new Error('invalid-color');
+    return { w: w, h: h, base: base, brand: meta[2], code: meta[3], max: max };
   }
   function applyPacked(p, name){
+    if (!p || !Number.isInteger(p.w) || !Number.isInteger(p.h) || p.w < 1 || p.h < 1 || p.w > 400 || p.h > 400 ||
+        p.w * p.h > 160000 || !p.base || p.base.length !== p.w * p.h){
+      throw new Error('invalid-document');
+    }
+    if (p.brand && !BRANDS[p.brand]) throw new Error('invalid-brand');
+    var palette = BRANDS[p.brand || S.brandId];
+    for (var i = 0; i < p.base.length; i++){
+      if (!Number.isInteger(p.base[i]) || p.base[i] < -1 || p.base[i] >= palette.colors.length){
+        throw new Error('invalid-color');
+      }
+    }
+    if (p.max != null && (!Number.isInteger(p.max) || p.max < 0 || p.max > palette.colors.length)){
+      throw new Error('invalid-limit');
+    }
+    if (window.__docBeforeImport) window.__docBeforeImport();
     S.gw = p.w; S.gh = p.h; S.base = p.base;
     if (p.brand) S.brandId = p.brand;
     if (p.code) S.codeSys = p.code;
@@ -3782,7 +3938,7 @@ renderProgress();
     installDoc(p.w, p.h, p.base);
     resetProgress();
     fit();
-    if (window.__docsCommitFromState) window.__docsCommitFromState(name || '分享的图纸');
+    if (window.__docAfterImport) window.__docAfterImport(name || '分享的图纸');
   }
   /* 短链服务（Cloudflare Worker + KV）：链接只有 40 来个字符，微信/QQ 能直接发；
      没网时自动退回 #d= 长链接，再不行退回 .pinda.json 文件。 */
@@ -3853,7 +4009,9 @@ renderProgress();
       try {
         var resp = await fetch(SHARE_API + '/api/get/' + sm[1]);
         if (!resp.ok) throw new Error('miss');
-        var code = (await resp.text()).trim();
+        var length = +(resp.headers.get('content-length') || 0);
+        if (length > MAX_PACKED_CODE) throw new Error('too-large');
+        var code = (await readTextBounded(resp.body, MAX_PACKED_CODE)).trim();
         var sp = await unpackDoc(code);
         applyPacked(sp, '分享的图纸');
         try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
@@ -3878,6 +4036,7 @@ renderProgress();
     if (!inp) return;
     inp.addEventListener('change', function(e){
       var f = e.target.files[0]; if (!f) return;
+      if (f.size > MAX_PACKED_RAW){ toast('图纸文件过大，无法安全读取'); e.target.value = ''; return; }
       var r = new FileReader();
       r.onload = function(){
         try {
