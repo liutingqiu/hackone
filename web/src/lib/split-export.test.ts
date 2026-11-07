@@ -22,6 +22,10 @@ describe("split-export 分页布局", () => {
     expect(boardPages[0].board).toMatchObject({ index: 1, row: 0, col: 0, w: 29, h: 29 });
     expect(boardPages[15].board).toMatchObject({ index: 16, row: 3, col: 3, w: 13, h: 13 });
 
+    // D-03：切 52 大板时页数同样 = K + 1
+    const big = splitBoards(100, 100, 52, 52);
+    expect(buildSplitPages(big)).toHaveLength(big.boards.length + 1);
+
     // 换一种板尺寸也保持同一页序（3 列 × 2 行）
     const small = splitBoards(90, 58, 30, 29);
     const smallPages = buildSplitPages(small).filter((p) => p.kind === "board");

@@ -4,7 +4,8 @@ import { imageToPattern, reduceNoise, usedColors, type Pattern } from "./lib/qua
 import { splitBoards } from "./lib/split";
 import { openSplitPrintWindow } from "./lib/split-export";
 
-const MAX_BOARD = 57; // 板尺寸上限；更大的板导出时会自动缩小格子
+// D-03：板尺寸可选，默认 29，可切 52
+const BOARD_SIZES = [29, 52] as const;
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -293,17 +294,11 @@ export default function App() {
             </div>
             <label className="row">
               <span>板尺寸</span>
-              <input
-                type="number"
-                min={1}
-                max={MAX_BOARD}
-                step={1}
-                value={boardSize}
-                onChange={(e) => {
-                  const v = Math.round(Number(e.target.value));
-                  if (Number.isFinite(v)) setBoardSize(Math.max(1, Math.min(MAX_BOARD, v)));
-                }}
-              />
+              <select value={boardSize} onChange={(e) => setBoardSize(Number(e.target.value))}>
+                {BOARD_SIZES.map((size) => (
+                  <option key={size} value={size}>{size}×{size}</option>
+                ))}
+              </select>
             </label>
             <label className="switch"><input type="checkbox" checked={showBoardIds} onChange={(e) => setShowBoardIds(e.target.checked)} /> 画布显示板号</label>
             <button className="wide" onClick={exportSplit} disabled={!pattern || !grid}>导出分板拼装图</button>

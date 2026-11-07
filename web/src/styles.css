@@ -102,9 +102,9 @@ canvas { box-shadow: var(--shadow); border-radius: 6px; image-rendering: pixelat
 }
 .board-section h2 { margin: 0; font-size: 13px; letter-spacing: .3px; }
 .board-section .row b { text-align: right; font-variant-numeric: tabular-nums; }
-.board-section input[type="number"] {
-  width: 64px; padding: 4px 6px; border-radius: 8px;
+.board-section select {
+  padding: 4px 6px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--bg); color: var(--text);
-  font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right;
+  font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 button.wide { width: 100%; }
