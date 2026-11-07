@@ -8,3 +8,8 @@
 [11:24:36] ops       核查 web 构建与静态托管兼容性（base ./） 证据: feat/ops 4fc2289 · 构建复现 3 文件/JS gzip 49.5KB · 无绝对路径/无动态 import/无路由
 [11:24:36] ops       写 wrangler Pages 配置 + runbook + 部署工作流草稿（未部署） 证据: wrangler.toml + docs/ops/runbook.md + docs/ops/deploy-workflow.md + .github/workflows/deploy.yml.disabled（feat/ops 4fc2289，未推 main）
 [11:24:49] chief     裁定 QA 四处文档冲突 + 定 UI 骨架   证据: docs/decisions.md + docs/ui-skeleton.md
+[11:25:01] qa        修正测试计划 P0 计数 26→27（复核为准） 证据: wt/qa/docs/qa/test-plan.md @ feat/qa 7293656：58 条，P0 27（功能 17/边界 5/性能 5），P1 31
+[11:25:26] ops       runbook 补 wrangler 镜像安装（仓库根无 .npmrc）与兼容日期排障 证据: feat/ops 2c90a38 · docs/ops/runbook.md §1.5 + 故障表；未安装 wrangler、未部署
+[11:26:51] qa        对齐主控 11:26 裁定与 UI 骨架（新增 MARD 291 P0 用例、专业模式改色口径） 证据: wt/qa/docs/qa/test-plan.md @ feat/qa 475baab：59 条，P0 28（功能 18/边界 5/性能 5），P1 31；C-01~C-04 + D-01/02 已并入
+[11:30:03] research  实测4个竞品的分板/板号/顺序/库存/导出/收费 证据: docs/market-research.md 新增「竞品实测（2026-11-07）」；证据 docs/evidence/{zippland,ldb,jett-*,mypindou-1}.png
+[11:31:31] chief     采纳竞品实测结论，板尺寸改为可选（29/52），话术修正 证据: docs/decisions.md D-03/D-04
