@@ -162,8 +162,12 @@
   .u .x{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums}
   .u .x b{color:var(--ink);font-weight:600}
   .u .pct{margin-left:auto;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .u .buy{padding:2px 5px;font-size:10px;border-radius:4px;color:var(--ink2);flex:0 0 auto}
+  .u .buy:hover{color:var(--accent);border-color:var(--accent);background:var(--accent2)}
   #useHead{padding:9px 13px 6px;font-size:11px;color:var(--ink3);
-           display:flex;justify-content:space-between;align-items:center}
+           display:flex;justify-content:space-between;align-items:center;gap:7px}
+  #useHead b{margin-left:auto}
+  #copyPurchase{padding:3px 6px;font-size:10.5px;white-space:nowrap}
   #useHead b{color:var(--ink);font-size:12px}
   .empty2{color:var(--ink3);font-size:12px;padding:14px 13px;text-align:center}
 
@@ -378,10 +382,10 @@
     <!-- [hackone] 查看 / 标记：标记模式只改完成态，不改图案 -->
     <div id="modebar">
       <div class="seg" id="modeSeg" role="group" aria-label="画布模式">
-        <button data-m="view" class="on">查看</button>
+        <button data-m="view" class="on">浏览</button>
         <button data-m="mark">标记</button>
       </div>
-      <span id="modeHint">查看模式：点格子查色号，不改进度</span>
+      <span id="modeHint">浏览模式：点格子查色号，不改进度</span>
     </div>
     <div id="view">
       <canvas id="grid" hidden></canvas>
@@ -409,7 +413,10 @@
       <div id="progBar"><i id="progFill"></i></div>
       <div id="progBoards"></div>
     </div>
-    <div id="useHead"><span>用量统计</span><b id="useTotal">—</b></div>
+    <div id="useHead">
+      <span>用量统计</span><b id="useTotal">—</b>
+      <button id="copyPurchase" class="pri" type="button" title="复制可直接粘给店家的采购清单">复制采购清单</button>
+    </div>
     <div id="useWrap"><div id="use"></div></div>
   </aside>
 </div>
@@ -1656,6 +1663,55 @@ function inspect(cellIdx){
 }
 
 /* ------------------------------------------------ 用量列表 -------------- */
+/* ------------------------------------------------ [hackone] 采购清单 ---------- */
+function purchaseSystemName(){
+  const b = paletteOf(S.brandId);
+  const sys = b.codeSystems.find(c => c.id === S.codeSys);
+  const label = (sys && sys.label) || S.codeSys || b.short;
+  return label + ' ' + S.palette.length;
+}
+function buildPurchaseText(){
+  if (!S.used || !S.used.length) return '';
+  const total = S.used.reduce((a, u) => a + u.c, 0);
+  const lines = ['拼豆采购清单（' + purchaseSystemName() + '）'];
+  for (const u of S.used) lines.push(S.palette[u.i].code + ' × ' + u.c);
+  lines.push('共 ' + S.used.length + ' 色 / ' + total + ' 颗');
+  return lines.join('\n');
+}
+async function copyPurchase(){
+  const text = buildPurchaseText();
+  if (!text){ toast('先生成网格'); return; }
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    }
+  } catch (e) { ok = false; }
+  if (!ok){
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.setAttribute('readonly', '');
+      document.body.appendChild(ta);
+      ta.select();
+      ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (e) { ok = false; }
+  }
+  toast(ok ? '已复制，可直接粘给店家' : '复制失败，请手动选择清单');
+}
+function taobaoUrl(code){
+  return 'https://s.taobao.com/search?q=' + encodeURIComponent('MARD ' + code + ' 拼豆');
+}
+function openPurchase(code){
+  const win = window.open(taobaoUrl(code), '_blank');
+  if (win) win.opener = null;
+  else toast('浏览器拦截了新窗口，请允许后重试');
+}
+
 function renderUsage(){
   const box = $('use');
   updatePaintUI();
@@ -1668,6 +1724,7 @@ function renderUsage(){
       <div class="code">${p.code}</div>
       <div class="x"><b>${c}</b> 颗</div>
       <div class="pct">${(100*c/total).toFixed(1)}%</div>
+      <button type="button" class="buy" data-code="${p.code}" title="在淘宝搜索 MARD ${p.code} 拼豆">去购买</button>
     </div>`;
   }).join('');
 }
@@ -1677,6 +1734,9 @@ function renderUsage(){
 let useLast = { i:-1, t:0 };
 const DBL_MS = 350;
 $('use').addEventListener('click', e => {
+  // [hackone] 去购买是行内按钮；阻止冒泡，不改变高亮/选色
+  const buy = e.target.closest ? e.target.closest('.buy') : null;
+  if (buy){ e.stopPropagation(); openPurchase(buy.dataset.code); return; }
   const el = e.target.closest('.u');
   if (!el) return;
   const i = +el.dataset.i;
@@ -2551,7 +2611,7 @@ function setMode(m){
   }
   $('modeHint').textContent = m === 'mark'
     ? '标记模式：点格子标记完成 / 再点取消，不改图案'
-    : '查看模式：点格子查色号，不改进度';
+    : '浏览模式：点格子查色号，不改进度';
   requestDraw();
 }
 document.querySelectorAll('#modeSeg button').forEach(btn => {
@@ -2559,6 +2619,8 @@ document.querySelectorAll('#modeSeg button').forEach(btn => {
 });
 
 /* 导出 / 撤销 / 翻转 */
+// [hackone] 采购清单复制
+$('copyPurchase').addEventListener('click', copyPurchase);
 // [hackone] A4 总览 + 每板一页
 $('expA4').addEventListener('click', exportA4);
 $('expPng').addEventListener('click', exportPNG);
