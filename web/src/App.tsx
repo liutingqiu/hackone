@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PALETTE } from "./lib/palette";
 import { imageToPattern, reduceNoise, usedColors, type Pattern } from "./lib/quantize";
+import { fitLabel } from "./lib/label-fit";
 import { splitBoards } from "./lib/split";
 import { openSplitPrintWindow } from "./lib/split-export";
 
@@ -123,18 +124,38 @@ export default function App() {
       ctx.stroke();
     }
 
-    if (showCodes && cell >= 16) {
-      ctx.font = `${Math.max(7, cell * 0.34)}px ui-monospace, monospace`;
+    if (showCodes) {
+      const measure = (text: string, size: number) => {
+        ctx.font = `${size}px ui-monospace, monospace`;
+        return ctx.measureText(text).width;
+      };
+      // 等宽字体下同长度色号所需字号一致；按长度缓存，避免每格重复 measureText
+      const fitByLength = new Map<number, ReturnType<typeof fitLabel>>();
+      const fitFor = (code: string) => {
+        let fit = fitByLength.get(code.length);
+        if (!fit) {
+          fit = fitLabel("W".repeat(code.length), cell, measure, {
+            minFontSize: 6,
+            maxFontSize: 12,
+            padding: 2,
+          });
+          fitByLength.set(code.length, fit);
+        }
+        return fit;
+      };
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (let y = 0; y < pattern.rows; y++) {
         for (let x = 0; x < pattern.cols; x++) {
           const i = y * pattern.cols + x;
           const bead = PALETTE[pattern.cells[i]];
+          const fit = fitFor(bead.code);
+          if (!fit.fits) continue; // 放不下就不画，避免被裁成半截
           const n = parseInt(bead.hex.slice(1), 16);
           const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-          ctx.fillStyle = lum > 0.6 ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.7)";
-          ctx.fillText(bead.code.slice(1), x * cell + cell / 2, y * cell + cell / 2);
+          ctx.font = `${fit.fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+          ctx.fillStyle = lum > 0.6 ? "rgba(0,0,0,0.62)" : "rgba(255,255,255,0.82)";
+          ctx.fillText(bead.code, x * cell + cell / 2, y * cell + cell / 2);
         }
       }
     }
