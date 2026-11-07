@@ -219,6 +219,34 @@ export default function App() {
     saveLastCell(cell);
   }, [cell]);
 
+  // 草稿恢复：按当前 stage 重算格子像素大小；只改 cell，不动图案/进度/板尺寸
+  useEffect(() => {
+    if (!restoredPattern) return;
+    const token = ++fitTokenRef.current;
+    let cancelled = false;
+    const apply = () => {
+      if (cancelled || token !== fitTokenRef.current) return;
+      const stage = stageRef.current;
+      if (!stage) return;
+      const minCell = window.innerWidth >= 1000 ? 11 : 8;
+      setCell(
+        fitCellSize(
+          restoredPattern.cols,
+          restoredPattern.rows,
+          stage.clientWidth - 48,
+          stage.clientHeight - 48,
+          { min: minCell },
+        ),
+      );
+    };
+    requestAnimationFrame(() => requestAnimationFrame(apply));
+    const t = window.setTimeout(apply, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [restoredPattern]);
+
   const activeBoard = mode === "beginner" ? DEFAULT_BOARD : boardSize;
   const grid = useMemo(
     () => (pattern ? splitBoards(pattern.cols, pattern.rows, activeBoard, activeBoard) : null),
