@@ -28,3 +28,6 @@
 [11:56:02] user-test 线上站全量体验：A 新手 / B 老手各走一遍，13 步全真实点击 证据: docs/user-testing/report-2026-11-07.md + friction.md + docs/evidence/user-testing/（19 张截图 + 2 份 A4 分板 PDF）
 [11:56:27] user-test 补充：证据目录共 21 张截图 + 2 份 A4 分板 PDF（报告/清单已按新版 MARD 291 复核） 证据: docs/evidence/user-testing/；新版复核图 latest-code-clipped.png / latest-b-zoom40.png / split-print-latest-36colors.pdf
 [12:01:26] chief     启动二阶段（拼装引导/色卡校准/采购闭环）前置调研 证据: docs/research-phase2.md 待产出
+[12:02:22] dev       修复色号截断：画布改用完整色号并按格子缩字号，<6px 不画；14/20/40 单测 证据: web/src/lib/label-fit.ts(+test)；docs/evidence/user-testing/fix-01-codes-14/40.png；25 tests
+[12:03:34] dev       修复画布默认被裁：导入后按容器宽高自动 fit，保留手动格子大小 证据: web/src/lib/fit.ts(+test)；docs/evidence/user-testing/fix-03-fit.png；31 tests
+[12:09:19] research  实测两家的拼豆引导并调研三方向（引导/色卡校准/采购闭环） 证据: docs/research-phase2.md + 证据 docs/evidence/phase2-*.png（LDB focus 0/300 不可标记、Zippland 整色确认刷新归零、淘宝搜索登录墙）
