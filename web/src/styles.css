@@ -61,6 +61,7 @@ main { flex: 1; display: grid; grid-template-columns: 240px 1fr 260px; min-heigh
 .row b { color: var(--text); font-weight: 600; }
 
 input[type="range"] { width: 100%; accent-color: var(--accent); }
+input[type="range"]:disabled { opacity: .45; cursor: not-allowed; }
 
 .switch { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
 .switch input { accent-color: var(--accent); }
@@ -122,6 +123,49 @@ button.wide { width: 100%; }
 .mode-switch button:active { transform: none; }
 
 .actions button { white-space: nowrap; }
+
+/* 图纸图层：base / 选色压暗 / 完成标记 */
+.canvas-stack {
+  position: relative; border-radius: 6px; box-shadow: var(--shadow);
+  cursor: crosshair; touch-action: none; user-select: none;
+}
+.canvas-stack canvas { display: block; box-shadow: none; border-radius: 6px; }
+.canvas-stack .pattern-overlay {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+}
+.hover-ring {
+  position: absolute; z-index: 3; pointer-events: none; box-sizing: border-box;
+  border: 2px solid #2f81f7; border-radius: 2px;
+}
+
+/* 拼装进度 */
+.progress-section {
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 12px; border-top: 1px solid var(--line);
+}
+.progress-section h2 { margin: 0; font-size: 13px; letter-spacing: .3px; }
+.progress-bar, .mini-bar { background: var(--line); border-radius: 999px; overflow: hidden; }
+.progress-bar { height: 8px; }
+.progress-bar i, .mini-bar i { display: block; height: 100%; background: #10b981; border-radius: 999px; }
+.mini-bar { flex: 1; height: 5px; min-width: 36px; }
+.board-progress-list {
+  display: flex; flex-direction: column; gap: 3px;
+  max-height: 220px; overflow-y: auto;
+}
+.board-progress-row {
+  display: grid; grid-template-columns: 72px 1fr 34px; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--muted);
+}
+.board-progress-row b { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+.progress-hint { margin: 0; font-size: 11px; color: var(--muted); }
+.link-button {
+  align-self: flex-start; padding: 0; border: 0; background: transparent;
+  color: var(--muted); font-size: 11px; text-decoration: underline; cursor: pointer;
+}
+.link-button:hover { color: var(--text); }
+.colors .color { cursor: pointer; }
+.colors .color.selected { background: rgba(47, 129, 247, .16); outline: 1px solid rgba(47, 129, 247, .45); }
+.colors .color:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* 导出反馈 toast：顶部居中，避开底部浏览器/扩展浮层 */
 .toast {
