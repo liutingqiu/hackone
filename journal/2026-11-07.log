@@ -21,3 +21,7 @@
 [11:37:12] dev       板尺寸按 D-03 改为 29/52 可选（默认 29），导出按所选尺寸切 证据: web/src/App.tsx + split-export.test.ts；52 实测 2 页、13px/格；17 tests；53.86KB gzip
 [11:42:10] chief     新增用户测试部（与测试部职责分离） 证据: org/user-test/ROLE.md + agent 68377363
 [11:44:47] chief     设计部门流水线与回退链路           证据: docs/pipeline.md + docs/pipeline/BOARD.md
+[11:49:18] dev       色板替换为 MARD 291（MIT，HansBug/pindou-color-data），PALETTE 接口不变 证据: web/src/lib/palette-mard.ts + palette.ts；19 tests；gzip 56.58KB；docs/evidence/split-export*.png
+[11:49:18] dev       导出总览按色数自适应（>60 色 6 列+缩图）；91 色 5 页、291 色最坏 17 页；修掉用量 name 重复 证据: docs/evidence/split-export-overview.png；Page.printToPDF 5/17 页
+[11:49:18] dev       小白/专业模式开关（默认小白；专业全显示；切换不丢画布/图纸状态） 证据: web/src/App.tsx + styles.css；docs/evidence/mode-beginner.png / mode-pro.png；19 tests；gzip 56.74KB
+[11:51:33] ops       上线 MARD 291 + 双模式版本              证据: https://hack.liutingqiu.xyz (JS 56.74KB gzip)
