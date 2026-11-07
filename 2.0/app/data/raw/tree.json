@@ -1,0 +1,619 @@
+{
+  "sha": "2efee730f73dd4eb472ebde443a022d11f98bc21",
+  "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/2efee730f73dd4eb472ebde443a022d11f98bc21",
+  "tree": [
+    {
+      "path": ".cursor",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f6c71e05baea92476fdabb788e24674a34e10488",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/f6c71e05baea92476fdabb788e24674a34e10488"
+    },
+    {
+      "path": ".cursor/rules",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "bfdc887e249d727e5fc5784442b981c697743890",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/bfdc887e249d727e5fc5784442b981c697743890"
+    },
+    {
+      "path": ".cursor/rules/plan.mdc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1480a2d736820fa8096ba9ea18cd7fcf6a3ddb13",
+      "size": 9147,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/1480a2d736820fa8096ba9ea18cd7fcf6a3ddb13"
+    },
+    {
+      "path": ".cursor/rules/reviewgate.mdc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b0e17204f21f44895e6a0f91fbb280309ce21aa9",
+      "size": 11978,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/b0e17204f21f44895e6a0f91fbb280309ce21aa9"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7942234dd53712857163a6bcea8117f6e1fcbf6d",
+      "size": 630,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/7942234dd53712857163a6bcea8117f6e1fcbf6d"
+    },
+    {
+      "path": "CLAUDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "00c8a78b97b4dfb909580e8e7ffbd12c48245f20",
+      "size": 16217,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/00c8a78b97b4dfb909580e8e7ffbd12c48245f20"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "302aee15531106090d92b0ebe983e3f3ea20eeae",
+      "size": 35446,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/302aee15531106090d92b0ebe983e3f3ea20eeae"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "76c9a3366cffa44fce232c86042eaa935e536efa",
+      "size": 4565,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/76c9a3366cffa44fce232c86042eaa935e536efa"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c85fb67c463f20d1ee449b0ffee725a61dfb9259",
+      "size": 393,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/c85fb67c463f20d1ee449b0ffee725a61dfb9259"
+    },
+    {
+      "path": "final_review_gate.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "326f6d908f30f15dad177fa664eb8efb54446f39",
+      "size": 2637,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/326f6d908f30f15dad177fa664eb8efb54446f39"
+    },
+    {
+      "path": "next.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4cb8b9cb35ea35d341f1b65e3a744e4cc962c180",
+      "size": 607,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/4cb8b9cb35ea35d341f1b65e3a744e4cc962c180"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cf9f2863f20e04a8741427c1a6fd01bc3e1a0f4d",
+      "size": 358545,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/cf9f2863f20e04a8741427c1a6fd01bc3e1a0f4d"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8ad68da00d9040b10c3d924cb281b88e41aec3c",
+      "size": 654,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/a8ad68da00d9040b10c3d924cb281b88e41aec3c"
+    },
+    {
+      "path": "postcss.config.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c7bcb4b1ee14cd5e25078c2c934529afdd2a7df9",
+      "size": 81,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/c7bcb4b1ee14cd5e25078c2c934529afdd2a7df9"
+    },
+    {
+      "path": "public",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "7e43803117c5ea86e4b76482491d7710e9e7cf79",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/7e43803117c5ea86e4b76482491d7710e9e7cf79"
+    },
+    {
+      "path": "public/donation-qr.jpg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0d6442c9d251b3a049fce50f5b8e71282da6303a",
+      "size": 39171,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/0d6442c9d251b3a049fce50f5b8e71282da6303a"
+    },
+    {
+      "path": "public/file.svg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "004145cddf3f9db91b57b9cb596683c8eb420862",
+      "size": 391,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/004145cddf3f9db91b57b9cb596683c8eb420862"
+    },
+    {
+      "path": "public/globe.svg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "567f17b0d7c7fb662c16d4357dd74830caf2dccb",
+      "size": 1035,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/567f17b0d7c7fb662c16d4357dd74830caf2dccb"
+    },
+    {
+      "path": "public/icon-192x192.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8b4bf2119aaf9dfa20dee344f40ee86cda612d79",
+      "size": 18700,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/8b4bf2119aaf9dfa20dee344f40ee86cda612d79"
+    },
+    {
+      "path": "public/icon-256x256.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fa1b7be62c7b5ee5927ec4f8601a6083fd619346",
+      "size": 45582,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/fa1b7be62c7b5ee5927ec4f8601a6083fd619346"
+    },
+    {
+      "path": "public/icon-384x384.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f6ce83ebbf81c145d49866c293800450fd695b3e",
+      "size": 69459,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/f6ce83ebbf81c145d49866c293800450fd695b3e"
+    },
+    {
+      "path": "public/icon-512x512.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "95f24669a936439ffb7be5c1be4008638befd9c9",
+      "size": 115493,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/95f24669a936439ffb7be5c1be4008638befd9c9"
+    },
+    {
+      "path": "public/manifest.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ab927e86d73b3beb53c04c4030b5a8f05aa4242",
+      "size": 1122,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/7ab927e86d73b3beb53c04c4030b5a8f05aa4242"
+    },
+    {
+      "path": "public/next.svg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5174b28c565c285e3e312ec5178be64fbeca8398",
+      "size": 1375,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/5174b28c565c285e3e312ec5178be64fbeca8398"
+    },
+    {
+      "path": "public/vercel.svg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "77053960334e2e34dc584dea8019925c3b4ccca9",
+      "size": 128,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/77053960334e2e34dc584dea8019925c3b4ccca9"
+    },
+    {
+      "path": "public/website_qrcode.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "173837f43a4f65bba767713c581b2445a235f99e",
+      "size": 2324,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/173837f43a4f65bba767713c581b2445a235f99e"
+    },
+    {
+      "path": "public/window.svg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2b2a44f6ebc70c450043c05a002e7a93ba5d651",
+      "size": 385,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/b2b2a44f6ebc70c450043c05a002e7a93ba5d651"
+    },
+    {
+      "path": "scripts",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "616cdc101e7bbb382fe903d54a0320f294d078f7",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/616cdc101e7bbb382fe903d54a0320f294d078f7"
+    },
+    {
+      "path": "scripts/generate-cert.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3008e85da845fcee4a90877d8cfb3798dc358fa1",
+      "size": 1057,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/3008e85da845fcee4a90877d8cfb3798dc358fa1"
+    },
+    {
+      "path": "scripts/generate-icons.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "50202c055914a3b45c8b038c60df0ff61cb8c38d",
+      "size": 2028,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/50202c055914a3b45c8b038c60df0ff61cb8c38d"
+    },
+    {
+      "path": "server.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44a69e88f490f7bd285664c8e0e45255df79c6a7",
+      "size": 1476,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/44a69e88f490f7bd285664c8e0e45255df79c6a7"
+    },
+    {
+      "path": "src",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e387626424e358d24a0a2544f17d3af78b359166",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/e387626424e358d24a0a2544f17d3af78b359166"
+    },
+    {
+      "path": "src/app",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "b34a4524ec8c60e945ac477a47cc73a803e6f84a",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/b34a4524ec8c60e945ac477a47cc73a803e6f84a"
+    },
+    {
+      "path": "src/app/colorSystemMapping.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2600afb0cdf2bdd165711b7e4e893d5f92e3af86",
+      "size": 29063,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/2600afb0cdf2bdd165711b7e4e893d5f92e3af86"
+    },
+    {
+      "path": "src/app/favicon.ico",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "718d6fea4835ec2d246af9800eddb7ffb276240c",
+      "size": 25931,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/718d6fea4835ec2d246af9800eddb7ffb276240c"
+    },
+    {
+      "path": "src/app/focus",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6378b1c69b45a8aba1619acfd6982391be7219f7",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/6378b1c69b45a8aba1619acfd6982391be7219f7"
+    },
+    {
+      "path": "src/app/focus/page.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0db8ba9feedb3eb6a4eed4ac36e549543fa15e8c",
+      "size": 21540,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/0db8ba9feedb3eb6a4eed4ac36e549543fa15e8c"
+    },
+    {
+      "path": "src/app/globals.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a2dc41ecee5ec435200fe7cba2bde4107f823774",
+      "size": 488,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/a2dc41ecee5ec435200fe7cba2bde4107f823774"
+    },
+    {
+      "path": "src/app/layout.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "aab6b7963cef8c8dfa08c57f7bfaf3e29dca01b8",
+      "size": 1533,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/aab6b7963cef8c8dfa08c57f7bfaf3e29dca01b8"
+    },
+    {
+      "path": "src/app/page.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0d208ed7bf8f921c6654656d135a1e701be20e5c",
+      "size": 135625,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/0d208ed7bf8f921c6654656d135a1e701be20e5c"
+    },
+    {
+      "path": "src/app/pwa-debug",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "49cba54d7388205e92946be823671a1c36c92069",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/49cba54d7388205e92946be823671a1c36c92069"
+    },
+    {
+      "path": "src/app/pwa-debug/page.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0d338354fb3ed360fdb529af10e92680e385dc76",
+      "size": 5514,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/0d338354fb3ed360fdb529af10e92680e385dc76"
+    },
+    {
+      "path": "src/components",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "20a8d41f7991e6ead3622a3d316e5fe12d26e86e",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/20a8d41f7991e6ead3622a3d316e5fe12d26e86e"
+    },
+    {
+      "path": "src/components/CelebrationAnimation.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "faae3bf6d6e7be7d8b11e5b2e4da0f52622ab7b3",
+      "size": 5490,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/faae3bf6d6e7be7d8b11e5b2e4da0f52622ab7b3"
+    },
+    {
+      "path": "src/components/ColorPalette.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63220a53c6ab627e64495a07c4c91a1a35cf3141",
+      "size": 15867,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/63220a53c6ab627e64495a07c4c91a1a35cf3141"
+    },
+    {
+      "path": "src/components/ColorPanel.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "973e3bdf710a7c909c47fccc45d966d324d05455",
+      "size": 6411,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/973e3bdf710a7c909c47fccc45d966d324d05455"
+    },
+    {
+      "path": "src/components/ColorStatusBar.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "86d827dd8e932833f0569598e571c7b19e6c41dc",
+      "size": 1607,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/86d827dd8e932833f0569598e571c7b19e6c41dc"
+    },
+    {
+      "path": "src/components/CompletionCard.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eaf7ed0384c7824ca36264cab30f08d34223c0ca",
+      "size": 19915,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/eaf7ed0384c7824ca36264cab30f08d34223c0ca"
+    },
+    {
+      "path": "src/components/CustomPaletteEditor.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e66896b9b3a13ca902d5dca29daa16d77f286b4b",
+      "size": 13645,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/e66896b9b3a13ca902d5dca29daa16d77f286b4b"
+    },
+    {
+      "path": "src/components/DonationModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c0df2d580ad105fbc9efff561390cfbd7e667471",
+      "size": 3526,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/c0df2d580ad105fbc9efff561390cfbd7e667471"
+    },
+    {
+      "path": "src/components/DownloadSettingsModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "83a164e06aaf5ace0a4264edf1eade9fc709ee3e",
+      "size": 11756,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/83a164e06aaf5ace0a4264edf1eade9fc709ee3e"
+    },
+    {
+      "path": "src/components/FloatingColorPalette.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3883bf5be008984a02015714708ed2027d0568b3",
+      "size": 14869,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/3883bf5be008984a02015714708ed2027d0568b3"
+    },
+    {
+      "path": "src/components/FloatingToolbar.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f93bc34f871ac9bdb067e2c4716f853cd6daa921",
+      "size": 2940,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/f93bc34f871ac9bdb067e2c4716f853cd6daa921"
+    },
+    {
+      "path": "src/components/FocusCanvas.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "34682cc1293d9b0e5bbaabf640a2950a2dd706eb",
+      "size": 11472,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/34682cc1293d9b0e5bbaabf640a2950a2dd706eb"
+    },
+    {
+      "path": "src/components/FocusModePreDownloadModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5f1e63a90f5e2aadb013ae281f6abf76027a7b2e",
+      "size": 5234,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/5f1e63a90f5e2aadb013ae281f6abf76027a7b2e"
+    },
+    {
+      "path": "src/components/GridTooltip.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1c6253336f0ce4d556dcb295309cb54be7176ebf",
+      "size": 1217,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/1c6253336f0ce4d556dcb295309cb54be7176ebf"
+    },
+    {
+      "path": "src/components/InstallPWA.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f6bd48800fb3bb7037ea3fa566adf541dec3f9a5",
+      "size": 1951,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/f6bd48800fb3bb7037ea3fa566adf541dec3f9a5"
+    },
+    {
+      "path": "src/components/MagnifierSelectionOverlay.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2c3c4d5d930500b34c6ba9e46bf2f661a68231cf",
+      "size": 9414,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/2c3c4d5d930500b34c6ba9e46bf2f661a68231cf"
+    },
+    {
+      "path": "src/components/MagnifierTool.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "488f83ef55ae009f8a0b1501a2ccb9b721437f59",
+      "size": 14173,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/488f83ef55ae009f8a0b1501a2ccb9b721437f59"
+    },
+    {
+      "path": "src/components/PixelatedPreviewCanvas.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ae5a8727dd0760381d009c09f122a41577e3671",
+      "size": 9447,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/4ae5a8727dd0760381d009c09f122a41577e3671"
+    },
+    {
+      "path": "src/components/ProgressBar.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bcce2a1a149c2f7f7052a608d1f7e135382e1f9f",
+      "size": 1348,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/bcce2a1a149c2f7f7052a608d1f7e135382e1f9f"
+    },
+    {
+      "path": "src/components/SettingsPanel.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7131e707ec0c4aa2f70b2aad4208154882c32de0",
+      "size": 8965,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/7131e707ec0c4aa2f70b2aad4208154882c32de0"
+    },
+    {
+      "path": "src/components/ToolBar.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "439be3270189b04e6f083e95512b3d990d9d21cc",
+      "size": 2642,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/439be3270189b04e6f083e95512b3d990d9d21cc"
+    },
+    {
+      "path": "src/hooks",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9a17a7b2d3c38b5ed74fe1b6f19ea0f625270ca4",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/9a17a7b2d3c38b5ed74fe1b6f19ea0f625270ca4"
+    },
+    {
+      "path": "src/hooks/useManualEditingState.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d1f1f485dc111dda5e9d4097d1e5ba9cfa202ac0",
+      "size": 4545,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/d1f1f485dc111dda5e9d4097d1e5ba9cfa202ac0"
+    },
+    {
+      "path": "src/hooks/usePixelEditingOperations.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6809db13ef8ff27095e91a0d8ffc134fb6b36ba1",
+      "size": 4164,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/6809db13ef8ff27095e91a0d8ffc134fb6b36ba1"
+    },
+    {
+      "path": "src/types",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "390fbf8cc47d55300f6519b77ef4134e3d63291d",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/390fbf8cc47d55300f6519b77ef4134e3d63291d"
+    },
+    {
+      "path": "src/types/downloadTypes.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7764bcf6c19377d4bb39d4678dedf95f5d895c0b",
+      "size": 293,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/7764bcf6c19377d4bb39d4678dedf95f5d895c0b"
+    },
+    {
+      "path": "src/utils",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "475b72c69932a67e5b5d2467e8522791540ba236",
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/trees/475b72c69932a67e5b5d2467e8522791540ba236"
+    },
+    {
+      "path": "src/utils/canvasUtils.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "16de9bd8401bf631b147cb3b0414fca0261a0ce5",
+      "size": 1579,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/16de9bd8401bf631b147cb3b0414fca0261a0ce5"
+    },
+    {
+      "path": "src/utils/colorSystemUtils.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8147aba72ea2f0cb9f7d9aaf8d365e71db638c6f",
+      "size": 5534,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/8147aba72ea2f0cb9f7d9aaf8d365e71db638c6f"
+    },
+    {
+      "path": "src/utils/floodFillUtils.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3309a76068ea1a374b31abc04a3fa52ba2fea116",
+      "size": 4381,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/3309a76068ea1a374b31abc04a3fa52ba2fea116"
+    },
+    {
+      "path": "src/utils/imageDownloader.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "808137ada0fb64ded519349199e46fdf75b52d3a",
+      "size": 33889,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/808137ada0fb64ded519349199e46fdf75b52d3a"
+    },
+    {
+      "path": "src/utils/localStorageUtils.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c94489c7d6f8eebaa63474bdd7e83e52bb08c9c8",
+      "size": 2503,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/c94489c7d6f8eebaa63474bdd7e83e52bb08c9c8"
+    },
+    {
+      "path": "src/utils/pixelEditingUtils.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c0b950429f9b212224d7b5a454c6647a785659d",
+      "size": 4987,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/0c0b950429f9b212224d7b5a454c6647a785659d"
+    },
+    {
+      "path": "src/utils/pixelation.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ed251d1abf8c34c2978235c95d6a8c1ccf96e58f",
+      "size": 8695,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/ed251d1abf8c34c2978235c95d6a8c1ccf96e58f"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c1334095f876a408c10f2357faaced969ec090ab",
+      "size": 602,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/c1334095f876a408c10f2357faaced969ec090ab"
+    },
+    {
+      "path": "色号对应表.csv",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5f098eaf4f700918e4641d9e2f00f4227d1a80aa",
+      "size": 5828,
+      "url": "https://api.github.com/repos/Zippland/perler-beads/git/blobs/5f098eaf4f700918e4641d9e2f00f4227d1a80aa"
+    }
+  ],
+  "truncated": false
+}
