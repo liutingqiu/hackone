@@ -3,7 +3,7 @@ import { PALETTE } from "./lib/palette";
 import { imageToPattern, reduceNoise, usedColors, type Pattern } from "./lib/quantize";
 import { fitCellSize } from "./lib/fit";
 import { fitLabel } from "./lib/label-fit";
-import { splitBoards } from "./lib/split";
+import { splitBoards, type BoardGrid } from "./lib/split";
 import { openSplitPrintWindow } from "./lib/split-export";
 
 // D-03：板尺寸可选，默认 29，可切 52
@@ -12,6 +12,76 @@ const DEFAULT_BOARD = 29;
 
 // ui-skeleton：小白模式固定 29，专业模式可改；切换不改画布/图纸状态
 type Mode = "beginner" | "pro";
+
+/** 无标注预览：纯色块 + 网格 + 板界红线，白底，不含色号/板号/用量 */
+function buildPreviewCanvas(pattern: Pattern, cell: number, grid: BoardGrid | null): HTMLCanvasElement {
+  const scale = 2;
+  const w = pattern.cols * cell;
+  const h = pattern.rows * cell;
+  const cv = document.createElement("canvas");
+  cv.width = w * scale;
+  cv.height = h * scale;
+  const ctx = cv.getContext("2d")!;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+
+  for (let y = 0; y < pattern.rows; y++) {
+    for (let x = 0; x < pattern.cols; x++) {
+      ctx.fillStyle = PALETTE[pattern.cells[y * pattern.cols + x]].hex;
+      ctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+
+  if (cell >= 5) {
+    ctx.strokeStyle = "rgba(0,0,0,0.18)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x <= pattern.cols; x++) {
+      ctx.moveTo(x * cell + 0.5, 0);
+      ctx.lineTo(x * cell + 0.5, h);
+    }
+    for (let y = 0; y <= pattern.rows; y++) {
+      ctx.moveTo(0, y * cell + 0.5);
+      ctx.lineTo(w, y * cell + 0.5);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,0,0.45)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = 0; x <= pattern.cols; x += 10) {
+      ctx.moveTo(x * cell + 0.5, 0);
+      ctx.lineTo(x * cell + 0.5, h);
+    }
+    for (let y = 0; y <= pattern.rows; y += 10) {
+      ctx.moveTo(0, y * cell + 0.5);
+      ctx.lineTo(w, y * cell + 0.5);
+    }
+    ctx.stroke();
+  }
+
+  if (grid) {
+    const lineW = Math.max(1.5, Math.min(3, cell * 0.12));
+    ctx.strokeStyle = "rgba(220, 38, 38, 0.92)";
+    ctx.lineWidth = lineW;
+    ctx.beginPath();
+    for (const b of grid.boards) {
+      const x = b.x0 * cell + 0.5;
+      const y = b.y0 * cell + 0.5;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+    }
+    ctx.moveTo(w - 0.5, 0);
+    ctx.lineTo(w - 0.5, h);
+    ctx.moveTo(0, h - 0.5);
+    ctx.lineTo(w, h - 0.5);
+    ctx.stroke();
+  }
+
+  return cv;
+}
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -46,9 +116,19 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(true);
   const [showBoardIds, setShowBoardIds] = useState(true);
   const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
+  const [busy, setBusy] = useState<null | "print" | "png">(null);
+  const [toast, setToast] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLElement>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+
+  const notify = useCallback((text: string) => {
+    setToast(text);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+  }, []);
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   const rows = useMemo(() => {
     if (!img) return 0;
@@ -230,17 +310,33 @@ export default function App() {
     [cols],
   );
 
-  const exportPng = () => {
-    const cv = canvasRef.current;
-    if (!cv) return;
-    const a = document.createElement("a");
-    a.download = "pattern.png";
-    a.href = cv.toDataURL("image/png");
-    a.click();
-  };
+  // 次按钮：保留原来的纯色块 PNG（无标注），异步 toBlob 让 loading 态能渲染
+  const exportPreview = useCallback(() => {
+    if (!pattern || busy) return;
+    const previewCell = Math.min(cell, 24);
+    const cv = buildPreviewCanvas(pattern, previewCell, grid);
+    setBusy("png");
+    cv.toBlob((blob) => {
+      if (!blob) {
+        setBusy(null);
+        notify("导出失败，请重试");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.download = "pattern-preview.png";
+      a.href = url;
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+      setBusy(null);
+      notify("已导出");
+    }, "image/png");
+  }, [pattern, cell, grid, busy, notify]);
 
-  const exportSplit = useCallback(() => {
-    if (!pattern || !grid) return;
+  // 主按钮：可打印图纸（总览 + 每板一页，复用 split-export），弹窗被拦时 toast
+  const exportPrintable = useCallback(() => {
+    if (!pattern || !grid || busy) return;
+    setBusy("print");
     const win = openSplitPrintWindow({
       pattern,
       grid,
@@ -248,8 +344,16 @@ export default function App() {
       boardH: activeBoard,
       title: "拼豆图纸",
     });
-    if (!win) window.alert("分板导出窗口被浏览器拦截了，请允许弹窗后重试。");
-  }, [pattern, grid, activeBoard]);
+    if (!win) {
+      setBusy(null);
+      notify("浏览器拦截了新窗口，请允许后重试");
+      return;
+    }
+    window.setTimeout(() => {
+      setBusy(null);
+      notify("已导出");
+    }, 700);
+  }, [pattern, grid, activeBoard, busy, notify]);
 
   const hoverInfo = hover && pattern ? PALETTE[pattern.cells[hover.y * pattern.cols + hover.x]] : null;
 
@@ -269,7 +373,12 @@ export default function App() {
         </div>
         <div className="actions">
           <button className="ghost" onClick={() => fileRef.current?.click()}>上传图片</button>
-          <button onClick={exportPng} disabled={!pattern}>导出 PNG</button>
+          <button onClick={exportPrintable} disabled={!pattern || !!busy}>
+            {busy === "print" ? "生成中…" : "导出图纸（可打印）"}
+          </button>
+          <button className="ghost" onClick={exportPreview} disabled={!pattern || !!busy}>
+            {busy === "png" ? "生成中…" : "导出预览图（无标注）"}
+          </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
         </div>
       </header>
@@ -349,7 +458,9 @@ export default function App() {
               </label>
             )}
             <label className="switch"><input type="checkbox" checked={showBoardIds} onChange={(e) => setShowBoardIds(e.target.checked)} /> 画布显示板号</label>
-            <button className="wide" onClick={exportSplit} disabled={!pattern || !grid}>导出分板拼装图</button>
+            <button className="wide" onClick={exportPrintable} disabled={!pattern || !grid || !!busy}>
+              {busy === "print" ? "生成中…" : "导出分板拼装图"}
+            </button>
           </section>
 
           <div className="colors">
@@ -367,6 +478,9 @@ export default function App() {
           </div>
         </aside>
       </main>
+      {toast && (
+        <div className="toast" role="status" aria-live="polite">{toast}</div>
+      )}
     </div>
   );
 }
