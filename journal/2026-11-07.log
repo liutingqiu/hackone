@@ -80,3 +80,7 @@
 [19:24:09] dev       标记模式锁定工具栏，点工具只提示不回退浏览 证据: S.mode 保持 mark、tool 保持 inspect、#tools.off=true
 [19:24:09] ops       部署分享短链 Worker+KV 与 Pages v1.2    证据: pinda-share.tianqi689.workers.dev；链接 38 字符，#s=j9pqp69 还原 90x90
 [19:24:09] dev       整理卡片合并为全宽「应用整理」按钮 证据: 截图 tidy-card.png；点击 toast：40 色→15 色，改写 18672 格
+[19:54:18] dev       取消浏览/标记模式，标记降为工具栏工具；修翻转清空工具 bug 证据: document.getElementById('modeSeg')=0；mark 拖动 13 格、切铅笔再回标记进度不变
+[19:54:18] dev       进度不再因整理/重新识别清零，翻转时镜像 证据: 整理后 13 颗保留；翻转后 marked 4 -> 5（10 列镜像）
+[19:54:18] dev       按尺寸反推并入新建画布；打开图纸气泡提示 证据: newCap: 32x32 -> 成品约 8.3x8.3cm · 1024 颗 · 4 块底板
+[19:54:18] ops       部署 v1.3 到 Pages                          证据: https://hack.liutingqiu.xyz 20x20 标记 1/576

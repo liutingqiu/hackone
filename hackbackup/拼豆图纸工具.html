@@ -102,17 +102,15 @@
     display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--panel);
     border-bottom:1px solid var(--line);font-size:12px;color:var(--ink2);flex:0 0 auto;
   }
-  #modeSeg{flex:0 0 150px}
-  #modeSeg button{padding:5px 8px}
-  #modeHint{color:var(--ink3);font-size:11.5px}
+  #modeHint{color:var(--ink3);font-size:11.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #tools .tsep{width:1px;align-self:stretch;background:var(--line);margin:2px 6px}
+  #tools button[data-t="mark"].on{background:#e9f7ef;border-color:#a7d8ba;color:#15803d}
   #view{flex:1;overflow:auto;display:grid;place-items:center;padding:20px;min-height:0}
   #grid{image-rendering:pixelated;background:#fff;box-shadow:0 1px 10px #0006;cursor:crosshair}
   /* [hackone] 拖拽平移：查看工具显示抓手，拖动中显示抓握 */
   #grid.grab{cursor:grab}
   #view.panning, #view.panning #grid{cursor:grabbing}
   #view.spacepan, #view.spacepan #grid{cursor:grab}
-  #tools.off button{opacity:.34;filter:grayscale(1)}
-  #modeHint.warn{color:#b45309}
   #empty{text-align:center;color:var(--ink3);font-size:13px;line-height:2}
   #empty .big{font-size:17px;font-weight:700;color:var(--ink2);margin-bottom:4px}
 
@@ -383,8 +381,6 @@
   #barInfo { flex: 1 1 100%; min-width: 0; white-space: normal; line-height: 1.45; }
   #barPos { min-width: 0; margin-left: auto; text-align: right; font-size: 11.5px; }
   #modebar { flex-wrap: wrap; gap: 6px 10px; padding: 6px 10px; }
-  #modeSeg { flex: 0 0 100%; display: grid; grid-template-columns: 1fr 1fr; }
-  #modeSeg button { min-height: 44px; padding: 8px 6px; font-size: 13px; }
   #modeHint { flex: 1 1 100%; min-width: 0; line-height: 1.4; }
   #view {
     display: block; max-width: 100%; min-width: 0;
@@ -404,7 +400,6 @@
 
 
   @media (max-width: 900px){
-    #modeSeg{order:1;flex:0 0 100%}
     .tools{order:2;flex:0 0 100%;flex-wrap:wrap;overflow:visible}
     .tools button{padding:6px 9px;font-size:11.5px}
     #quickOps{order:3;flex:0 0 auto}
@@ -447,6 +442,9 @@
     transition:opacity .12s ease .28s, transform .12s ease .28s;z-index:95}
   [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0)}
   @media (hover:none){[data-tip]::after{display:none}}
+  [data-tip].tip-up{position:relative}
+  [data-tip].tip-up::after{top:auto;bottom:calc(100% + 7px);transform:translateX(-50%) translateY(-2px)}
+  [data-tip].tip-up:hover::after{transform:translateX(-50%) translateY(0)}
   #bar .iconbtn{margin-left:2px}
   #barPos{min-width:96px;text-align:right}
 
@@ -466,7 +464,6 @@
 
   @media (max-width: 900px){
     #modebar{flex-wrap:wrap;gap:6px 8px;padding:6px 10px}
-    #modeSeg{flex:0 0 100%}
     #modebar .tools{flex:1 1 100%;width:100%;overflow:visible;flex-wrap:wrap;justify-content:space-between}
     #modebar .tools button{width:36px;height:36px}
     #bar{padding:8px 10px;gap:6px}
@@ -585,6 +582,7 @@
           <div class="stepper"><button data-for="newH" data-d="-1">−</button><input id="newH" type="number" min="1" max="400" value="32"><button data-for="newH" data-d="1">+</button></div>
         </div>
         <div class="row2"><span class="lb">空白画布</span><button id="newGo" class="sm">创建</button></div>
+        <div class="cap" id="newCap">—</div>
       </div>
     </div>
     <div class="grp" data-g="size">
@@ -669,12 +667,10 @@
       </div>
     </div>
     <div id="modebar">
-      <div class="seg" id="modeSeg" role="group" aria-label="画布模式">
-        <button data-m="view" class="on">浏览</button>
-        <button data-m="mark">标记</button>
-      </div>
       <div class="tools" id="tools">
         <button data-t="inspect" class="iconbtn on" data-tip="查看" aria-label="查看"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><path d="M24 37v7"/><path d="M36 24h8"/><path d="M4 24h7"/><path d="M24 11V4"/></svg></button>
+        <button data-t="mark" class="iconbtn" data-tip="标记完成" aria-label="标记完成"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="34" height="34" rx="6"/><path d="M15 24.5l6.5 6.5L33 17"/></svg></button>
+        <span class="tsep" aria-hidden="true"></span>
         <button data-t="pencil" class="iconbtn" data-tip="铅笔" aria-label="铅笔"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M31 9l8 8"/><path d="M8 32 36 4l8 8-28 28-10 2 2-10Z"/><path d="M9 32l7 7"/></svg></button>
         <button data-t="eraser" class="iconbtn" data-tip="橡皮" aria-label="橡皮"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M44.78 24.17 31.92 7.1 14.13 20.5 27.5 37l3.36-2.34 13.92-10.49Z"/><path d="M27.5 37l-3.84 3.07-10.56.01-2.6-3.45-6.43-8.54L14.5 20.22"/><path d="M13.2 40.07h31.36"/></svg></button>
         <button data-t="picker" class="iconbtn" data-tip="吸色" aria-label="吸色"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="12" r="7.5" fill="currentColor" stroke="none"/><path d="M33 17 13 37l-3 9 9-3 20-20"/><path d="M15 34l-1 1"/></svg></button>
@@ -684,7 +680,7 @@
         <button data-t="bucket" class="iconbtn" data-tip="连选填色" aria-label="连选填色"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M37 37a4 4 0 1 0 0-8c-1.47 0-2.67 2-4 4s1.53 4 4 4Z" fill="currentColor" stroke="none"/><path d="m20.85 5.5 3.54 3.54"/><path d="M23.68 8.33 8.13 23.89l11.31 11.31 15.56-15.56L23.68 8.33Z"/><path d="M12 20.07l16.96 5.58"/><path d="M4 43h40"/></svg></button>
         <button id="flip" class="iconbtn" data-tip="左右翻转" aria-label="左右翻转"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5v38"/><path d="M14 13 5 24l9 11V13Z"/><path d="M34 13l9 11-9 11V13Z"/></svg></button>
       </div>
-      <span id="modeHint" hidden></span>
+      <span id="modeHint"></span>
     </div>
     <div id="paintbar">
       <div class="pb-group" data-for="brush">
@@ -841,7 +837,7 @@ const S = {
   cell:16, showCode:true, showGrid:true, showBoard:true,   // [hackone] 默认显示分板
   flip:false, tool:'inspect', paintIdx:0,
   // [hackone] 进度：模式 + bitmask + 图案 hash；doc 单独存，刷新可恢复
-  mode:'view', progress:new Uint8Array(0), progressHash:'',
+  progress:new Uint8Array(0), progressHash:'',
   brush:1, conn:4, shapeFill:false,
   counts:new Map(), used:null, palette:[], ext:null,
   sel:-1, selCell:-1, hoverCell:-1, highlight:-1, hlCells:null,
@@ -1159,6 +1155,15 @@ function flipGrid(){
   // 撤销记录存的是格子下标，镜像后同一下标指向另一格 —— 坐标必须一起镜像
   for (const h of S.history) if (h.t === 'c') mirrorPositions(h);
   for (const h of S.future) if (h.t === 'c') mirrorPositions(h);
+  if (S.progress && S.progress.length === Math.ceil(S.cells.length / 8)){
+    const bits = new Uint8Array(S.cells.length);
+    for (let i = 0; i < bits.length; i++) bits[i] = (S.progress[i >> 3] >> (i & 7)) & 1;
+    mirrorArray(bits, S.gw, S.gh);
+    S.progress.fill(0);
+    for (let i = 0; i < bits.length; i++) if (bits[i]) S.progress[i >> 3] |= (1 << (i & 7));
+    S.progressHash = progressPatternHash();
+    S.statsDirty = true;
+  }
   if (S.selCell >= 0) S.selCell = mirrorIndex(S.selCell);
   if (S.highlight >= 0) S.hlCells = cellsWith(S.highlight);
   S.preview = null;
@@ -1202,9 +1207,10 @@ function syncProgress(){
     return;
   }
   const h = progressPatternHash();
-  if (h === S.progressHash) return;
   S.progressHash = h;
   const n = progressByteCount();
+  // [hackone] 只有画布尺寸变了才清进度；整理、重新识别、撤销都不会把已拼记录清零
+  if (S.progress.length === n) return;
   S.progress = new Uint8Array(n);
   try {
     const raw = localStorage.getItem(PROGRESS_KEY);
@@ -1503,6 +1509,8 @@ function draw(){
 function installDoc(nw, nh, base){
   S.gw = nw; S.gh = nh; S.base = base;
   S.cells = limitColors(base, S.maxColors);
+  S.progress = new Uint8Array(Math.ceil(S.cells.length / 8));
+  S.progressHash = '';
   S.selCell = -1; S.highlight = -1; S.hlCells = null;
   S.preview = null; S.drag = null; S.stroke = null; S.dragging = false;
   S.buf = null; S.bufCtx = null;
@@ -2387,14 +2395,14 @@ function endPan(){
   return moved;
 }
 function panCursor(){
-  if (canvas) canvas.classList.toggle('grab', S.tool === 'inspect' && S.mode !== 'mark');
+  if (canvas) canvas.classList.toggle('grab', S.tool === 'inspect');
 }
 viewEl.addEventListener('pointerdown', e => {
   if (!S.cells) return;
   if (e.button === 1){ e.preventDefault(); beginPan(e, true); return; }   // 中键：顺手掐掉 Linux 的粘贴/自动滚动
   if (e.button !== 0) return;
   if (spaceDown){ e.preventDefault(); beginPan(e, true); return; }
-  if (e.target === canvas && S.tool === 'inspect' && S.mode !== 'mark') beginPan(e, false);
+  if (e.target === canvas && S.tool === 'inspect') beginPan(e, false);
   else if (e.target === viewEl) beginPan(e, true);                        // 灰色底也能拖
 });
 viewEl.addEventListener('pointermove', e => { if (panState) movePan(e); });
@@ -2420,8 +2428,8 @@ canvas.addEventListener('mousedown', e => {
   if (S.palOpen) closePalette();
   const i = cellFromEvent(e);
   if (i < 0 || !S.cells) return;
-  // [hackone] 标记模式：只切完成态，原有工具/取色不受影响
-  if (S.mode === 'mark'){
+  // [hackone] 标记工具：只切完成态，不动图案
+  if (S.tool === 'mark'){
     S.markSet = new Set([i]);
     S.markLast = i;
     S.dragging = 'mark';
@@ -2985,15 +2993,17 @@ const TOOL_HINT = {
   line:'按住拖一条直线，松手落笔；Esc 取消。',
   rect:'按住拖一个矩形，可选实心；Esc 取消。',
   ellipse:'按住拖一个圆/椭圆，可选实心；Esc 取消。',
-  bucket:'点一格，填充与它相连的同色区域；4/8 连通可切换。'
+  bucket:'点一格，填充与它相连的同色区域；4/8 连通可切换。',
+  mark:'点格子标记完成 / 再点取消，拖动可连续标记；只记进度，不改图案。'
 };
 document.querySelectorAll('#tools button').forEach(btn => btn.addEventListener('click', () => {
-  // [hackone] 标记模式下工具栏锁定：不再静默踢回「浏览」，只提示
-  if (S.mode === 'mark'){ toast('标记模式下工具栏已锁定，先切回「浏览」再选工具'); return; }
-  S.tool = btn.dataset.t;
+  const t = btn.dataset.t;
+  if (!t) return;                 // 翻转是动作按钮，不是工具，别把当前工具清掉
+  S.tool = t;
   document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b === btn));
-  $('toolHint').textContent = TOOL_HINT[S.tool] || '';
+  $('modeHint').textContent = TOOL_HINT[S.tool] || '';
   S.preview = null; S.drag = null;
+  panCursor();
   requestDraw();
 }));
 $('brush').addEventListener('input', () => {
@@ -3007,27 +3017,8 @@ document.querySelectorAll('#bucket button').forEach(btn => btn.addEventListener(
 }));
 $('shapeFill').addEventListener('change', () => { S.shapeFill = $('shapeFill').checked; });
 
-// [hackone] 查看 / 标记模式；标记模式强制 inspect，不触发画笔
-function setMode(m){
-  S.mode = m;
-  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-  if (m === 'mark'){
-    S.tool = 'inspect';
-    document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b.dataset.t === 'inspect'));
-    $('toolHint').textContent = TOOL_HINT.inspect;
-  }
-  $('tools').classList.toggle('off', m === 'mark');
-  $('tools').setAttribute('aria-disabled', m === 'mark' ? 'true' : 'false');
-  $('modeHint').classList.toggle('warn', m === 'mark');
-  $('modeHint').textContent = m === 'mark'
-    ? '标记模式：点格子标记完成 / 再点取消，不改图案；工具栏已锁定'
-    : '浏览模式：点格子查色号；放大后按住左键「拖动」可平移画布';
-  panCursor();
-  requestDraw();
-}
-document.querySelectorAll('#modeSeg button').forEach(btn => {
-  btn.addEventListener('click', () => setMode(btn.dataset.m));
-});
+// [hackone] 初始提示
+$('modeHint').textContent = TOOL_HINT.inspect;
 
 /* 导出 / 撤销 / 翻转 */
 // [hackone] 采购清单复制
@@ -3133,7 +3124,7 @@ renderProgress();
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePop(); });
 
   var GROUPS = {
-    inspect: [], pencil: ['brush','paint'], eraser: ['brush'], picker: [],
+    inspect: [], mark: [], pencil: ['brush','paint'], eraser: ['brush'], picker: [],
     line: ['brush','paint'], rect: ['brush','paint','shape'],
     ellipse: ['brush','paint','shape'], bucket: ['paint']
   };
@@ -3146,9 +3137,6 @@ renderProgress();
     });
   }
   document.querySelectorAll('#tools button').forEach(function(b){
-    b.addEventListener('click', function(){ setTimeout(sync, 0); });
-  });
-  document.querySelectorAll('#modeSeg button').forEach(function(b){
     b.addEventListener('click', function(){ setTimeout(sync, 0); });
   });
   sync();
@@ -3536,53 +3524,26 @@ renderProgress();
     return g;
   }
 
-  /* ---------- F5 目标尺寸反推 ---------- */
-  var SIZE_UI = '' +
-    '<div class="row2"><span class="lb">成品宽度</span>' +
-      '<div class="stepper"><button data-cm="-1">−</button><input id="cmW" type="number" min="5" max="300" value="30"><button data-cm="1">+</button></div>' +
-    '</div>' +
-    '<div class="row2"><span class="lb">高度</span>' +
-      '<div class="stepper"><button data-cmh="-1">−</button><input id="cmH" type="number" min="5" max="300" value="21"><button data-cmh="1">+</button></div>' +
-    '</div>' +
-    '<div class="cap" id="cmOut">—</div>' +
-    '<div class="row2"><span class="lb">按此新建</span><button id="cmGo" class="sm">创建</button></div>';
-  var sizeGrp = mkGroup('cmsize', '按尺寸反推', SIZE_UI);
-  var side = $('side');
-  var newGrp = side.querySelector('.grp[data-g="new"]');
-  if (newGrp && newGrp.nextSibling) side.insertBefore(sizeGrp, newGrp.nextSibling);
-  else side.appendChild(sizeGrp);
-
+  /* ---------- F5 尺寸换算：挂在「新建画布」下方（原独立模块合并于此） ---------- */
   function pitchMm(){
     var b = paletteOf(S.brandId);
     return b.pitch || 2.6;
   }
-  function calcCm(){
-    var w = Math.max(5, Math.min(300, +$('cmW').value || 30));
-    var h = Math.max(5, Math.min(300, +$('cmH').value || 21));
+  function updateNewCap(){
+    var el = $('newCap'); if (!el) return;
+    var w = Math.max(1, Math.min(400, parseInt(($('newW') || {}).value, 10) || 32));
+    var h = Math.max(1, Math.min(400, parseInt(($('newH') || {}).value, 10) || 32));
     var p = pitchMm();
-    var gw = Math.max(1, Math.round(w * 10 / p));
-    var gh = Math.max(1, Math.round(h * 10 / p));
-    var boards = Math.ceil(gw / 29) * Math.ceil(gh / 29);
-    $('cmOut').innerHTML = '<b>' + gw + ' × ' + gh + '</b> 格 · 约 <b>' + (gw*gh) + '</b> 颗 · ' +
-      boards + ' 块 29×29 底板（' + p + 'mm 豆）';
-    return { gw: gw, gh: gh };
+    var boards = Math.ceil(w / 29) * Math.ceil(h / 29);
+    el.innerHTML = '成品约 <b>' + (w * p / 10).toFixed(1) + ' × ' + (h * p / 10).toFixed(1) +
+      ' cm</b> · <b>' + (w * h) + '</b> 颗 · ' + boards + ' 块底板（' + p + 'mm 豆）';
   }
-  ['cmW','cmH'].forEach(function(id){ $(id).addEventListener('input', calcCm); });
-  document.querySelectorAll('#side .grp[data-g="cmsize"] .stepper button').forEach(function(b){
-    b.addEventListener('click', function(){
-      var id = b.dataset.cm ? 'cmW' : 'cmH';
-      var inp = $(id);
-      var v = (+inp.value || 0) + (b.dataset.cm ? +b.dataset.cm : +b.dataset.cmh);
-      inp.value = Math.max(5, Math.min(300, v));
-      calcCm();
-    });
+  ['newW', 'newH'].forEach(function(id){
+    var el = $(id); if (!el) return;
+    ['input', 'change'].forEach(function(ev){ el.addEventListener(ev, updateNewCap); });
   });
-  $('cmGo').addEventListener('click', function(){
-    var g = calcCm();
-    if (window.newBlank) newBlank(g.gw, g.gh);
-    toast('已按 ' + g.gw + '×' + g.gh + ' 新建画布');
-  });
-  calcCm();
+  if ($('brand')) $('brand').addEventListener('change', updateNewCap);
+  updateNewCap();
 
   /* ---------- F9 性能：增量统计 ---------- */
   function ensureStats(){
@@ -3824,10 +3785,20 @@ renderProgress();
     if (!S.cells) { toast('先生成图纸'); return; }
     var code = await packDoc();
     var kb = Math.max(1, Math.round(code.length / 1024));
+    var fail = '网络不通';
     toast('正在生成分享链接…');
     try {
-      var r = await fetch(SHARE_API + '/api/save', { method: 'POST', body: code });
-      if (r.ok){
+      var r = null;
+      for (var attempt = 0; attempt < 2; attempt++){
+        try {
+          r = await fetch(SHARE_API + '/api/save', { method: 'POST', body: code });
+          if (r.ok) break;
+          fail = r.status === 413 ? '图纸太大（超过 400 KB）' : '分享服务返回 ' + r.status;
+          if (r.status === 413) break;
+        } catch(e){ r = null; fail = '网络不通'; }
+        await new Promise(function(res){ setTimeout(res, 500); });
+      }
+      if (r && r.ok){
         var j = await r.json();
         if (j && j.id){
           var shortUrl = SHARE_SITE + '/#s=' + j.id;
@@ -3851,7 +3822,7 @@ renderProgress();
     a.download = '拼豆图纸_' + S.gw + 'x' + S.gh + '.pinda.json';
     a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
-    toast('网络不通，已导出 .pinda.json（' + kb + ' KB），用「打开图纸」可以再打开');
+    toast(fail + '，已导出 .pinda.json（' + kb + ' KB），用「打开图纸」可以再打开');
   };
 
   async function loadShareHash(){
@@ -4101,7 +4072,7 @@ renderProgress();
     var row2 = document.createElement('div');
     row2.className = 'row2';
     row2.innerHTML = '<button id="btnShareLink" class="sm" title="生成短链接，微信/QQ 直接发">分享链接</button>' +
-      '<button id="btnOpenDoc" class="sm" title="打开别人发来的 .pinda.json 图纸文件（没网时的备用通道）">打开图纸</button>';
+      '<button id="btnOpenDoc" class="sm tip-up" data-tip="需要 .json 图纸文件">打开图纸</button>';
     var docInp = document.createElement('input');
     docInp.type = 'file'; docInp.id = 'docFile'; docInp.accept = '.json,application/json'; docInp.hidden = true;
     dock.appendChild(docInp);
