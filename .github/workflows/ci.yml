@@ -34,6 +34,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Production HTML and share Worker regressions
+        run: node --test ../tests/runtime.test.cjs
+
       - name: Build
         run: npm run build
 
