@@ -13,8 +13,17 @@ describe("palette", () => {
     }
   });
 
-  it("色板规模符合预期", () => {
-    expect(PALETTE.length).toBeGreaterThanOrEqual(48);
+  it("色板规模为 MARD 291", () => {
+    expect(PALETTE.length).toBe(291);
+  });
+
+  it("使用 MARD 色号，name 回退为色号", () => {
+    const codes = PALETTE.map((p) => p.code);
+    expect(codes).toContain("A1");
+    expect(codes).toContain("ZG8");
+    for (const p of PALETTE) {
+      expect(p.name).toBe(p.code);
+    }
   });
 });
 
@@ -25,6 +34,15 @@ describe("quantize", () => {
       const i = nearestIndex(rgb[0], rgb[1], rgb[2]);
       expect(i).toBeGreaterThanOrEqual(0);
       expect(i).toBeLessThan(PALETTE.length);
+    }
+  });
+
+  it("色板内每个颜色都映射回自身", async () => {
+    const { nearestIndex } = await import("./quantize");
+    for (let i = 0; i < PALETTE.length; i++) {
+      const n = parseInt(PALETTE[i].hex.slice(1), 16);
+      const got = nearestIndex((n >> 16) & 255, (n >> 8) & 255, n & 255);
+      expect(got, `${PALETTE[i].code} 应映射回自身`).toBe(i);
     }
   });
 

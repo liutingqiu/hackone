@@ -6,6 +6,10 @@ import { openSplitPrintWindow } from "./lib/split-export";
 
 // D-03：板尺寸可选，默认 29，可切 52
 const BOARD_SIZES = [29, 52] as const;
+const DEFAULT_BOARD = 29;
+
+// ui-skeleton：小白模式固定 29，专业模式可改；切换不改画布/图纸状态
+type Mode = "beginner" | "pro";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -35,6 +39,7 @@ export default function App() {
   const [cell, setCell] = useState(14);
   const [minCount, setMinCount] = useState(2);
   const [boardSize, setBoardSize] = useState(29);
+  const [mode, setMode] = useState<Mode>("beginner");
   const [showCodes, setShowCodes] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showBoardIds, setShowBoardIds] = useState(true);
@@ -57,9 +62,10 @@ export default function App() {
     return minCount > 1 ? reduceNoise(raw, minCount) : raw;
   }, [raw, minCount]);
 
+  const activeBoard = mode === "beginner" ? DEFAULT_BOARD : boardSize;
   const grid = useMemo(
-    () => (pattern ? splitBoards(pattern.cols, pattern.rows, boardSize, boardSize) : null),
-    [pattern, boardSize],
+    () => (pattern ? splitBoards(pattern.cols, pattern.rows, activeBoard, activeBoard) : null),
+    [pattern, activeBoard],
   );
 
   const stats = useMemo(() => (pattern ? usedColors(pattern) : []), [pattern]);
@@ -206,12 +212,12 @@ export default function App() {
     const win = openSplitPrintWindow({
       pattern,
       grid,
-      boardW: boardSize,
-      boardH: boardSize,
+      boardW: activeBoard,
+      boardH: activeBoard,
       title: "拼豆图纸",
     });
     if (!win) window.alert("分板导出窗口被浏览器拦截了，请允许弹窗后重试。");
-  }, [pattern, grid, boardSize]);
+  }, [pattern, grid, activeBoard]);
 
   const hoverInfo = hover && pattern ? PALETTE[pattern.cells[hover.y * pattern.cols + hover.x]] : null;
 
@@ -224,6 +230,10 @@ export default function App() {
             <h1>拼豆图纸</h1>
             <p>传图 → 出图 → 按色号摆</p>
           </div>
+        </div>
+        <div className="mode-switch" role="group" aria-label="界面模式">
+          <button type="button" className={mode === "beginner" ? "active" : ""} aria-pressed={mode === "beginner"} onClick={() => setMode("beginner")}>小白</button>
+          <button type="button" className={mode === "pro" ? "active" : ""} aria-pressed={mode === "pro"} onClick={() => setMode("pro")}>专业</button>
         </div>
         <div className="actions">
           <button className="ghost" onClick={() => fileRef.current?.click()}>上传图片</button>
@@ -249,14 +259,18 @@ export default function App() {
           </label>
           <input type="range" min={3} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
 
-          <label className="row">
-            <span>杂色合并阈值</span>
-            <b>{minCount} 颗</b>
-          </label>
-          <input type="range" min={1} max={20} value={minCount} onChange={(e) => setMinCount(+e.target.value)} />
+          {mode === "pro" && (
+            <>
+              <label className="row">
+                <span>杂色合并阈值</span>
+                <b>{minCount} 颗</b>
+              </label>
+              <input type="range" min={1} max={20} value={minCount} onChange={(e) => setMinCount(+e.target.value)} />
 
-          <label className="switch"><input type="checkbox" checked={showCodes} onChange={(e) => setShowCodes(e.target.checked)} /> 显示色号</label>
-          <label className="switch"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> 显示网格</label>
+              <label className="switch"><input type="checkbox" checked={showCodes} onChange={(e) => setShowCodes(e.target.checked)} /> 显示色号</label>
+              <label className="switch"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> 显示网格</label>
+            </>
+          )}
 
           {!img && <p className="hint">把图片拖进来，或点右上角上传</p>}
         </aside>
@@ -290,16 +304,18 @@ export default function App() {
             <h2>分板</h2>
             <div className="row">
               <span>分板</span>
-              <b>{grid ? `${grid.cols} × ${grid.rows} = ${grid.boards.length} 块（${boardSize}×${boardSize}）` : "—"}</b>
+              <b>{grid ? `${grid.cols} × ${grid.rows} = ${grid.boards.length} 块（${activeBoard}×${activeBoard}）` : "—"}</b>
             </div>
-            <label className="row">
-              <span>板尺寸</span>
-              <select value={boardSize} onChange={(e) => setBoardSize(Number(e.target.value))}>
-                {BOARD_SIZES.map((size) => (
-                  <option key={size} value={size}>{size}×{size}</option>
-                ))}
-              </select>
-            </label>
+            {mode === "pro" && (
+              <label className="row">
+                <span>板尺寸</span>
+                <select value={boardSize} onChange={(e) => setBoardSize(Number(e.target.value))}>
+                  {BOARD_SIZES.map((size) => (
+                    <option key={size} value={size}>{size}×{size}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="switch"><input type="checkbox" checked={showBoardIds} onChange={(e) => setShowBoardIds(e.target.checked)} /> 画布显示板号</label>
             <button className="wide" onClick={exportSplit} disabled={!pattern || !grid}>导出分板拼装图</button>
           </section>
@@ -309,13 +325,13 @@ export default function App() {
               <div className="color" key={s.bead.code}>
                 <i style={{ background: s.bead.hex }} />
                 <span className="code">{s.bead.code}</span>
-                <span className="name">{s.bead.name}</span>
+                <span className="name">{s.bead.name !== s.bead.code ? s.bead.name : ""}</span>
                 <span className="n">{s.count}</span>
               </div>
             ))}
           </div>
           <div className="footnote">
-            {hoverInfo ? `光标：${hoverInfo.code} ${hoverInfo.name}` : "鼠标移到图纸上看色号"}
+            {hoverInfo ? `光标：${hoverInfo.code}${hoverInfo.name !== hoverInfo.code ? ` ${hoverInfo.name}` : ""}` : "鼠标移到图纸上看色号"}
           </div>
         </aside>
       </main>

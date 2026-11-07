@@ -76,10 +76,15 @@ function overviewPage(input: SplitExportInput, pageCount: number): string {
     })
     .join("");
 
+  // 色多时用 6 列并压缩总览图，保证总览始终只占 1 页（291 色为最坏情况）
+  const usageCols = stats.length > 60 ? 6 : 4;
+  const usageRows = Math.ceil(stats.length / usageCols);
+  const overviewMax = Math.min(160, Math.max(52, 260 - (usageRows * 3.3 + 8.5)));
+
   const usage = stats
     .map(
       (s) =>
-        `<li><i style="background:${s.hex}"></i><b>${esc(s.code)}</b><span>${esc(s.name)}</span><em>${s.count}</em></li>`,
+        `<li><i style="background:${s.hex}"></i><b>${esc(s.code)}</b>${s.name !== s.code ? `<span>${esc(s.name)}</span>` : ""}<em>${s.count}</em></li>`,
     )
     .join("");
 
@@ -91,13 +96,13 @@ function overviewPage(input: SplitExportInput, pageCount: number): string {
     </div>
     <span class="badge">总览 · 第 1 / ${pageCount} 页</span>
   </header>
-  <div class="ov-wrap">
+  <div class="ov-wrap" style="max-width:${overviewMax.toFixed(1)}mm">
     <div class="ov-grid" style="grid-template-columns:repeat(${pattern.cols},1fr);aspect-ratio:${pattern.cols}/${pattern.rows}">${cells}</div>
     <div class="ov-lines">${boardOverlays}</div>
   </div>
   <div class="usage">
     <div class="usage-head"><b>用量摘要</b><span>共 ${total} 颗 · ${stats.length} 色 · ${grid.boards.length} 块板</span></div>
-    <ul class="usage-list">${usage}</ul>
+    <ul class="usage-list" style="columns:${usageCols}">${usage}</ul>
   </div>
   <footer class="sheet-foot"><span>编号先行后列 · 红色分隔线为板边界</span><span>第 1 / ${pageCount} 页</span></footer>
 </section>`;
@@ -218,10 +223,10 @@ h1 { margin: 0; font-size: 14px; letter-spacing: .2px; }
 .usage { margin-top: 4mm; }
 .usage-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-bottom: 1.5mm; }
 .usage-head span { color: #6b7280; }
-.usage-list { columns: 4; column-gap: 6mm; list-style: none; margin: 0; padding: 0; }
-.usage-list li { display: flex; align-items: center; gap: 4px; font-size: 10px; padding: 1px 0; break-inside: avoid; }
-.usage-list i { width: 10px; height: 10px; border: 1px solid #e5e7eb; border-radius: 2px; flex: none; }
-.usage-list b { font: 10px ui-monospace, monospace; }
+.usage-list { columns: 4; column-gap: 4mm; list-style: none; margin: 0; padding: 0; }
+.usage-list li { display: flex; align-items: center; gap: 3px; font-size: 9px; line-height: 1.2; padding: 0.2mm 0; break-inside: avoid; }
+.usage-list i { width: 8px; height: 8px; border: 1px solid #e5e7eb; border-radius: 2px; flex: none; }
+.usage-list b { font: 9px ui-monospace, monospace; }
 .usage-list span { color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .usage-list em { margin-left: auto; font-style: normal; font-variant-numeric: tabular-nums; }
 

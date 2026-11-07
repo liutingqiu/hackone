@@ -108,3 +108,15 @@ canvas { box-shadow: var(--shadow); border-radius: 6px; image-rendering: pixelat
   font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 button.wide { width: 100%; }
+
+/* 小白 / 专业 模式切换（顶栏中部） */
+.mode-switch {
+  display: inline-flex; gap: 2px; padding: 2px; flex: none;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+}
+.mode-switch button {
+  padding: 5px 14px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--muted); font-size: 12px; line-height: 1.2;
+}
+.mode-switch button.active { background: var(--accent); color: #fff; }
+.mode-switch button:active { transform: none; }
