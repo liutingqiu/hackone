@@ -47,6 +47,10 @@ gh run watch <id>                 # 盯着它跑完
 ├── docs/          # 方案、接口、分工
 └── .gitignore
 ```
+## 发布说明
+
+各版本的新增、变更、修复与已知问题见 [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md)。
+
 ## 部署
 
 应用是单文件 HTML，构建后直接同步到 Pages：
