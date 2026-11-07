@@ -61,3 +61,4 @@
 [13:47:11] dev       草稿恢复按 stage 重算 cell；去购买改 36px 描边按钮 证据: App.tsx、styles.css；docs/evidence/user-testing/ui-restore-fit-1280.png、ui-buy-1024.png；51 tests
 [13:48:44] chief     功能冻结：UI 重构完成，转入演出物料 证据: 8f101fa，51 测试，62.34KB
 [14:07:10] dev       视觉批：深色滚动条/header 居中/按钮层级/品牌状态/390 复查 证据: App.tsx、styles.css；docs/evidence/user-testing/visual-*.png；51 tests
+[14:09:20] dev       功能批 1：撤销/重做（50 步，Ctrl+Z/Ctrl+Shift+Z） 证据: App.tsx、styles.css；51 tests
