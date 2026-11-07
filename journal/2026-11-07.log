@@ -46,3 +46,5 @@
 [12:54:48] dev       演示可用性：触屏取色、44px 热区、滑杆步进、1024 画布 528px/11px、文案与色板标注 证据: web/src/App.tsx + styles.css + label-fit/fit tests；docs/evidence/user-testing/demo-*.png；45 tests
 [13:01:26] dev       删 beforeunload 后补静默草稿：图/格子/色号/板尺寸恢复条 + 重新开始；触屏固定色号条 证据: web/src/App.tsx + progress.ts(+test)；docs/evidence/user-testing/draft-*.png；47 tests
 [13:04:04] ops       部署演示就绪版（390修复/触屏取色/草稿/文案） 证据: hack.liutingqiu.xyz 61.29KB gzip
+[13:09:36] dev       查看/标记显式模式：查看只取色、标记切完成；移动端纵向布局+fit 兜底 证据: web/src/App.tsx + styles.css；docs/evidence/user-testing/mode-*.png；47 tests
+[13:11:29] ops       部署查看/标记模式版                   证据: hack.liutingqiu.xyz 61.48KB gzip
