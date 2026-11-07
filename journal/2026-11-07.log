@@ -60,3 +60,4 @@
 [13:43:53] ops       部署 UI 重构版（令牌/去装饰/对齐/动效） 证据: hack.liutingqiu.xyz 62.26KB gzip
 [13:47:11] dev       草稿恢复按 stage 重算 cell；去购买改 36px 描边按钮 证据: App.tsx、styles.css；docs/evidence/user-testing/ui-restore-fit-1280.png、ui-buy-1024.png；51 tests
 [13:48:44] chief     功能冻结：UI 重构完成，转入演出物料 证据: 8f101fa，51 测试，62.34KB
+[14:07:10] dev       视觉批：深色滚动条/header 居中/按钮层级/品牌状态/390 复查 证据: App.tsx、styles.css；docs/evidence/user-testing/visual-*.png；51 tests

@@ -742,7 +742,7 @@ export default function App() {
         <div className="brand">
           <div>
             <h1>拼豆图纸</h1>
-            <p>传图 → 出图 → 按色号摆</p>
+            <p>上传图片 · 自动生成可打印图纸</p>
           </div>
         </div>
         <div className="mode-switch" role="group" aria-label="界面模式">
@@ -750,7 +750,7 @@ export default function App() {
           <button type="button" className={mode === "pro" ? "active" : ""} aria-pressed={mode === "pro"} onClick={() => setMode("pro")}>专业</button>
         </div>
         <div className="actions">
-          <button className="btn-secondary" onClick={() => fileRef.current?.click()}>上传图片</button>
+          <button className="btn-text" onClick={() => fileRef.current?.click()}>上传图片</button>
           <button className="btn-primary" onClick={exportPrintable} disabled={!pattern || !!busy}>
             {busy === "print" ? "生成中…" : "打印拼装图（A4）"}
           </button>
@@ -875,7 +875,9 @@ export default function App() {
 
           {!pattern && <p className="hint">把图片拖进来，或点右上角上传</p>}
           {restored && (
-            <p className="hint">已恢复上次图纸（{pattern?.cols}×{pattern?.rows}）；上传新图可重新调参</p>
+            <p className="hint">
+              {pattern ? `MARD 291 · ${stats.length} 色 · ${total} 颗` : "上传一张图片开始"}
+            </p>
           )}
         </aside>
 
