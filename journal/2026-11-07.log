@@ -51,3 +51,4 @@
 [13:18:33] dev       采购闭环：复制 MARD 采购清单（clipboard+降级）、每行去购买淘宝搜索 证据: web/src/lib/purchase.ts(+test)；docs/evidence/user-testing/purchase-*.png；51 tests
 [13:20:32] user-test 复测查看/标记版：按钮 72x44 状态清楚；标记10→10、取消→9、查看不误改、刷新保留；390 新图完整可见（草稿带回桌面尺寸会溢出）；导出预览仍 5.2s 证据: docs/user-testing/retest-2026-11-07-1320.md + demo-runbook.md（v3）+ docs/evidence/user-testing/round5/（3 图）
 [13:21:05] chief     功能冻结（13:20），转入演出物料   证据: docs/pitch.md 五分局稿
+[13:29:13] chief     据抖音去 AI 味调研，定 UI 重构规格 证据: docs/ui-redesign.md
