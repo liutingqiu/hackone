@@ -132,6 +132,13 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(true);
   const [showBoardIds, setShowBoardIds] = useState(true);
   const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
+  const [coarsePointer, setCoarsePointer] = useState(() => {
+    try {
+      return window.matchMedia("(pointer: coarse)").matches;
+    } catch {
+      return false;
+    }
+  });
   const [busy, setBusy] = useState<null | "print" | "png">(null);
   const [toast, setToast] = useState<string | null>(null);
   const [, setExportedPattern] = useState<Pattern | null>(null);
@@ -144,7 +151,7 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
-  const dragRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  const dragRef = useRef<{ id: number; x: number; y: number; pointerType: string } | null>(null);
 
   const notify = useCallback((text: string) => {
     setToast(text);
@@ -308,9 +315,9 @@ export default function App() {
         let fit = fitByLength.get(code.length);
         if (!fit) {
           fit = fitLabel("W".repeat(code.length), cell, measure, {
-            minFontSize: 6,
+            minFontSize: 5.5,
             maxFontSize: 12,
-            padding: 2,
+            padding: 1,
           });
           fitByLength.set(code.length, fit);
         }
@@ -456,7 +463,8 @@ export default function App() {
             const stage = stageRef.current;
             if (!stage || im.naturalWidth <= 0 || im.naturalHeight <= 0) return;
             const r = Math.max(1, Math.round((cols * im.naturalHeight) / im.naturalWidth));
-            setCell(fitCellSize(cols, r, stage.clientWidth - 48, stage.clientHeight - 48, { min: 8 }));
+            const minCell = window.innerWidth >= 1000 ? 11 : 8;
+            setCell(fitCellSize(cols, r, stage.clientWidth - 48, stage.clientHeight - 48, { min: minCell }));
           });
         });
       };
@@ -493,15 +501,14 @@ export default function App() {
     (e: ReactPointerEvent<HTMLDivElement>) => {
       const c = cellFromPoint(e);
       if (!c) return;
-      dragRef.current = { id: e.pointerId, ...c };
+      if (e.pointerType !== "mouse") setCoarsePointer(true);
+      dragRef.current = { id: e.pointerId, ...c, pointerType: e.pointerType };
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {
         // 合成事件没有真实 pointerId；忽略
       }
-      if (e.pointerType === "mouse" && pattern) {
-        setHover({ ...c, i: c.y * pattern.cols + c.x });
-      }
+      if (pattern) setHover({ ...c, i: c.y * pattern.cols + c.x });
     },
     [cellFromPoint, pattern],
   );
@@ -510,13 +517,13 @@ export default function App() {
     (e: ReactPointerEvent<HTMLDivElement>) => {
       const c = cellFromPoint(e);
       if (!c) return;
-      if (e.pointerType === "mouse" && pattern) {
-        setHover({ ...c, i: c.y * pattern.cols + c.x });
-      }
+      if (pattern) setHover({ ...c, i: c.y * pattern.cols + c.x });
       const drag = dragRef.current;
       if (drag && drag.id === e.pointerId) {
+        const moved = drag.x !== c.x || drag.y !== c.y;
         drag.x = c.x;
         drag.y = c.y;
+        if (moved) setCoarsePointer(true);
       }
     },
     [cellFromPoint, pattern],
@@ -528,16 +535,23 @@ export default function App() {
       dragRef.current = null;
       if (!drag || drag.id !== e.pointerId) return;
       const c = cellFromPoint(e) ?? { x: drag.x, y: drag.y };
-      toggleCell(c.x, c.y);
+      if (drag.pointerType === "mouse") {
+        toggleCell(c.x, c.y);
+      } else if (pattern) {
+        // 触屏：点按选中格子看色号，不误标进度
+        setHover({ ...c, i: c.y * pattern.cols + c.x });
+      }
     },
-    [cellFromPoint, toggleCell],
+    [cellFromPoint, toggleCell, pattern],
   );
 
   const handlePointerCancel = useCallback(() => {
     dragRef.current = null;
   }, []);
 
-  const handlePointerLeave = useCallback(() => setHover(null), []);
+  const handlePointerLeave = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse") setHover(null);
+  }, []);
 
   const resetProgress = useCallback(() => {
     if (!pattern || !patternHash) return;
@@ -553,8 +567,10 @@ export default function App() {
     const previewCell = Math.min(cell, 24);
     const cv = buildPreviewCanvas(pattern, previewCell);
     setBusy("png");
+    const slowTimer = window.setTimeout(() => notify("大图生成中，请稍候"), 5000);
     cv.toBlob((blob) => {
       if (!blob) {
+        window.clearTimeout(slowTimer);
         setBusy(null);
         notify("导出失败，请重试");
         return;
@@ -565,9 +581,10 @@ export default function App() {
       a.href = url;
       a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+      window.clearTimeout(slowTimer);
       setBusy(null);
       setExportedPattern(pattern);
-      notify("已导出");
+      notify("已保存 pattern-preview.png");
     }, "image/png");
   }, [pattern, cell, busy, notify]);
 
@@ -590,7 +607,7 @@ export default function App() {
     setExportedPattern(pattern);
     window.setTimeout(() => {
       setBusy(null);
-      notify("已导出");
+      notify(`已生成 ${grid.boards.length + 1} 页 A4`);
     }, 700);
   }, [pattern, grid, activeBoard, busy, notify]);
 
@@ -613,10 +630,10 @@ export default function App() {
         <div className="actions">
           <button className="ghost" onClick={() => fileRef.current?.click()}>上传图片</button>
           <button onClick={exportPrintable} disabled={!pattern || !!busy}>
-            {busy === "print" ? "生成中…" : "导出图纸（可打印）"}
+            {busy === "print" ? "生成中…" : "打印拼装图（A4）"}
           </button>
           <button className="ghost" onClick={exportPreview} disabled={!pattern || !!busy}>
-            {busy === "png" ? "生成中…" : "导出预览图（无标注）"}
+            {busy === "png" ? "生成中…" : "导出预览图（不含色号）"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
         </div>
@@ -628,30 +645,71 @@ export default function App() {
       >
         <aside className="panel">
           <label className="row">
-            <span>每行格数</span>
+            <span>每行颗数（格）</span>
             <b>{cols}</b>
           </label>
-          <input
-            type="range"
-            min={16}
-            max={120}
-            value={cols}
-            disabled={restored}
-            onChange={(e) => setCols(+e.target.value)}
-          />
+          <div className="stepper">
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="减少每行颗数"
+              disabled={restored || cols <= 16}
+              onClick={() => setCols(Math.max(16, cols - 4))}
+            >
+              −
+            </button>
+            <input
+              type="range"
+              min={16}
+              max={120}
+              step={4}
+              value={cols}
+              disabled={restored}
+              onChange={(e) => setCols(+e.target.value)}
+            />
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="增加每行颗数"
+              disabled={restored || cols >= 120}
+              onClick={() => setCols(Math.min(120, cols + 4))}
+            >
+              +
+            </button>
+          </div>
 
           <label className="row">
             <span>格子大小</span>
             <b>{cell}px</b>
           </label>
-          <input type="range" min={3} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
+          <div className="stepper">
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="缩小格子"
+              disabled={cell <= 3}
+              onClick={() => setCell(Math.max(3, cell - 1))}
+            >
+              −
+            </button>
+            <input type="range" min={3} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="放大格子"
+              disabled={cell >= 40}
+              onClick={() => setCell(Math.min(40, cell + 1))}
+            >
+              +
+            </button>
+          </div>
 
           <label className="switch"><input type="checkbox" checked={showCodes} onChange={(e) => setShowCodes(e.target.checked)} /> 显示色号</label>
 
           {mode === "pro" && (
             <>
-              <label className="row">
-                <span>杂色合并阈值</span>
+              <label className="row" title="出现次数低于阈值的颜色会合并到最接近的高频色">
+                <span>合并相近颜色（阈值）</span>
                 <b>{minCount} 颗</b>
               </label>
               <input
@@ -673,7 +731,13 @@ export default function App() {
           )}
         </aside>
 
-        <section className="stage" ref={stageRef}>
+        <section
+          className="stage"
+          ref={stageRef}
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setHover(null);
+          }}
+        >
           {pattern ? (
             <div
               className="canvas-stack"
@@ -707,6 +771,7 @@ export default function App() {
           <div className="row"><span>图纸</span><b>{pattern ? `${pattern.cols} × ${pattern.rows}` : "—"}</b></div>
           <div className="row"><span>总颗数</span><b>{total || "—"}</b></div>
           <div className="row"><span>颜色数</span><b>{stats.length || "—"}</b></div>
+          <div className="palette-note">色板：MARD {PALETTE.length}</div>
 
           <section className="board-section">
             <h2>分板</h2>
@@ -797,7 +862,11 @@ export default function App() {
             })}
           </div>
           <div className="footnote">
-            {hoverInfo ? `光标：${hoverInfo.code}${hoverInfo.name !== hoverInfo.code ? ` ${hoverInfo.name}` : ""}` : "鼠标移到图纸上看色号"}
+            {hoverInfo
+              ? `色号：${hoverInfo.code} · ${stats.find((s) => s.bead.code === hoverInfo.code)?.count ?? 0} 颗`
+              : coarsePointer
+                ? "点击格子看色号"
+                : "移到图纸上看色号"}
           </div>
         </aside>
       </main>

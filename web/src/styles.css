@@ -20,15 +20,19 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
+html, body, #root { height: 100%; margin: 0; overflow-x: hidden; }
 body {
   background: var(--bg);
   color: var(--text);
   font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-.app { height: 100%; display: flex; flex-direction: column; }
+.app {
+  height: 100%; width: 100%; max-width: 100vw;
+  display: flex; flex-direction: column; overflow-x: clip;
+}
 
 header {
   display: flex; align-items: center; justify-content: space-between;
@@ -49,11 +53,15 @@ button:active { transform: translateY(1px); }
 button:disabled { opacity: .4; cursor: not-allowed; }
 button.ghost { background: transparent; color: var(--text); border-color: var(--line); }
 
-main { flex: 1; display: grid; grid-template-columns: 240px 1fr 260px; min-height: 0; }
+main {
+  flex: 1; display: grid; grid-template-columns: 240px 1fr 260px;
+  min-height: 0; min-width: 0;
+}
 
 .panel {
   padding: 16px; background: var(--panel); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+  min-width: 0;
 }
 .panel.stats { border-right: 0; border-left: 1px solid var(--line); }
 
@@ -63,13 +71,17 @@ main { flex: 1; display: grid; grid-template-columns: 240px 1fr 260px; min-heigh
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 input[type="range"]:disabled { opacity: .45; cursor: not-allowed; }
 
-.switch { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
-.switch input { accent-color: var(--accent); }
+.switch {
+  display: flex; align-items: center; gap: 8px; min-height: 44px;
+  font-size: 13px; color: var(--muted); cursor: pointer;
+}
+.switch input { accent-color: var(--accent); width: 15px; height: 15px; }
 
 .hint { font-size: 12px; color: var(--muted); margin-top: auto; }
 
 .stage {
   overflow: auto; display: flex; align-items: center; justify-content: center; padding: 24px;
+  min-width: 0; min-height: 0;
   background-image: radial-gradient(var(--line) 1px, transparent 1px);
   background-size: 16px 16px;
 }
@@ -88,6 +100,10 @@ canvas { box-shadow: var(--shadow); border-radius: 6px; image-rendering: pixelat
 .color .n { flex: none; margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
 
 .footnote { margin-top: auto; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+
+@media (min-width: 1000px) and (max-width: 1199px) {
+  main { grid-template-columns: 200px 1fr 220px; }
+}
 
 @media (max-width: 900px) {
   header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
@@ -121,7 +137,7 @@ canvas { box-shadow: var(--shadow); border-radius: 6px; image-rendering: pixelat
 .board-section h2 { margin: 0; font-size: 13px; letter-spacing: .3px; }
 .board-section .row b { text-align: right; font-variant-numeric: tabular-nums; }
 .board-section select {
-  padding: 4px 6px; border-radius: 8px;
+  min-height: 44px; padding: 4px 6px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--bg); color: var(--text);
   font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
 }
@@ -129,17 +145,30 @@ button.wide { width: 100%; }
 
 /* 小白 / 专业 模式切换（顶栏中部） */
 .mode-switch {
-  display: inline-flex; gap: 2px; padding: 2px; flex: none;
+  display: inline-flex; align-items: center; gap: 2px; min-height: 40px;
+  padding: 2px; flex: none;
   background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
 }
 .mode-switch button {
-  padding: 5px 14px; border: 0; border-radius: 999px;
+  min-height: 36px; padding: 0 16px; border: 0; border-radius: 999px;
   background: transparent; color: var(--muted); font-size: 12px; line-height: 1.2;
 }
 .mode-switch button.active { background: var(--accent); color: #fff; }
 .mode-switch button:active { transform: none; }
 
-.actions button { white-space: nowrap; }
+.actions button { white-space: nowrap; min-height: 44px; }
+
+/* 滑杆步进：触摸时比拖 207px 的滑杆准 */
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper input[type="range"] { flex: 1; min-width: 0; }
+.step-btn {
+  flex: none; width: 44px; height: 44px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--text); font-size: 17px; line-height: 1;
+}
+.step-btn:disabled { opacity: .35; cursor: not-allowed; }
+.palette-note { font-size: 11px; color: var(--muted); }
 
 /* 图纸图层：base / 选色压暗 / 完成标记 */
 .canvas-stack {
@@ -176,7 +205,8 @@ button.wide { width: 100%; }
 .board-progress-row b { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
 .progress-hint { margin: 0; font-size: 11px; color: var(--muted); }
 .link-button {
-  align-self: flex-start; padding: 0; border: 0; background: transparent;
+  align-self: flex-start; min-height: 44px; display: inline-flex; align-items: center;
+  padding: 0; border: 0; background: transparent;
   color: var(--muted); font-size: 11px; text-decoration: underline; cursor: pointer;
 }
 .link-button:hover { color: var(--text); }
