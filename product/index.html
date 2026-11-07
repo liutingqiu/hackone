@@ -162,8 +162,8 @@
   .u .x{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums}
   .u .x b{color:var(--ink);font-weight:600}
   .u .pct{margin-left:auto;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
-  .u .buy{padding:2px 5px;font-size:10px;border-radius:4px;color:var(--ink2);flex:0 0 auto}
-  .u .buy:hover{color:var(--accent);border-color:var(--accent);background:var(--accent2)}
+  .u .rep{padding:2px 7px;font-size:10px;border-radius:4px;color:var(--ink2);flex:0 0 auto}
+  .u .rep:hover{color:var(--accent);border-color:var(--accent);background:var(--accent2)}
   #useHead{padding:9px 13px 6px;font-size:11px;color:var(--ink3);
            display:flex;justify-content:space-between;align-items:center;gap:7px}
   #useHead b{margin-left:auto}
@@ -294,6 +294,56 @@
     #paintbar #toolHint{flex:1 1 100%}
   }
 
+
+  /* ================= [hackone] v3 左栏：分组 + 行 + 开关 ================= */
+  #side{padding:0}
+  #side .grp{padding:10px 12px 12px;border-bottom:1px solid var(--line)}
+  #side .gt{font-size:10.5px;font-weight:700;letter-spacing:.12em;color:var(--ink3);margin-bottom:2px}
+  .row2{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:33px;
+        padding:3px 0;border-top:1px solid #f2f4f8}
+  .row2 .lb{font-size:12px;color:var(--ink2);white-space:nowrap}
+  .row2 select{width:142px;flex:0 0 142px;padding:4px 6px;font-size:12px}
+  .row2 .rg{display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end;min-width:0}
+  .row2 .rg input[type=range]{max-width:120px}
+  #side .cap{padding:8px 0 2px;font-size:10.5px;color:var(--ink3);line-height:1.5}
+  #side .cap b{color:var(--ink2);font-weight:600}
+
+  /* 数字步进器 */
+  .stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:#fff}
+  .stepper input{width:50px;border:0;text-align:center;padding:4px 2px;font-size:12px;background:transparent}
+  .stepper input:focus{outline:none;background:var(--accent2)}
+  .stepper button{width:26px;height:27px;border:0;border-radius:0;background:#fafbfd;color:var(--ink2);
+                  font-size:13px;line-height:1;padding:0}
+  .stepper button:hover{background:var(--accent2);color:var(--accent)}
+
+  /* 开关 */
+  .switch{position:relative;display:inline-block;width:34px;height:19px;flex:0 0 auto}
+  .switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%;z-index:2}
+  .switch i{position:absolute;inset:0;background:#d5dae2;border-radius:999px;transition:background .15s}
+  .switch i::after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;
+                   background:#fff;box-shadow:0 1px 2px #0003;transition:transform .15s}
+  .switch input:checked + i{background:var(--accent)}
+  .switch input:checked + i::after{transform:translateX(15px)}
+
+  /* banner */
+  #bar{position:relative;flex-wrap:wrap;gap:8px}
+  #barInfo{font-size:12px;color:var(--ink2);font-weight:600}
+  #bar #undo,#bar #redo{padding:4px 9px;font-size:11.5px}
+  #viewWrap{position:relative}
+  #viewOptsBtn{padding:4px 10px;font-size:11.5px}
+  #brand{width:auto}
+
+  /* 空状态水印 */
+  #view.over{outline:2px dashed var(--accent);outline-offset:-10px;background:var(--accent2)}
+  #empty{user-select:none;cursor:pointer}
+  #empty .wm{font-size:15px;color:#b9c1cd;letter-spacing:.06em;margin-bottom:6px}
+  #empty .wm2{font-size:11.5px;color:#c6cdd8}
+  #empty .ghost{margin-top:14px;padding:5px 12px;font-size:11.5px;color:var(--ink2);
+                background:#fff;border:1px solid var(--line);border-radius:999px}
+  #empty .ghost:hover{border-color:var(--accent);color:var(--accent)}
+  #modebar .tools{flex:0 1 auto}
+  #modebar #flip{padding:5px 8px;margin-left:2px}
+
 /* ------------------------------------------------ [hackone] 手机端单列布局 ---- */
 @media (max-width: 900px) {
   html, body { width: 100%; max-width: 100%; height: auto; min-height: 100%; overflow-x: hidden; }
@@ -355,6 +405,15 @@
     #expA4{top:auto;left:auto;right:12px;bottom:16px;width:auto;min-height:46px;padding:0 18px}
     #dock #expA4{width:auto;flex:none}
   }
+
+  @media (max-width: 900px){
+    #bar{padding:8px 10px;gap:6px}
+    #bar #barInfo{flex:1 1 100%;font-size:11.5px}
+    #bar #importBtn{order:0}
+    #viewWrap{margin-left:auto}
+    #expA4{top:auto;left:auto;right:12px;bottom:16px;width:auto;min-height:46px;padding:0 18px}
+    #dock #expA4{width:auto;flex:none}
+  }
 </style>
 </head>
 <body>
@@ -363,140 +422,117 @@
   <!-- ================= 左侧控制 ================= -->
   <aside id="side">
 
-    <!-- 导入 -->
-    <div class="sec" id="secLoad">
-      <div id="drop">＋ 导入图片<span class="dim"> · 拖入或 Ctrl+V 粘贴</span></div>
-      <input type="file" id="file" accept="image/*" hidden>
-      <div class="srcrow">
-        <span id="srcInfo">还没导入图片，也可以直接新建空白图纸</span>
-        <button id="blankNew" class="pri sm">新建空白</button>
+    <div class="grp">
+      <div class="gt">尺寸</div>
+      <div class="row2"><span class="lb">宽度</span>
+        <div class="stepper"><button data-for="gw" data-d="-1">−</button><input id="gw" type="number" min="1" max="400" value="32"><button data-for="gw" data-d="1">＋</button></div>
+      </div>
+      <div class="row2"><span class="lb">高度</span>
+        <div class="stepper"><button data-for="gh" data-d="-1">−</button><input id="gh" type="number" min="1" max="400" value="32"><button data-for="gh" data-d="1">＋</button></div>
+      </div>
+      <div class="row2"><span class="lb">等比</span>
+        <label class="switch"><input type="checkbox" id="square" checked><i></i></label>
+      </div>
+      <div class="row2"><span class="lb">倍数</span>
+        <div class="seg mini" id="mults"><button data-m="2">×2</button><button data-m="4">×4</button><button data-m="8">×8</button></div>
+      </div>
+      <div class="cap"><span id="sizeInfo">—</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="gt">配色</div>
+      <div class="row2"><span class="lb">品牌</span><select id="brand"></select></div>
+      <div class="row2" id="codeSysRow"><span class="lb">色号</span><select id="codeSys"></select></div>
+      <div class="row2"><span class="lb">最多色数</span>
+        <div class="rg"><input id="maxc" type="range" min="0" max="291" value="0"><span class="val" id="maxcV">不限</span></div>
+      </div>
+      <div class="row2"><span class="lb">抖动</span>
+        <label class="switch"><input type="checkbox" id="dither"><i></i></label>
+      </div>
+      <div class="row2"><span class="lb">去背景</span>
+        <label class="switch"><input type="checkbox" id="dropbg"><i></i></label>
+      </div>
+      <div class="row2"><span class="lb">重新识别</span><button id="redetect" class="sm">应用</button></div>
+      <div class="hint" id="redetectHint" hidden></div>
+    </div>
+
+    <div class="grp">
+      <div class="gt">识别</div>
+      <div class="row2"><span class="lb">算法</span>
+        <select id="algo">
+          <option value="de2000">CIEDE2000</option>
+          <option value="de76">Lab 欧氏</option>
+          <option value="rgb">RGB 加权</option>
+        </select>
+      </div>
+      <div class="row2"><span class="lb">取样</span>
+        <select id="sample">
+          <option value="nearest">最近邻</option>
+          <option value="smooth">平滑缩放</option>
+        </select>
+      </div>
+      <div class="row2"><span class="lb">缩小</span>
+        <select id="down">
+          <option value="nearest">最近邻</option>
+          <option value="area">面积平均</option>
+        </select>
       </div>
     </div>
 
-    <!-- 图纸 -->
-    <div class="sec" data-sec="size">
-      <div class="h" role="button" tabindex="0" aria-expanded="true">
-        <span class="t">图纸</span><span class="chev"></span>
+    <div class="grp">
+      <div class="gt">整理</div>
+      <div class="row2"><span class="lb">合并强度</span>
+        <select id="tidyPreset">
+          <option value="0">关</option>
+          <option value="4">轻 ΔE≤4</option>
+          <option value="8" selected>标准 ΔE≤8</option>
+          <option value="15">强 ΔE≤15</option>
+        </select>
       </div>
-      <div class="body">
-        <div class="row">
-          <label for="sideLen">边长</label>
-          <input id="sideLen" type="number" min="1" max="400" value="32">
-          <label class="chk inline"><input type="checkbox" id="square" checked>正方形</label>
-          <div class="seg mini" id="mults">
-            <button data-m="2">×2</button><button data-m="4">×4</button><button data-m="8">×8</button>
-          </div>
-        </div>
-        <div class="row" id="exactRow">
-          <label>宽 × 高</label>
-          <input id="gw" type="number" min="1" max="400" value="32">
-          <span class="x">×</span>
-          <input id="gh" type="number" min="1" max="400" value="32">
-        </div>
-        <div id="sizeInfo">—</div>
-        <details class="adv">
-          <summary>画布编辑 · 对齐与扩展 / 裁切</summary>
-          <div class="row">
-            <label>对齐</label>
-            <div class="anchor" id="anchor">
-              <button data-a="0" title="左上"></button><button data-a="1" title="上"></button><button data-a="2" title="右上"></button>
-              <button data-a="3" title="左"></button><button data-a="4" title="居中"></button><button data-a="5" title="右"></button>
-              <button data-a="6" title="左下"></button><button data-a="7" title="下"></button><button data-a="8" title="右下"></button>
-            </div>
-          </div>
-          <div class="row">
-            <label>画布</label>
-            <input id="cw" type="number" min="1" max="400" value="32">
-            <span class="x">×</span>
-            <input id="ch" type="number" min="1" max="400" value="32">
-            <button id="applyCanvas" class="sm">扩展 / 裁切</button>
-          </div>
-          <div class="hint">只增删格子、<b>不缩放</b>内容，新格子留空不拼；「对齐」决定现有内容落在新画布的哪个位置。</div>
-        </details>
+      <div class="row2"><span class="lb">零星清理</span>
+        <div class="stepper"><button data-for="tidyMin" data-d="-1">−</button><input id="tidyMin" type="number" min="0" max="20" value="0"><button data-for="tidyMin" data-d="1">＋</button></div>
       </div>
+      <div class="row2"><span class="lb">应用整理</span><button id="tidyGo" class="sm">执行</button></div>
+      <div class="hint" id="tidyInfo" hidden></div>
     </div>
 
-    <!-- 配色 -->
-    <div class="sec" data-sec="pal">
-      <div class="h" role="button" tabindex="0" aria-expanded="true">
-        <span class="t">配色</span><span class="chev"></span>
-      </div>
-      <div class="body">
-        <div class="row">
-          <label>品牌</label><select id="brand"></select>
-          <span class="csrow" id="codeSysRow"><label>色号</label><select id="codeSys"></select></span>
-        </div>
-        <div id="palInfo"></div>
-        <div class="row">
-          <label>最多色数</label>
-          <input id="maxc" type="range" min="0" max="291" value="0"><span class="val" id="maxcV">不限</span>
-        </div>
-        <div class="chkrow">
-          <label class="chk inline"><input type="checkbox" id="dither">抖动</label>
-          <label class="chk inline"><input type="checkbox" id="dropbg">去背景</label>
-          <button id="redetect" class="sm">重新识别</button>
-        </div>
-        <div class="hint" id="redetectHint">识别设置只在导入/重新识别时生效，不覆盖手改。</div>
-
-        <details class="adv">
-          <summary>识别参数 · 算法 / 取样 / 缩小</summary>
-          <div class="row"><label>算法</label>
-            <select id="algo">
-              <option value="de2000">CIEDE2000（最佳，推荐）</option>
-              <option value="de76">Lab 欧氏距离</option>
-              <option value="rgb">RGB 加权距离</option>
-            </select>
-          </div>
-          <div class="row"><label>取样</label>
-            <select id="sample">
-              <option value="nearest">最近邻（像素/图片）</option>
-              <option value="smooth">平滑缩放（照片）</option>
-            </select>
-          </div>
-          <div class="row"><label>缩小</label>
-            <select id="down">
-              <option value="nearest">最近邻（锐利）</option>
-              <option value="area">面积平均（更平滑）</option>
-            </select>
-          </div>
-        </details>
-
-        <details class="adv">
-          <summary>配色整理 · 合并相近色</summary>
-          <div class="row"><label>强度</label>
-            <select id="tidyPreset">
-              <option value="0">关（只清杂色）</option>
-              <option value="4">轻 ΔE≤4</option>
-              <option value="8" selected>标准 ΔE≤8</option>
-              <option value="15">强 ΔE≤15</option>
-            </select>
-          </div>
-          <div class="row">
-            <label>零星</label>
-            <input id="tidyMin" type="number" min="0" max="20" value="0">
-            <span class="dim">格以下清掉</span>
-          </div>
-          <div class="row"><button id="tidyGo" style="flex:1">应用整理</button></div>
-          <div class="hint" id="tidyInfo">把相近的豆子色合并成同一种、清掉零星杂点，让图纸更好拼。可撤销。</div>
-        </details>
-      </div>
-    </div>
+    <input type="hidden" id="sideLen" value="32">
+    <input type="hidden" id="cw" value="32">
+    <input type="hidden" id="ch" value="32">
+    <button id="applyCanvas" hidden></button>
+    <input type="file" id="file" accept="image/*" hidden>
 
     <div id="dock">
+      <div class="gt">导出</div>
       <button class="pri" id="expA4">导出 A4 拼装图</button>
-      <div class="row">
-        <button id="expPng">导出 PNG</button>
-        <button id="expCsv">导出 CSV</button>
-      </div>
+      <div class="row2 dockrow"><button id="expPng">PNG</button><button id="expCsv">CSV</button></div>
     </div>
   </aside>
 
   <!-- ================= 中间画布 ================= -->
   <main>
     <div id="bar">
-      <span id="barInfo">导入图片或新建空白图纸后开始</span>
+      <button id="importBtn" class="sm">导入图片</button>
+      <span id="srcInfo" hidden></span>
+      <span id="barInfo">拼豆图纸生成器</span>
       <span class="sp"></span>
       <span id="barPos">—</span>
+      <button id="undo" title="撤销 Ctrl+Z">撤销</button>
+      <button id="redo" title="重做 Ctrl+Shift+Z">重做</button>
+      <div id="viewWrap">
+        <button id="viewOptsBtn" aria-expanded="false">显示</button>
+        <div id="viewOpts" hidden>
+          <div class="row"><label>格子 px</label>
+            <input id="cell" type="range" min="2" max="60" value="16"><span class="val" id="cellV">16</span>
+          </div>
+          <div class="row2"><span class="lb">色号</span><label class="switch"><input type="checkbox" id="showCode" checked><i></i></label></div>
+          <div class="row2"><span class="lb">网格线</span><label class="switch"><input type="checkbox" id="showGrid" checked><i></i></label></div>
+          <div class="row">
+            <button id="fit" style="flex:1">适应窗口</button>
+            <button id="zoomOut">−</button><button id="zoomIn">＋</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="modebar">
       <div class="seg" id="modeSeg" role="group" aria-label="画布模式">
@@ -512,28 +548,9 @@
         <button data-t="rect">矩形</button>
         <button data-t="ellipse">圆形</button>
         <button data-t="bucket">油漆桶</button>
-      </div>
-      <span class="sp"></span>
-      <div id="quickOps">
-        <button id="undo" title="撤销（Ctrl+Z）">撤销</button>
-        <button id="redo" title="重做（Ctrl+Shift+Z）">重做</button>
         <button id="flip" title="左右翻转整张图纸">⇄</button>
       </div>
-      <div id="viewWrap">
-        <button id="viewOptsBtn" aria-expanded="false" title="显示设置">显示</button>
-        <div id="viewOpts" hidden>
-          <div class="row"><label>格子 px</label>
-            <input id="cell" type="range" min="2" max="60" value="16"><span class="val" id="cellV">16</span>
-          </div>
-          <label class="chk"><input type="checkbox" id="showCode" checked>显示色号</label>
-          <label class="chk"><input type="checkbox" id="showGrid" checked>网格线</label>
-          <label class="chk"><input type="checkbox" id="showBoard" checked>每 29 格分板线 + 编号</label>
-          <div class="row">
-            <button id="fit" style="flex:1">适应窗口</button>
-            <button id="zoomOut">−</button><button id="zoomIn">＋</button>
-          </div>
-        </div>
-      </div>
+      <span id="modeHint" hidden></span>
     </div>
     <div id="paintbar">
       <div class="pb-group" data-for="brush">
@@ -544,19 +561,19 @@
         <div class="seg mini" id="bucket"><button data-c="4" class="on">4</button><button data-c="8">8</button></div>
       </div>
       <div class="pb-group" data-for="shape">
-        <label class="chk inline"><input type="checkbox" id="shapeFill">实心</label>
+        <span class="lb">实心</span><label class="switch"><input type="checkbox" id="shapeFill"><i></i></label>
       </div>
       <div class="pb-group" data-for="paint">
-        <span id="paintRow" title="点击打开色卡选颜色"><span class="pchip" id="paintSw"></span><b id="paintCode">—</b><span class="dim">选色 ▾</span></span>
+        <span id="paintRow"><span class="pchip" id="paintSw" title="打开色卡"></span><b id="paintCode">—</b></span>
       </div>
-      <span id="toolHint">点击格子查看色号。切到铅笔可改单个格子。</span>
+      <span id="toolHint" hidden></span>
     </div>
     <div id="view">
       <canvas id="grid" hidden></canvas>
       <div id="empty">
-        <div class="big">拼豆图纸生成器</div>
-        左侧导入图片，或点「新建空白」从零画<br>
-        <span style="font-size:12px;opacity:.85">点格子看色号 · 导出可打印的带色号网格图纸</span>
+        <div class="wm">把图片拖到这里</div>
+        <div class="wm2">点击选择文件 · 也支持 Ctrl+V 粘贴</div>
+        <button id="blankNew" class="ghost">新建空白图纸</button>
       </div>
     </div>
   </main>
@@ -1321,42 +1338,6 @@ function draw(){
     }
     ctx.stroke();
   }
-  if (S.showBoard){
-    // [hackone] 红色板界 + 每块左上角行优先编号
-    ctx.strokeStyle = 'rgba(200,30,30,.75)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let x = BOARD_SIZE; x < S.gw; x += BOARD_SIZE){
-      if (x < R.x0 || x > R.x1) continue;
-      const px = Math.round(x*cs) + .5; ctx.moveTo(px, R.y0*cs); ctx.lineTo(px, R.y1*cs);
-    }
-    for (let y = BOARD_SIZE; y < S.gh; y += BOARD_SIZE){
-      if (y < R.y0 || y > R.y1) continue;
-      const py = Math.round(y*cs) + .5; ctx.moveTo(R.x0*cs, py); ctx.lineTo(R.x1*cs, py);
-    }
-    ctx.moveTo(.5, .5); ctx.lineTo(W - .5, .5);
-    ctx.moveTo(W - .5, .5); ctx.lineTo(W - .5, H - .5);
-    ctx.moveTo(W - .5, H - .5); ctx.lineTo(.5, H - .5);
-    ctx.moveTo(.5, H - .5); ctx.lineTo(.5, .5);
-    ctx.stroke();
-    if (cs >= 5){
-      const bc = boardCols(), br = boardRows();
-      const badge = Math.max(14, Math.min(24, cs * 1.4));
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = `700 ${Math.max(9, Math.round(badge * 0.65))}px Consolas,monospace`;
-      for (let by = 0; by < br; by++) for (let bx = 0; bx < bc; bx++){
-        const label = String(boardNo(bx, by));
-        const x = bx * BOARD_SIZE * cs + 3;
-        const y = by * BOARD_SIZE * cs + 3;
-        if (x > W || y > H) continue;
-        ctx.fillStyle = 'rgba(200,30,30,.92)';
-        ctx.fillRect(x, y, badge, badge);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(label, x + badge / 2, y + badge / 2 + .5);
-      }
-    }
-  }
   if (S.highlight >= 0 && cs >= 3 && S.hlCells){
     ctx.strokeStyle = 'rgba(47,111,237,.95)';
     ctx.lineWidth = 2;
@@ -1887,7 +1868,7 @@ function renderUsage(){
       <div class="code">${p.code}</div>
       <div class="x"><b>${c}</b> 颗</div>
       <div class="pct">${(100*c/total).toFixed(1)}%</div>
-      <button type="button" class="buy" data-code="${p.code}" title="在淘宝搜索 MARD ${p.code} 拼豆">去购买</button>
+      <button type="button" class="rep" data-i="${i}" title="换成另一种颜色">替换</button>
     </div>`;
   }).join('');
 }
@@ -1897,9 +1878,9 @@ function renderUsage(){
 let useLast = { i:-1, t:0 };
 const DBL_MS = 350;
 $('use').addEventListener('click', e => {
-  // [hackone] 去购买是行内按钮；阻止冒泡，不改变高亮/选色
-  const buy = e.target.closest ? e.target.closest('.buy') : null;
-  if (buy){ e.stopPropagation(); openPurchase(buy.dataset.code); return; }
+  // [hackone] 替换：选中新颜色后整片换色
+  const rep = e.target.closest ? e.target.closest('.rep') : null;
+  if (rep){ e.stopPropagation(); openReplacePalette(+rep.dataset.i, rep); return; }
   const el = e.target.closest('.u');
   if (!el) return;
   const i = +el.dataset.i;
@@ -1940,7 +1921,7 @@ function renderSimilar(){
       <div class="c" style="background:${S.palette[c.i].hex}"></div>
       <div class="code">${S.palette[c.i].code}</div>
       <div class="n">${c.c} 颗</div>
-      <div class="d">ΔE ${c.d.toFixed(1)} · 点击替换</div>
+      <div class="d">ΔE ${c.d.toFixed(1)}</div>
     </div>`).join('');
 }
 $('sim').addEventListener('click', e => {
@@ -2087,11 +2068,11 @@ function renderPalGrid(q){
       style="background:${p.hex}" title="${p.code} · ${p.hex}"></button>`;
   }).join('');
 }
-function openPalette(){
+function openPalette(anchor){
   const pop = $('palPop');
   pop.hidden = false;
   S.palOpen = true;
-  const r = $('paintRow').getBoundingClientRect();
+  const r = (anchor || $('paintSw')).getBoundingClientRect();
   const w = Math.min(348, window.innerWidth - 20);
   const h = Math.min(window.innerHeight * .7, 460);
   let left = r.right + 10;
@@ -2113,8 +2094,18 @@ function closePalette(){
   S.palOpen = false;
 }
 function pickPaletteIndex(i){
+  if (S.repFrom != null){
+    const from = S.repFrom; S.repFrom = null;
+    closePalette();
+    if (from !== i) replaceColor(from, i);
+    return;
+  }
   if (!setPaint(i)) return;
   closePalette();
+}
+function openReplacePalette(i, el){
+  S.repFrom = i;
+  openPalette(el);
 }
 $('palSearch').addEventListener('input', () => renderPalGrid($('palSearch').value));
 $('palGrid').addEventListener('click', e => {
@@ -2147,7 +2138,9 @@ $('palHex').addEventListener('keydown', e => {
   pickPaletteIndex(nearestIdx([(n >> 16) & 255, (n >> 8) & 255, n & 255], new Map(), S.algo));
 });
 $('palClose').addEventListener('click', closePalette);
-$('paintRow').addEventListener('click', () => {
+$('paintSw').addEventListener('click', e => {
+  e.stopPropagation();
+  S.repFrom = null;
   if (S.palOpen) closePalette(); else openPalette();
 });
 
@@ -2195,6 +2188,24 @@ function act(cellIdx){
   endStroke();
   renderUsage();
 }
+/* [hackone] v3 滚轮缩放：以光标为锚点，普通滚轮即缩放 */
+$('view').addEventListener('wheel', e => {
+  if (!S.cells) return;
+  e.preventDefault();
+  const v = $('view'), r = canvas.getBoundingClientRect();
+  if (!r.width) return;
+  const gx = (e.clientX - r.left) / S.cell, gy = (e.clientY - r.top) / S.cell;
+  const step = Math.max(1, Math.round(S.cell * .15));
+  const next = Math.max(2, Math.min(cellCap(), S.cell + (e.deltaY < 0 ? step : -step)));
+  if (next === S.cell) return;
+  setCellSize(next);
+  requestAnimationFrame(() => {
+    const r2 = canvas.getBoundingClientRect();
+    v.scrollLeft += r2.left + gx*S.cell - e.clientX;
+    v.scrollTop  += r2.top  + gy*S.cell - e.clientY;
+  });
+}, { passive:false });
+
 canvas.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   if (S.palOpen) closePalette();
@@ -2202,6 +2213,9 @@ canvas.addEventListener('mousedown', e => {
   if (i < 0 || !S.cells) return;
   // [hackone] 标记模式：只切完成态，原有工具/取色不受影响
   if (S.mode === 'mark'){
+    S.markSet = new Set([i]);
+    S.markLast = i;
+    S.dragging = 'mark';
     toggleProgress(i);
     S.selCell = i;
     inspect(i);
@@ -2233,7 +2247,13 @@ canvas.addEventListener('mousemove', e => {
       $('barPos').textContent = `${x},${y} → ${lab}`;
       requestDraw();
     }
-    if (S.drag) updatePreview(i);
+    if (S.dragging === 'mark'){
+      if (i !== S.markLast){
+        S.markLast = i;
+        if (!S.markSet.has(i)){ S.markSet.add(i); toggleProgress(i); }
+      }
+    }
+    else if (S.drag) updatePreview(i);
     else if (S.dragging) paintBrush(i, S.tool === 'eraser' ? -1 : S.paintIdx);
   } else if (S.hoverCell >= 0){
     S.hoverCell = -1;
@@ -2246,7 +2266,10 @@ window.addEventListener('mouseup', () => {
     const end = (S.drag.last !== undefined) ? S.drag.last : S.drag.start;
     commitShape(end);
   }
-  if (S.dragging){
+  if (S.dragging === 'mark'){
+    S.dragging = false; S.markSet = null; S.markLast = -1;
+    renderProgress();
+  } else if (S.dragging){
     S.dragging = false;
     endStroke();
     renderUsage(); renderSimilar();
@@ -2287,7 +2310,7 @@ function loadImage(src, name){
 
 /* ------------------------------------------------ 尺寸信息 -------------- */
 function updateSizeInfo(){
-  if (!S.gw || !S.gh){ $('sizeInfo').textContent = '—'; return; }
+  if (!S.gw || !S.gh){ $('sizeInfo').textContent = ''; return; }
   const b = paletteOf(S.brandId);
   const cols = Math.ceil(S.gw/29), rows = Math.ceil(S.gh/29);
   let s = `成品 <b>${S.gw} × ${S.gh}</b> 格位 · <b>${S.gw*S.gh}</b> 颗`;
@@ -2614,7 +2637,8 @@ function clearDirtyImg(){
   $('redetectHint').innerHTML = '识别设置只在导入/重新识别时生效，不覆盖手改。';
 }
 
-$('drop').addEventListener('click', () => $('file').click());
+$('importBtn').addEventListener('click', () => $('file').click());
+$('empty').addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) return; $('file').click(); });
 $('file').addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) return;
@@ -2624,12 +2648,12 @@ $('file').addEventListener('change', e => {
 });
 ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => {
   e.preventDefault();
-  $('drop').classList.add('over');
+  $('view').classList.add('over');
 }));
 ['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => {
   e.preventDefault();
   if (ev === 'dragleave' && e.relatedTarget) return;
-  $('drop').classList.remove('over');
+  $('view').classList.remove('over');
 }));
 document.addEventListener('drop', e => {
   const f = e.dataTransfer && e.dataTransfer.files[0];
@@ -2727,7 +2751,7 @@ $('tidyGo').addEventListener('click', tidyApply);
 $('cell').addEventListener('input', () => setCellSize(+$('cell').value));
 $('showCode').addEventListener('change', () => { S.showCode = $('showCode').checked; requestDraw(); });
 $('showGrid').addEventListener('change', () => { S.showGrid = $('showGrid').checked; requestDraw(); });
-$('showBoard').addEventListener('change', () => { S.showBoard = $('showBoard').checked; requestDraw(); });
+
 $('fit').addEventListener('click', fit);
 $('zoomIn').addEventListener('click', () => setCellSize(S.cell + Math.max(1, Math.round(S.cell*0.25))));
 $('zoomOut').addEventListener('click', () => setCellSize(S.cell - Math.max(1, Math.round(S.cell*0.25))));
@@ -2911,5 +2935,23 @@ renderProgress();
 })();
 </script>
 
+
+<script>
+/* [hackone] v3：步进器 / 导入按钮 / 空白图纸 */
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  document.querySelectorAll('.stepper button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var inp = $(b.dataset.for); if (!inp) return;
+      var v = (parseInt(inp.value, 10) || 0) + (+b.dataset.d);
+      var lo = inp.min !== '' ? +inp.min : -9999, hi = inp.max !== '' ? +inp.max : 9999;
+      inp.value = Math.max(lo, Math.min(hi, v));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+  var wm = $('blankNew');
+  if (wm) wm.addEventListener('click', function(e){ e.stopPropagation(); $('blankNew').click(); });
+})();
+</script>
 </body>
 </html>
