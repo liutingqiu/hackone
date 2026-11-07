@@ -1,16 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PALETTE } from "./lib/palette";
 import { imageToPattern, reduceNoise, usedColors, type Pattern } from "./lib/quantize";
+import { splitBoards } from "./lib/split";
+import { openSplitPrintWindow } from "./lib/split-export";
 
-const BOARD = 29; // 单块拼豆板 29x29
+// D-03：板尺寸可选，默认 29，可切 52
+const BOARD_SIZES = [29, 52] as const;
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.arcTo(x + w, y, x + w, y + radius, radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius);
+  ctx.lineTo(x + radius, y + h);
+  ctx.arcTo(x, y + h, x, y + h - radius, radius);
+  ctx.lineTo(x, y + radius);
+  ctx.arcTo(x, y, x + radius, y, radius);
+  ctx.closePath();
+}
 
 export default function App() {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [cols, setCols] = useState(48);
   const [cell, setCell] = useState(14);
   const [minCount, setMinCount] = useState(2);
+  const [boardSize, setBoardSize] = useState(29);
   const [showCodes, setShowCodes] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  const [showBoardIds, setShowBoardIds] = useState(true);
   const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -30,12 +57,13 @@ export default function App() {
     return minCount > 1 ? reduceNoise(raw, minCount) : raw;
   }, [raw, minCount]);
 
+  const grid = useMemo(
+    () => (pattern ? splitBoards(pattern.cols, pattern.rows, boardSize, boardSize) : null),
+    [pattern, boardSize],
+  );
+
   const stats = useMemo(() => (pattern ? usedColors(pattern) : []), [pattern]);
   const total = useMemo(() => stats.reduce((s, x) => s + x.count, 0), [stats]);
-  const boards = useMemo(() => {
-    if (!pattern) return 0;
-    return Math.ceil(pattern.cols / BOARD) * Math.ceil(pattern.rows / BOARD);
-  }, [pattern]);
 
   // 渲染
   useEffect(() => {
@@ -105,12 +133,53 @@ export default function App() {
       }
     }
 
+    // 分板叠加：红色分隔线 + 左上角红色圆角板号标签；格子太小时只画线
+    if (showBoardIds && grid) {
+      const lineW = Math.max(1.5, Math.min(3, cell * 0.12));
+      ctx.strokeStyle = "rgba(220, 38, 38, 0.92)";
+      ctx.lineWidth = lineW;
+      ctx.beginPath();
+      for (const b of grid.boards) {
+        const x = b.x0 * cell + 0.5;
+        const y = b.y0 * cell + 0.5;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+      }
+      ctx.moveTo(w - 0.5, 0);
+      ctx.lineTo(w - 0.5, h);
+      ctx.moveTo(0, h - 0.5);
+      ctx.lineTo(w, h - 0.5);
+      ctx.stroke();
+
+      if (cell >= 6) {
+        const fontSize = Math.max(9, Math.min(12, cell * 0.75));
+        ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        for (const b of grid.boards) {
+          const label = String(b.index);
+          const tw = ctx.measureText(label).width;
+          const bw = Math.max(16, tw + 10);
+          const bh = fontSize + 6;
+          const lx = b.x0 * cell + 3;
+          const ly = b.y0 * cell + 3;
+          ctx.fillStyle = "rgba(220, 38, 38, 0.96)";
+          roundRect(ctx, lx, ly, bw, bh, 4);
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.fillText(label, lx + bw / 2, ly + bh / 2 + 0.5);
+        }
+      }
+    }
+
     if (hover) {
       ctx.strokeStyle = "#2f81f7";
       ctx.lineWidth = 2;
       ctx.strokeRect(hover.x * cell + 1, hover.y * cell + 1, cell - 2, cell - 2);
     }
-  }, [pattern, cell, showCodes, showGrid, hover]);
+  }, [pattern, cell, showCodes, showGrid, showBoardIds, grid, hover]);
 
   const onFile = useCallback((f: File | undefined | null) => {
     if (!f || !f.type.startsWith("image/")) return;
@@ -131,6 +200,18 @@ export default function App() {
     a.href = cv.toDataURL("image/png");
     a.click();
   };
+
+  const exportSplit = useCallback(() => {
+    if (!pattern || !grid) return;
+    const win = openSplitPrintWindow({
+      pattern,
+      grid,
+      boardW: boardSize,
+      boardH: boardSize,
+      title: "拼豆图纸",
+    });
+    if (!win) window.alert("分板导出窗口被浏览器拦截了，请允许弹窗后重试。");
+  }, [pattern, grid, boardSize]);
 
   const hoverInfo = hover && pattern ? PALETTE[pattern.cells[hover.y * pattern.cols + hover.x]] : null;
 
@@ -166,7 +247,7 @@ export default function App() {
             <span>格子大小</span>
             <b>{cell}px</b>
           </label>
-          <input type="range" min={6} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
+          <input type="range" min={3} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
 
           <label className="row">
             <span>杂色合并阈值</span>
@@ -203,8 +284,25 @@ export default function App() {
         <aside className="panel stats">
           <div className="row"><span>图纸</span><b>{pattern ? `${pattern.cols} × ${pattern.rows}` : "—"}</b></div>
           <div className="row"><span>总颗数</span><b>{total || "—"}</b></div>
-          <div className="row"><span>拼豆板</span><b>{boards ? `${boards} 块 (29×29)` : "—"}</b></div>
           <div className="row"><span>颜色数</span><b>{stats.length || "—"}</b></div>
+
+          <section className="board-section">
+            <h2>分板</h2>
+            <div className="row">
+              <span>分板</span>
+              <b>{grid ? `${grid.cols} × ${grid.rows} = ${grid.boards.length} 块（${boardSize}×${boardSize}）` : "—"}</b>
+            </div>
+            <label className="row">
+              <span>板尺寸</span>
+              <select value={boardSize} onChange={(e) => setBoardSize(Number(e.target.value))}>
+                {BOARD_SIZES.map((size) => (
+                  <option key={size} value={size}>{size}×{size}</option>
+                ))}
+              </select>
+            </label>
+            <label className="switch"><input type="checkbox" checked={showBoardIds} onChange={(e) => setShowBoardIds(e.target.checked)} /> 画布显示板号</label>
+            <button className="wide" onClick={exportSplit} disabled={!pattern || !grid}>导出分板拼装图</button>
+          </section>
 
           <div className="colors">
             {stats.map((s) => (

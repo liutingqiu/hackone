@@ -94,3 +94,17 @@ canvas { box-shadow: var(--shadow); border-radius: 6px; image-rendering: pixelat
   .panel.stats { border: 0; border-top: 1px solid var(--line); max-height: 30vh; }
   .colors { flex-direction: row; flex-wrap: wrap; }
 }
+
+/* 分板区块 */
+.board-section {
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 12px; border-top: 1px solid var(--line);
+}
+.board-section h2 { margin: 0; font-size: 13px; letter-spacing: .3px; }
+.board-section .row b { text-align: right; font-variant-numeric: tabular-nums; }
+.board-section select {
+  padding: 4px 6px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+button.wide { width: 100%; }
