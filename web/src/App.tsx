@@ -4,6 +4,7 @@ import { PALETTE } from "./lib/palette";
 import { imageToPattern, reduceNoise, usedColors, type Pattern } from "./lib/quantize";
 import { fitCellSize } from "./lib/fit";
 import { fitLabel } from "./lib/label-fit";
+import { buildPurchaseList, taobaoSearchUrl } from "./lib/purchase";
 import { splitBoards } from "./lib/split";
 import { openSplitPrintWindow } from "./lib/split-export";
 import {
@@ -579,6 +580,41 @@ export default function App() {
   }, [pattern, patternHash, notify]);
 
   // 「重新开始」：清空本地草稿（图/格子/参数/本图进度），回到空白页
+  const copyPurchaseList = useCallback(async () => {
+    if (!stats.length) return;
+    const text = buildPurchaseList(
+      stats.map((s) => ({ code: s.bead.code, count: s.count })),
+      total,
+    );
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch {
+      ok = false;
+    }
+    if (!ok) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        ta.setAttribute("readonly", "");
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch {
+        ok = false;
+      }
+    }
+    notify(ok ? "已复制，可直接粘给店家" : "复制失败，请手动选择清单");
+  }, [stats, total, notify]);
+
   const resetDraft = useCallback(() => {
     skipDraftSaveRef.current = true;
     window.setTimeout(() => {
@@ -910,6 +946,17 @@ export default function App() {
             )}
           </section>
 
+          <div className="usage-head">
+            <h2>用量清单</h2>
+            <button
+              type="button"
+              className="copy-btn"
+              onClick={copyPurchaseList}
+              disabled={!stats.length}
+            >
+              复制采购清单
+            </button>
+          </div>
           <div className="colors">
             {stats.map((s) => {
               const index = colorIndexByCode.get(s.bead.code) ?? -1;
@@ -933,9 +980,23 @@ export default function App() {
                   <span className="code">{s.bead.code}</span>
                   {s.bead.name !== s.bead.code && <span className="name">{s.bead.name}</span>}
                   <span className="n">{s.count}</span>
+                  <button
+                    type="button"
+                    className="buy-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const win = window.open(taobaoSearchUrl(s.bead.code), "_blank");
+                      if (win) win.opener = null;
+                      else notify("浏览器拦截了新窗口，请允许后重试");
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    去购买
+                  </button>
                 </div>
               );
             })}
+            {!stats.length && <p className="hint">导入图片后显示</p>}
           </div>
           <div className="footnote">
             {hoverInfo
