@@ -1,0 +1,66 @@
+[11:06:10] ops       建立组织架构与留痕机制              证据: org/README.md + org/*/ROLE.md + tools/journal.sh
+[11:10:12] chief     编写五个部门的 bot 指令模板         证据: org/*/INSTRUCTIONS.md
+[11:16:56] chief     启用四个部门子 agent（调研/开发/测试/运维） 证据: org/AGENTS.md
+[11:19:14] dev       实现分板切分算法层（先行后列编号 + 四邻查询） 证据: web/src/lib/split.ts + split.test.ts(10 用例) + lint/typecheck/test/build 全绿
+[11:20:41] dev       分板算法层已提交 feat/split(3915e23)，四道关与独立副本复验全绿 证据: web/src/lib/split.ts + split.test.ts(10 用例)；commit 3915e23
+[11:20:41] dev       共享工作区 HEAD 被其他部门切到 feat/ops，11:16:59 索引短暂全量删除后自愈；dev 用独立临时索引提交，未动他人分支 证据: git reflog feat/research->feat/split->feat/ops；git branch -vv feat/split=3915e23；线上索引未被我改写
+[11:24:06] qa        产出 V1 验收测试计划（功能/边界/性能/演练） 证据: wt/qa/docs/qa/test-plan.md @ feat/qa b1d9974：58 条用例，P0 27；文档冲突 C-01~C-04 待拍板
+[11:24:36] ops       核查 web 构建与静态托管兼容性（base ./） 证据: feat/ops 4fc2289 · 构建复现 3 文件/JS gzip 49.5KB · 无绝对路径/无动态 import/无路由
+[11:24:36] ops       写 wrangler Pages 配置 + runbook + 部署工作流草稿（未部署） 证据: wrangler.toml + docs/ops/runbook.md + docs/ops/deploy-workflow.md + .github/workflows/deploy.yml.disabled（feat/ops 4fc2289，未推 main）
+[11:24:49] chief     裁定 QA 四处文档冲突 + 定 UI 骨架   证据: docs/decisions.md + docs/ui-skeleton.md
+[11:25:01] qa        修正测试计划 P0 计数 26→27（复核为准） 证据: wt/qa/docs/qa/test-plan.md @ feat/qa 7293656：58 条，P0 27（功能 17/边界 5/性能 5），P1 31
+[11:25:26] ops       runbook 补 wrangler 镜像安装（仓库根无 .npmrc）与兼容日期排障 证据: feat/ops 2c90a38 · docs/ops/runbook.md §1.5 + 故障表；未安装 wrangler、未部署
+[11:26:51] qa        对齐主控 11:26 裁定与 UI 骨架（新增 MARD 291 P0 用例、专业模式改色口径） 证据: wt/qa/docs/qa/test-plan.md @ feat/qa 475baab：59 条，P0 28（功能 18/边界 5/性能 5），P1 31；C-01~C-04 + D-01/02 已并入
+[11:30:03] research  实测4个竞品的分板/板号/顺序/库存/导出/收费 证据: docs/market-research.md 新增「竞品实测（2026-11-07）」；证据 docs/evidence/{zippland,ldb,jett-*,mypindou-1}.png
+[11:31:31] chief     采纳竞品实测结论，板尺寸改为可选（29/52），话术修正 证据: docs/decisions.md D-03/D-04
+[11:33:40] ops       首次部署 Cloudflare Pages 成功           证据: https://hackone.pages.dev (项目 hackone, 3 文件 3.99s)
+[11:35:11] dev       分板 UI 接入：画布红色板界+圆角板号、右栏分板块、板尺寸输入、A4 分板拼装图导出 证据: web/src/App.tsx + styles.css + lib/split-export.ts(+2 单测)；17 tests；53.87KB gzip；docs/evidence/split-export.png
+[11:35:11] dev       导出实测 4 板+总览=5 页 A4；修复 .sheet:last-child 导致的末页多一张空白页 证据: Page.printToPDF 页数 5；docs/evidence/split-export.png + split-export-overview.png
+[11:35:11] dev       范围说明：小白/专业模式开关尚未实现，板尺寸输入暂常显可改（默认 29），待模式接入后按小白固定 证据: web/src/App.tsx board-section
+[11:36:15] ops       自定义域名生效                          证据: https://hack.liutingqiu.xyz HTTP/2 200
+[11:37:12] dev       板尺寸按 D-03 改为 29/52 可选（默认 29），导出按所选尺寸切 证据: web/src/App.tsx + split-export.test.ts；52 实测 2 页、13px/格；17 tests；53.86KB gzip
+[11:42:10] chief     新增用户测试部（与测试部职责分离） 证据: org/user-test/ROLE.md + agent 68377363
+[11:44:47] chief     设计部门流水线与回退链路           证据: docs/pipeline.md + docs/pipeline/BOARD.md
+[11:49:18] dev       色板替换为 MARD 291（MIT，HansBug/pindou-color-data），PALETTE 接口不变 证据: web/src/lib/palette-mard.ts + palette.ts；19 tests；gzip 56.58KB；docs/evidence/split-export*.png
+[11:49:18] dev       导出总览按色数自适应（>60 色 6 列+缩图）；91 色 5 页、291 色最坏 17 页；修掉用量 name 重复 证据: docs/evidence/split-export-overview.png；Page.printToPDF 5/17 页
+[11:49:18] dev       小白/专业模式开关（默认小白；专业全显示；切换不丢画布/图纸状态） 证据: web/src/App.tsx + styles.css；docs/evidence/mode-beginner.png / mode-pro.png；19 tests；gzip 56.74KB
+[11:51:33] ops       上线 MARD 291 + 双模式版本              证据: https://hack.liutingqiu.xyz (JS 56.74KB gzip)
+[11:56:02] user-test 线上站全量体验：A 新手 / B 老手各走一遍，13 步全真实点击 证据: docs/user-testing/report-2026-11-07.md + friction.md + docs/evidence/user-testing/（19 张截图 + 2 份 A4 分板 PDF）
+[11:56:27] user-test 补充：证据目录共 21 张截图 + 2 份 A4 分板 PDF（报告/清单已按新版 MARD 291 复核） 证据: docs/evidence/user-testing/；新版复核图 latest-code-clipped.png / latest-b-zoom40.png / split-print-latest-36colors.pdf
+[12:01:26] chief     启动二阶段（拼装引导/色卡校准/采购闭环）前置调研 证据: docs/research-phase2.md 待产出
+[12:02:22] dev       修复色号截断：画布改用完整色号并按格子缩字号，<6px 不画；14/20/40 单测 证据: web/src/lib/label-fit.ts(+test)；docs/evidence/user-testing/fix-01-codes-14/40.png；25 tests
+[12:03:34] dev       修复画布默认被裁：导入后按容器宽高自动 fit，保留手动格子大小 证据: web/src/lib/fit.ts(+test)；docs/evidence/user-testing/fix-03-fit.png；31 tests
+[12:09:19] research  实测两家的拼豆引导并调研三方向（引导/色卡校准/采购闭环） 证据: docs/research-phase2.md + 证据 docs/evidence/phase2-*.png（LDB focus 0/300 不可标记、Zippland 整色确认刷新归零、淘宝搜索登录墙）
+[12:14:05] chief     定二阶段方针：不加新功能，拼完整度与细节；用户测试转细节审计 证据: docs/pipeline/BOARD.md T-15~T-17
+[12:15:52] dev       导出主次重排：主按钮可打印图纸、次按钮无标注预览；loading/toast、弹窗拦截提示 证据: web/src/App.tsx + styles.css；docs/evidence/user-testing/fix-02-*.png；31 tests
+[12:22:49] chief     新增对照视图与过渡动效两项待办  证据: BOARD T-18/T-19
+[12:24:08] dev       补错误与状态提示：非图片/空图 toast，未导出 beforeunload 拦截 证据: web/src/App.tsx；docs/evidence/user-testing/fix-04-fake.png / fix-04-empty.png；31 tests
+[12:26:23] ops       部署 P0 修复版                            证据: https://hack.liutingqiu.xyz (57.97KB gzip)
+[12:36:33] user-test 复测 12:26 部署：色号/整图/错误提示已修；新报手机 390 布局塌陷、主按钮与分板重复、预览图仍带红线、色名消失 证据: docs/user-testing/retest-2026-11-07-1238.md + audit-checklist.md + docs/evidence/user-testing/round2/（9 图 + 1 PDF）
+[12:36:38] chief     复测发现手机端 P0 回归，暂停第五棒先修 证据: BOARD T-20~T-23
+[12:36:46] dev       拼装引导第一段：按色高亮、patternHash+bitmask 进度持久化、按板统计；刷新/换图实测 证据: web/src/lib/progress.ts(+test)；docs/evidence/user-testing/t15-progress-highlight/reload/100x100.png；42 tests
+[12:42:24] user-test 完成审计第 3/4 类 + 演示路径专项：触摸目标全<44px、平板 1024 fit 但格子 9px、手机 390 溢出 603px、冷启动 4s、打印框是最大冷场点 证据: docs/user-testing/audit-checklist.md（第三/四/五节）+ demo-runbook.md + docs/evidence/user-testing/round3/（5 图）
+[12:42:49] chief     新增演示可用性任务（触屏取色/触摸尺寸/滑杆精度/文案） 证据: BOARD T-24~T-27 + demo-runbook
+[12:43:49] dev       修 390 布局回归/导出按钮去重/预览去红线/色名空白+小白显色号；390 scrollWidth=390、canvas 384 证据: web/src/App.tsx + styles.css + fit.test.ts；docs/evidence/user-testing/fix-05-*.png；43 tests
+[12:51:22] chief     去掉离开确认弹窗，改自动保存草稿 证据: BOARD T-28
+[12:54:48] dev       演示可用性：触屏取色、44px 热区、滑杆步进、1024 画布 528px/11px、文案与色板标注 证据: web/src/App.tsx + styles.css + label-fit/fit tests；docs/evidence/user-testing/demo-*.png；45 tests
+[13:01:26] dev       删 beforeunload 后补静默草稿：图/格子/色号/板尺寸恢复条 + 重新开始；触屏固定色号条 证据: web/src/App.tsx + progress.ts(+test)；docs/evidence/user-testing/draft-*.png；47 tests
+[13:04:04] ops       部署演示就绪版（390修复/触屏取色/草稿/文案） 证据: hack.liutingqiu.xyz 61.29KB gzip
+[13:09:36] dev       查看/标记显式模式：查看只取色、标记切完成；移动端纵向布局+fit 兜底 证据: web/src/App.tsx + styles.css；docs/evidence/user-testing/mode-*.png；47 tests
+[13:11:29] ops       部署查看/标记模式版                   证据: hack.liutingqiu.xyz 61.48KB gzip
+[13:18:33] dev       采购闭环：复制 MARD 采购清单（clipboard+降级）、每行去购买淘宝搜索 证据: web/src/lib/purchase.ts(+test)；docs/evidence/user-testing/purchase-*.png；51 tests
+[13:20:32] user-test 复测查看/标记版：按钮 72x44 状态清楚；标记10→10、取消→9、查看不误改、刷新保留；390 新图完整可见（草稿带回桌面尺寸会溢出）；导出预览仍 5.2s 证据: docs/user-testing/retest-2026-11-07-1320.md + demo-runbook.md（v3）+ docs/evidence/user-testing/round5/（3 图）
+[13:21:05] chief     功能冻结（13:20），转入演出物料   证据: docs/pitch.md 五分局稿
+[13:29:13] chief     据抖音去 AI 味调研，定 UI 重构规格 证据: docs/ui-redesign.md
+[13:32:07] dev       UI 重构 1/5：设计令牌替换（space/radius/dur/颜色） 证据: web/src/styles.css；51 tests
+[13:32:40] dev       UI 重构 2/5：去装饰（emoji/发光/彩色阴影） 证据: web/src/App.tsx、styles.css；51 tests
+[13:33:19] dev       UI 重构 3/5：左对齐与分组（32/8、grid、56 顶栏、248/272） 证据: App.tsx、styles.css；51 tests
+[13:36:03] dev       UI 重构 4/5：按钮三态/分段/滑杆/用量列表；画布彩色收敛 证据: App.tsx、styles.css；51 tests
+[13:41:46] dev       UI 重构 5/5：动效 + 终验（四宽度/reduced-motion/浅色） 证据: App.tsx、styles.css；docs/evidence/user-testing/ui-*.png；51 tests
+[13:43:53] ops       部署 UI 重构版（令牌/去装饰/对齐/动效） 证据: hack.liutingqiu.xyz 62.26KB gzip
+[13:47:11] dev       草稿恢复按 stage 重算 cell；去购买改 36px 描边按钮 证据: App.tsx、styles.css；docs/evidence/user-testing/ui-restore-fit-1280.png、ui-buy-1024.png；51 tests
+[13:48:44] chief     功能冻结：UI 重构完成，转入演出物料 证据: 8f101fa，51 测试，62.34KB
+[14:07:10] dev       视觉批：深色滚动条/header 居中/按钮层级/品牌状态/390 复查 证据: App.tsx、styles.css；docs/evidence/user-testing/visual-*.png；51 tests
+[14:09:20] dev       功能批 1：撤销/重做（50 步，Ctrl+Z/Ctrl+Shift+Z） 证据: App.tsx、styles.css；51 tests
+[14:38:09] chief     功能全部冻结                             证据: product/index.html 303.9KB，A4+进度+采购+手机布局
+[14:38:44] chief     功能冻结完成；路演稿同步为最终按钮与能力 证据: docs/pitch.md
