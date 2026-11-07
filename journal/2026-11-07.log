@@ -41,3 +41,5 @@
 [12:36:46] dev       拼装引导第一段：按色高亮、patternHash+bitmask 进度持久化、按板统计；刷新/换图实测 证据: web/src/lib/progress.ts(+test)；docs/evidence/user-testing/t15-progress-highlight/reload/100x100.png；42 tests
 [12:42:24] user-test 完成审计第 3/4 类 + 演示路径专项：触摸目标全<44px、平板 1024 fit 但格子 9px、手机 390 溢出 603px、冷启动 4s、打印框是最大冷场点 证据: docs/user-testing/audit-checklist.md（第三/四/五节）+ demo-runbook.md + docs/evidence/user-testing/round3/（5 图）
 [12:42:49] chief     新增演示可用性任务（触屏取色/触摸尺寸/滑杆精度/文案） 证据: BOARD T-24~T-27 + demo-runbook
+[12:43:49] dev       修 390 布局回归/导出按钮去重/预览去红线/色名空白+小白显色号；390 scrollWidth=390、canvas 384 证据: web/src/App.tsx + styles.css + fit.test.ts；docs/evidence/user-testing/fix-05-*.png；43 tests
+[12:51:22] chief     去掉离开确认弹窗，改自动保存草稿 证据: BOARD T-28
