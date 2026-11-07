@@ -15,6 +15,16 @@ describe("fitCellSize", () => {
     expect(fitCellSize(48, 48, 0, 0)).toBe(3);
   });
 
+  it("390px 窄屏算到 7px 时抬到 8px，允许滚动而不是压到看不清", () => {
+    expect(fitCellSize(48, 48, 342, 700)).toBe(7);
+    expect(fitCellSize(48, 48, 342, 700, { min: 8 })).toBe(8);
+  });
+
+  it("1024 平板（面板 200/220，可用 556）48×48 → 11px，画布 528px", () => {
+    expect(fitCellSize(48, 48, 556, 654, { min: 11 })).toBe(11);
+    expect(11 * 48).toBeGreaterThanOrEqual(520);
+  });
+
   it("超大容器不超过 40px 上限", () => {
     expect(fitCellSize(8, 8, 1000, 1000)).toBe(40);
   });

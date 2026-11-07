@@ -10,8 +10,8 @@ describe("fitLabel", () => {
       for (const code of ["A07", "C04", "G14", "H1", "ZG5"]) {
         const fit = fitLabel(code, cell, monospace);
         if (fit.fits) {
-          expect(fit.fontSize).toBeGreaterThanOrEqual(6);
-          expect(monospace(code, fit.fontSize)).toBeLessThanOrEqual(cell - 2 + 1e-9);
+          expect(fit.fontSize).toBeGreaterThanOrEqual(5.5);
+          expect(monospace(code, fit.fontSize)).toBeLessThanOrEqual(cell - 1 + 1e-9);
         } else {
           expect(fit.fontSize).toBe(0);
         }
@@ -22,14 +22,21 @@ describe("fitLabel", () => {
   it("cell=14 时三位色号能放下完整 A07（不再默认不显示）", () => {
     const fit = fitLabel("A07", 14, monospace);
     expect(fit.fits).toBe(true);
-    expect(monospace("A07", fit.fontSize)).toBeLessThanOrEqual(12);
+    expect(monospace("A07", fit.fontSize)).toBeLessThanOrEqual(13);
+  });
+
+  it("cell=11（1024 平板）也能显示完整三位色号", () => {
+    const fit = fitLabel("A07", 11, monospace);
+    expect(fit.fits).toBe(true);
+    expect(fit.fontSize).toBeGreaterThanOrEqual(5.5);
+    expect(monospace("A07", fit.fontSize)).toBeLessThanOrEqual(10);
   });
 
   it("cell=40 时字号有上限，不会溢出格子", () => {
     const fit = fitLabel("A07", 40, monospace);
     expect(fit.fits).toBe(true);
     expect(fit.fontSize).toBeLessThanOrEqual(12);
-    expect(monospace("A07", fit.fontSize)).toBeLessThanOrEqual(38);
+    expect(monospace("A07", fit.fontSize)).toBeLessThanOrEqual(39);
   });
 
   it("格子太小时宁可不画，也不画一半", () => {

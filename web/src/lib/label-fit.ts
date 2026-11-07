@@ -21,9 +21,9 @@ export function fitLabel(
   measure: (text: string, fontSize: number) => number,
   options: FitLabelOptions = {},
 ): LabelFit {
-  const minFontSize = options.minFontSize ?? 6;
+  const minFontSize = options.minFontSize ?? 5.5;
   const maxFontSize = options.maxFontSize ?? 12;
-  const padding = options.padding ?? 2;
+  const padding = options.padding ?? 1;
   const available = cell - padding;
   if (!text || available <= 0) return { fontSize: 0, fits: false };
 
