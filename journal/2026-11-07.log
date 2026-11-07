@@ -52,3 +52,9 @@
 [13:20:32] user-test 复测查看/标记版：按钮 72x44 状态清楚；标记10→10、取消→9、查看不误改、刷新保留；390 新图完整可见（草稿带回桌面尺寸会溢出）；导出预览仍 5.2s 证据: docs/user-testing/retest-2026-11-07-1320.md + demo-runbook.md（v3）+ docs/evidence/user-testing/round5/（3 图）
 [13:21:05] chief     功能冻结（13:20），转入演出物料   证据: docs/pitch.md 五分局稿
 [13:29:13] chief     据抖音去 AI 味调研，定 UI 重构规格 证据: docs/ui-redesign.md
+[13:32:07] dev       UI 重构 1/5：设计令牌替换（space/radius/dur/颜色） 证据: web/src/styles.css；51 tests
+[13:32:40] dev       UI 重构 2/5：去装饰（emoji/发光/彩色阴影） 证据: web/src/App.tsx、styles.css；51 tests
+[13:33:19] dev       UI 重构 3/5：左对齐与分组（32/8、grid、56 顶栏、248/272） 证据: App.tsx、styles.css；51 tests
+[13:36:03] dev       UI 重构 4/5：按钮三态/分段/滑杆/用量列表；画布彩色收敛 证据: App.tsx、styles.css；51 tests
+[13:41:46] dev       UI 重构 5/5：动效 + 终验（四宽度/reduced-motion/浅色） 证据: App.tsx、styles.css；docs/evidence/user-testing/ui-*.png；51 tests
+[13:43:53] ops       部署 UI 重构版（令牌/去装饰/对齐/动效） 证据: hack.liutingqiu.xyz 62.26KB gzip
