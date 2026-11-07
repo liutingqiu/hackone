@@ -64,3 +64,4 @@
 [14:09:20] dev       功能批 1：撤销/重做（50 步，Ctrl+Z/Ctrl+Shift+Z） 证据: App.tsx、styles.css；51 tests
 [14:38:09] chief     功能全部冻结                             证据: product/index.html 303.9KB，A4+进度+采购+手机布局
 [14:38:44] chief     功能冻结完成；路演稿同步为最终按钮与能力 证据: docs/pitch.md
+[15:56:56] ops       清理工作区垃圾：web/node_modules、web/dist、.wrangler、Hackone.zip、/tmp 临时文件；git gc 重新打包；新增 hackbackup/ 离线版（线上同版单文件） 证据: 272M→61M；sha256 一致 48a518a5
