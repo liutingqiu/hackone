@@ -350,6 +350,8 @@ button.wide { width: 100%; }
 }
 .board-progress-row b { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
 .progress-hint { margin: 0; font-size: 11px; color: var(--muted); }
+.edit-actions { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+.edit-actions .progress-hint { margin-left: auto; }
 .link-button {
   align-self: flex-start; min-height: 36px; display: inline-flex; align-items: center;
   padding: 0 var(--space-2); border: 0; background: transparent;

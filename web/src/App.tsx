@@ -152,6 +152,9 @@ export default function App() {
   const [toastLeaving, setToastLeaving] = useState(false);
   const [, setExportedPattern] = useState<Pattern | null>(null);
   const [selectedColor, setSelectedColor] = useState<number | null>(() => draftSettings?.selectedColor ?? null);
+  const [editedCells, setEditedCells] = useState<number[] | null>(null);
+  const [undoStack, setUndoStack] = useState<number[][]>([]);
+  const [redoStack, setRedoStack] = useState<number[][]>([]);
   const [marked, setMarked] = useState<Uint8Array>(EMPTY_MASK);
   const [loadedHash, setLoadedHash] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -205,8 +208,24 @@ export default function App() {
   }, [raw, minCount]);
 
   // 刷新后恢复上次图纸；上传新图会替换
-  const pattern = restoredPattern ?? generatedPattern;
+  const basePattern = restoredPattern ?? generatedPattern;
+  const pattern = useMemo<Pattern | null>(() => {
+    if (!basePattern) return null;
+    if (editedCells && editedCells.length === basePattern.cells.length) {
+      return { ...basePattern, cells: editedCells };
+    }
+    return basePattern;
+  }, [basePattern, editedCells]);
   const restored = img === null && restoredPattern !== null;
+
+  // 换图/改分色参数即清空编辑历史；只重算 pattern，不动进度与板尺寸
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setEditedCells(null);
+    setUndoStack([]);
+    setRedoStack([]);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [basePattern]);
 
   useEffect(() => {
     if (!pattern || skipDraftSaveRef.current) return;
@@ -734,6 +753,40 @@ export default function App() {
     }, 700);
   }, [pattern, grid, activeBoard, busy, notify]);
 
+  const undo = useCallback(() => {
+    if (!pattern || !undoStack.length) return;
+    const prev = undoStack[undoStack.length - 1];
+    setRedoStack((r) => [...r, Array.from(pattern.cells)].slice(-50));
+    setUndoStack((u) => u.slice(0, -1));
+    setEditedCells(prev);
+  }, [pattern, undoStack]);
+
+  const redo = useCallback(() => {
+    if (!pattern || !redoStack.length) return;
+    const next = redoStack[redoStack.length - 1];
+    setUndoStack((u) => [...u, Array.from(pattern.cells)].slice(-50));
+    setRedoStack((r) => r.slice(0, -1));
+    setEditedCells(next);
+  }, [pattern, redoStack]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undo, redo]);
+
   const hoverInfo = hover && pattern ? PALETTE[pattern.cells[hover.y * pattern.cols + hover.x]] : null;
 
   return (
@@ -872,6 +925,22 @@ export default function App() {
               <label className="switch"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> 显示网格</label>
             </div>
           )}
+
+          <div className="panel-group">
+            <div className="row">
+              <span>撤销 / 重做</span>
+              <b>{undoStack.length ? `${undoStack.length} 步` : "—"}</b>
+            </div>
+            <div className="edit-actions">
+              <button type="button" className="btn-text" onClick={undo} disabled={!undoStack.length}>
+                撤销
+              </button>
+              <button type="button" className="btn-text" onClick={redo} disabled={!redoStack.length}>
+                重做
+              </button>
+              <span className="progress-hint">Ctrl+Z / Ctrl+Shift+Z</span>
+            </div>
+          </div>
 
           {!pattern && <p className="hint">把图片拖进来，或点右上角上传</p>}
           {restored && (
