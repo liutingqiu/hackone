@@ -58,3 +58,5 @@
 [13:36:03] dev       UI 重构 4/5：按钮三态/分段/滑杆/用量列表；画布彩色收敛 证据: App.tsx、styles.css；51 tests
 [13:41:46] dev       UI 重构 5/5：动效 + 终验（四宽度/reduced-motion/浅色） 证据: App.tsx、styles.css；docs/evidence/user-testing/ui-*.png；51 tests
 [13:43:53] ops       部署 UI 重构版（令牌/去装饰/对齐/动效） 证据: hack.liutingqiu.xyz 62.26KB gzip
+[13:47:11] dev       草稿恢复按 stage 重算 cell；去购买改 36px 描边按钮 证据: App.tsx、styles.css；docs/evidence/user-testing/ui-restore-fit-1280.png、ui-buy-1024.png；51 tests
+[13:48:44] chief     功能冻结：UI 重构完成，转入演出物料 证据: 8f101fa，51 测试，62.34KB
