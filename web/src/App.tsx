@@ -309,13 +309,13 @@ export default function App() {
               <div className="color" key={s.bead.code}>
                 <i style={{ background: s.bead.hex }} />
                 <span className="code">{s.bead.code}</span>
-                <span className="name">{s.bead.name}</span>
+                <span className="name">{s.bead.name !== s.bead.code ? s.bead.name : ""}</span>
                 <span className="n">{s.count}</span>
               </div>
             ))}
           </div>
           <div className="footnote">
-            {hoverInfo ? `光标：${hoverInfo.code} ${hoverInfo.name}` : "鼠标移到图纸上看色号"}
+            {hoverInfo ? `光标：${hoverInfo.code}${hoverInfo.name !== hoverInfo.code ? ` ${hoverInfo.name}` : ""}` : "鼠标移到图纸上看色号"}
           </div>
         </aside>
       </main>
