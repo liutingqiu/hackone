@@ -13,3 +13,4 @@
 [11:26:51] qa        对齐主控 11:26 裁定与 UI 骨架（新增 MARD 291 P0 用例、专业模式改色口径） 证据: wt/qa/docs/qa/test-plan.md @ feat/qa 475baab：59 条，P0 28（功能 18/边界 5/性能 5），P1 31；C-01~C-04 + D-01/02 已并入
 [11:30:03] research  实测4个竞品的分板/板号/顺序/库存/导出/收费 证据: docs/market-research.md 新增「竞品实测（2026-11-07）」；证据 docs/evidence/{zippland,ldb,jett-*,mypindou-1}.png
 [11:31:31] chief     采纳竞品实测结论，板尺寸改为可选（29/52），话术修正 证据: docs/decisions.md D-03/D-04
+[11:33:40] ops       首次部署 Cloudflare Pages 成功           证据: https://hackone.pages.dev (项目 hackone, 3 文件 3.99s)
