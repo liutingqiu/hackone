@@ -12,7 +12,7 @@
 | A1 | 本地仓库 | ✅ | — | — | `git -C ~/hackone status` |
 | A2 | 远端正库（私有） | ✅ liutingqiu/hackone | — | — | `gh repo view` |
 | A3 | 队友权限 | ✅ sshanersshaner（write） | 让他接受邀请（已接受） | — | `gh api .../collaborators` |
-| A4 | 队友代码 | ❌ 未推送 | 电话确认；或改为我方为唯一代码源 | — | `git ls-remote --heads` |
+| A4 | 队友代码 | ✅ 已推送（10:16，41960 行） | 按 ADR-005 移至 `reference/perler-tool/`，仅作参考实现 | — | `ls reference/` |
 | A5 | 分支策略 | ⚠️ 约定有，未执行 | 开 `feat/*` 分支，跑一次 PR 流程 | 10min | 仓库出现 PR |
 | A6 | main 分支保护 | ❌ 私有免费库不支持 | 转公开 或 放弃 | 5min | `gh api .../protection` |
 | A7 | gh 登录与 scope | ✅ repo/gist/read:org/workflow | — | — | `gh auth status` |
@@ -78,10 +78,10 @@
 | # | 项 | 现状 | 需要做什么 | 预计 | 验证方式 |
 | --- | --- | --- | --- | --- | --- |
 | G1 | Cloudflare 账号 | ✅ 已登录（浏览器，Tianqi689@gmail.com） | — | — | 控制台可见 |
-| G2 | 域名 | ✅ `liutingqiu.xyz` 在 CF 托管 | 定子域名（如 `hack.liutingqiu.xyz`） | 5min | DNS 记录生效 |
+| G2 | 域名 | ✅ 子域名已定：`hack.liutingqiu.xyz` | 建 CNAME 指向 Pages | 5min | `dig` 生效 |
 | G3 | CF Pages / Workers | ✅ 账号有权限 | 选部署方式：Pages 直传 或 Workers | 10min | 站点可访问 |
 | G4 | 腾讯云服务器 | ✅ 可用（**信息待补**） | 提供 IP / SSH 用户 / 用途 | 10min | `ssh` 连上 |
-| G5 | 部署方式决策 | ❌ 未定 | 静态站（Pages）还是 服务器（Nginx/Docker） | — | 写进文档 |
+| G5 | 部署方式决策 | ✅ 已定：Cloudflare Pages 静态站 | 腾讯云留待 V2（账号/云存储） | — | ADR-002 |
 
 ### G4 需要补充的信息
 
