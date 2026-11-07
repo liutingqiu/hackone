@@ -7,6 +7,7 @@ __pycache__/
 venv/
 
 # 构建产物
+*.tsbuildinfo
 dist/
 build/
 out/
