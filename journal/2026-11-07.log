@@ -36,3 +36,5 @@
 [12:22:49] chief     新增对照视图与过渡动效两项待办  证据: BOARD T-18/T-19
 [12:24:08] dev       补错误与状态提示：非图片/空图 toast，未导出 beforeunload 拦截 证据: web/src/App.tsx；docs/evidence/user-testing/fix-04-fake.png / fix-04-empty.png；31 tests
 [12:26:23] ops       部署 P0 修复版                            证据: https://hack.liutingqiu.xyz (57.97KB gzip)
+[12:36:33] user-test 复测 12:26 部署：色号/整图/错误提示已修；新报手机 390 布局塌陷、主按钮与分板重复、预览图仍带红线、色名消失 证据: docs/user-testing/retest-2026-11-07-1238.md + audit-checklist.md + docs/evidence/user-testing/round2/（9 图 + 1 PDF）
+[12:36:38] chief     复测发现手机端 P0 回归，暂停第五棒先修 证据: BOARD T-20~T-23
