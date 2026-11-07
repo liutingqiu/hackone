@@ -163,6 +163,11 @@ export default function App() {
   const fitTokenRef = useRef(0);
   const dragRef = useRef<{ id: number; x: number; y: number; pointerType: string } | null>(null);
 
+  const rangeBackground = (value: number, min: number, max: number) => {
+    const pct = ((value - min) / (max - min)) * 100;
+    return `linear-gradient(to right, var(--accent) 0 ${pct}%, var(--line) ${pct}% 100%)`;
+  };
+
   const notify = useCallback((text: string) => {
     setToast(text);
     window.clearTimeout(toastTimer.current);
@@ -357,10 +362,10 @@ export default function App() {
       }
     }
 
-    // 分板叠加：红色分隔线 + 左上角红色圆角板号标签；格子太小时只画线
+    // 分板叠加：中性分隔线 + 墨色板号标签；格子太小时只画线
     if (showBoardIds && grid) {
       const lineW = Math.max(1.5, Math.min(3, cell * 0.12));
-      ctx.strokeStyle = "rgba(220, 38, 38, 0.92)";
+      ctx.strokeStyle = "rgba(154, 158, 166, 0.9)";
       ctx.lineWidth = lineW;
       ctx.beginPath();
       for (const b of grid.boards) {
@@ -389,8 +394,8 @@ export default function App() {
           const bh = fontSize + 6;
           const lx = b.x0 * cell + 3;
           const ly = b.y0 * cell + 3;
-          ctx.fillStyle = "rgba(220, 38, 38, 0.96)";
-          roundRect(ctx, lx, ly, bw, bh, 4);
+          ctx.fillStyle = "rgba(17, 18, 20, 0.86)";
+          roundRect(ctx, lx, ly, bw, bh, 6);
           ctx.fill();
           ctx.fillStyle = "#fff";
           ctx.fillText(label, lx + bw / 2, ly + bh / 2 + 0.5);
@@ -439,17 +444,22 @@ export default function App() {
     const ctx = cv.getContext("2d")!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#1F6FEB";
     const totalCells = pattern.cols * pattern.rows;
     for (let i = 0; i < totalCells; i++) {
       if (!hasMark(activeMask, i)) continue;
       const x = i % pattern.cols;
       const y = (i / pattern.cols) | 0;
-      ctx.fillStyle = "rgba(16, 185, 129, 0.42)";
+      ctx.globalAlpha = 0.42;
+      ctx.fillStyle = accent;
       ctx.fillRect(x * cell, y * cell, cell, cell);
+      ctx.globalAlpha = 1;
       if (cell >= 6) {
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.95)";
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = accent;
         ctx.lineWidth = Math.max(1, cell * 0.08);
         ctx.strokeRect(x * cell + 0.5, y * cell + 0.5, cell - 1, cell - 1);
+        ctx.globalAlpha = 1;
       }
     }
   }, [pattern, cell, activeMask]);
@@ -704,11 +714,11 @@ export default function App() {
           <button type="button" className={mode === "pro" ? "active" : ""} aria-pressed={mode === "pro"} onClick={() => setMode("pro")}>专业</button>
         </div>
         <div className="actions">
-          <button className="ghost" onClick={() => fileRef.current?.click()}>上传图片</button>
-          <button onClick={exportPrintable} disabled={!pattern || !!busy}>
+          <button className="btn-secondary" onClick={() => fileRef.current?.click()}>上传图片</button>
+          <button className="btn-primary" onClick={exportPrintable} disabled={!pattern || !!busy}>
             {busy === "print" ? "生成中…" : "打印拼装图（A4）"}
           </button>
-          <button className="ghost" onClick={exportPreview} disabled={!pattern || !!busy}>
+          <button className="btn-secondary" onClick={exportPreview} disabled={!pattern || !!busy}>
             {busy === "png" ? "生成中…" : "导出预览图（不含色号）"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
@@ -718,7 +728,7 @@ export default function App() {
       {draftBannerOpen && restored && (
         <div className="draft-banner" role="status">
           <span>恢复了上次的图纸</span>
-          <button type="button" className="ghost" onClick={resetDraft}>重新开始</button>
+          <button type="button" className="btn-secondary" onClick={resetDraft}>重新开始</button>
           <button
             type="button"
             className="draft-close"
@@ -757,6 +767,7 @@ export default function App() {
               step={4}
               value={cols}
               disabled={restored}
+              style={{ background: rangeBackground(cols, 16, 120) }}
               onChange={(e) => setCols(+e.target.value)}
             />
             <button
@@ -784,7 +795,14 @@ export default function App() {
             >
               −
             </button>
-            <input type="range" min={3} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
+            <input
+              type="range"
+              min={3}
+              max={40}
+              value={cell}
+              style={{ background: rangeBackground(cell, 3, 40) }}
+              onChange={(e) => setCell(+e.target.value)}
+            />
             <button
               type="button"
               className="step-btn"
@@ -811,6 +829,7 @@ export default function App() {
                 max={20}
                 value={minCount}
                 disabled={restored}
+                style={{ background: rangeBackground(minCount, 1, 20) }}
                 onChange={(e) => setMinCount(+e.target.value)}
               />
 
@@ -954,7 +973,7 @@ export default function App() {
             <h2>用量清单</h2>
             <button
               type="button"
-              className="copy-btn"
+              className="copy-btn btn-secondary"
               onClick={copyPurchaseList}
               disabled={!stats.length}
             >
