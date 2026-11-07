@@ -83,6 +83,23 @@ function buildPreviewCanvas(pattern: Pattern, cell: number, grid: BoardGrid | nu
   return cv;
 }
 
+/** 透明图判定：缩到 32×32 采样，透明像素超过 90% 视为“几乎是空的” */
+function isMostlyTransparent(image: HTMLImageElement): boolean {
+  const size = 32;
+  const cv = document.createElement("canvas");
+  cv.width = size;
+  cv.height = size;
+  const ctx = cv.getContext("2d");
+  if (!ctx) return false;
+  ctx.drawImage(image, 0, 0, size, size);
+  const data = ctx.getImageData(0, 0, size, size).data;
+  let transparent = 0;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 8) transparent++;
+  }
+  return transparent / (size * size) > 0.9;
+}
+
 function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -118,6 +135,7 @@ export default function App() {
   const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
   const [busy, setBusy] = useState<null | "print" | "png">(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [exportedPattern, setExportedPattern] = useState<Pattern | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLElement>(null);
@@ -153,6 +171,20 @@ export default function App() {
 
   const stats = useMemo(() => (pattern ? usedColors(pattern) : []), [pattern]);
   const total = useMemo(() => stats.reduce((s, x) => s + x.count, 0), [stats]);
+
+  // 只有「当前这份 pattern」被导出过才算已导出；换图/改参数后自动失效
+  const hasExport = pattern !== null && exportedPattern === pattern;
+
+  // 有未导出的图纸时，刷新/关闭前提示
+  useEffect(() => {
+    if (!pattern || hasExport) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [pattern, hasExport]);
 
   // 渲染
   useEffect(() => {
@@ -292,11 +324,22 @@ export default function App() {
 
   const onFile = useCallback(
     (f: File | undefined | null) => {
-      if (!f || !f.type.startsWith("image/")) return;
+      if (!f) return;
+      if (!f.type.startsWith("image/")) {
+        notify("这不是图片文件");
+        return;
+      }
       const url = URL.createObjectURL(f);
       const im = new Image();
+      im.onerror = () => {
+        URL.revokeObjectURL(url);
+        notify("这不是图片文件");
+      };
       im.onload = () => {
         URL.revokeObjectURL(url);
+        if (im.naturalWidth < 2 || im.naturalHeight < 2 || isMostlyTransparent(im)) {
+          notify("这张图几乎是空的，可能不是你要的");
+        }
         // 导入后按 stage 可用宽高自动 fit，保证默认整图可见；之后仍可用滑杆手调
         const stage = stageRef.current;
         if (stage && im.naturalWidth > 0 && im.naturalHeight > 0) {
@@ -307,7 +350,7 @@ export default function App() {
       };
       im.src = url;
     },
-    [cols],
+    [cols, notify],
   );
 
   // 次按钮：保留原来的纯色块 PNG（无标注），异步 toBlob 让 loading 态能渲染
@@ -329,6 +372,7 @@ export default function App() {
       a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
       setBusy(null);
+      setExportedPattern(pattern);
       notify("已导出");
     }, "image/png");
   }, [pattern, cell, grid, busy, notify]);
@@ -349,6 +393,7 @@ export default function App() {
       notify("浏览器拦截了新窗口，请允许后重试");
       return;
     }
+    setExportedPattern(pattern);
     window.setTimeout(() => {
       setBusy(null);
       notify("已导出");
