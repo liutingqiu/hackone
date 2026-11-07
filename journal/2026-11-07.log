@@ -27,3 +27,4 @@
 [11:51:33] ops       上线 MARD 291 + 双模式版本              证据: https://hack.liutingqiu.xyz (JS 56.74KB gzip)
 [11:56:02] user-test 线上站全量体验：A 新手 / B 老手各走一遍，13 步全真实点击 证据: docs/user-testing/report-2026-11-07.md + friction.md + docs/evidence/user-testing/（19 张截图 + 2 份 A4 分板 PDF）
 [11:56:27] user-test 补充：证据目录共 21 张截图 + 2 份 A4 分板 PDF（报告/清单已按新版 MARD 291 复核） 证据: docs/evidence/user-testing/；新版复核图 latest-code-clipped.png / latest-b-zoom40.png / split-print-latest-36colors.pdf
+[12:01:26] chief     启动二阶段（拼装引导/色卡校准/采购闭环）前置调研 证据: docs/research-phase2.md 待产出
