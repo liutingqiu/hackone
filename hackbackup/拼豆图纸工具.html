@@ -107,6 +107,12 @@
   #modeHint{color:var(--ink3);font-size:11.5px}
   #view{flex:1;overflow:auto;display:grid;place-items:center;padding:20px;min-height:0}
   #grid{image-rendering:pixelated;background:#fff;box-shadow:0 1px 10px #0006;cursor:crosshair}
+  /* [hackone] 拖拽平移：查看工具显示抓手，拖动中显示抓握 */
+  #grid.grab{cursor:grab}
+  #view.panning, #view.panning #grid{cursor:grabbing}
+  #view.spacepan, #view.spacepan #grid{cursor:grab}
+  #tools.off button{opacity:.34;filter:grayscale(1)}
+  #modeHint.warn{color:#b45309}
   #empty{text-align:center;color:var(--ink3);font-size:13px;line-height:2}
   #empty .big{font-size:17px;font-weight:700;color:var(--ink2);margin-bottom:4px}
 
@@ -302,6 +308,7 @@
   .row2{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:33px;
         padding:3px 0;border-top:1px solid #f2f4f8}
   .row2 .lb{font-size:12px;color:var(--ink2);white-space:nowrap}
+  .row2 button.wide{flex:1;width:100%;padding:7px 10px;margin-top:2px}
   .row2 select{width:142px;flex:0 0 142px;padding:4px 6px;font-size:12px}
   .row2 .rg{display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end;min-width:0}
   .row2 .rg input[type=range]{max-width:120px}
@@ -626,7 +633,7 @@
       <div class="gb">
         <div class="row2"><span class="lb">合并强度</span><select id="tidyPreset"><option value="0">关</option><option value="4">轻 ΔE≤4</option><option value="8" selected>标准 ΔE≤8</option><option value="15">强 ΔE≤15</option></select></div>
         <div class="row2"><span class="lb">零星清理</span><div class="stepper"><button data-for="tidyMin" data-d="-1">−</button><input id="tidyMin" type="number" min="0" max="20" value="0"><button data-for="tidyMin" data-d="1">+</button></div></div>
-        <div class="row2"><span class="lb">应用整理</span><button id="tidyGo" class="sm">执行</button></div>
+        <div class="row2"><button id="tidyGo" class="wide">应用整理</button></div>
         <div class="hint" id="tidyInfo" hidden></div>
       </div>
     </div>
@@ -2342,8 +2349,74 @@ $('view').addEventListener('wheel', e => {
   animateZoom((zoomTarget || S.cell) * k, e.clientX, e.clientY);
 }, { passive:false });
 
+/* [hackone] v1.2 拖拽平移：中键 / 空格+左键 / 查看工具下左键拖动
+   此前没有任何平移实现，只能靠原生滚动条；Windows 触控板两指拖动、中键自动滚动
+   恰好能滚，Linux 鼠标只有竖直滚轮，所以看起来"放大后拖不动"。
+   这里自己实现，跨平台、跨设备行为一致。 */
+let panState = null, spaceDown = false;
+const viewEl = $('view');
+function beginPan(e, capture){
+  panState = { x:e.clientX, y:e.clientY, sl:viewEl.scrollLeft, st:viewEl.scrollTop,
+               moved:false, pid:e.pointerId, captured:false };
+  if (capture) capturePan();
+}
+function capturePan(){
+  if (!panState || panState.captured) return;
+  panState.captured = true;
+  try { viewEl.setPointerCapture(panState.pid); } catch(err){}
+  viewEl.classList.add('panning');
+}
+function movePan(e){
+  if (!panState) return false;
+  const dx = e.clientX - panState.x, dy = e.clientY - panState.y;
+  if (!panState.moved && Math.abs(dx) + Math.abs(dy) > 3){
+    panState.moved = true;
+    capturePan();                 // 真的开始拖了才接管指针，保证单击还能被画布收到
+  }
+  if (panState.moved){
+    viewEl.scrollLeft = panState.sl - dx;
+    viewEl.scrollTop  = panState.st - dy;
+  }
+  return true;
+}
+function endPan(){
+  if (!panState) return false;
+  const moved = panState.moved;
+  panState = null;
+  viewEl.classList.remove('panning');
+  return moved;
+}
+function panCursor(){
+  if (canvas) canvas.classList.toggle('grab', S.tool === 'inspect' && S.mode !== 'mark');
+}
+viewEl.addEventListener('pointerdown', e => {
+  if (!S.cells) return;
+  if (e.button === 1){ e.preventDefault(); beginPan(e, true); return; }   // 中键：顺手掐掉 Linux 的粘贴/自动滚动
+  if (e.button !== 0) return;
+  if (spaceDown){ e.preventDefault(); beginPan(e, true); return; }
+  if (e.target === canvas && S.tool === 'inspect' && S.mode !== 'mark') beginPan(e, false);
+  else if (e.target === viewEl) beginPan(e, true);                        // 灰色底也能拖
+});
+viewEl.addEventListener('pointermove', e => { if (panState) movePan(e); });
+window.addEventListener('pointerup', () => { endPan(); });
+window.addEventListener('pointercancel', () => { endPan(); });
+document.addEventListener('keydown', e => {
+  if (e.code !== 'Space' || spaceDown) return;
+  const t = e.target, tag = t && t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+  spaceDown = true;
+  if (S.cells){ viewEl.classList.add('spacepan'); e.preventDefault(); }
+});
+document.addEventListener('keyup', e => {
+  if (e.code !== 'Space') return;
+  spaceDown = false;
+  viewEl.classList.remove('spacepan');
+});
+window.addEventListener('blur', () => { spaceDown = false; viewEl.classList.remove('spacepan'); });
+
 canvas.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
+  if (panState && panState.captured) return;   // 中键/空格平移中，不落笔
   if (S.palOpen) closePalette();
   const i = cellFromEvent(e);
   if (i < 0 || !S.cells) return;
@@ -2359,7 +2432,9 @@ canvas.addEventListener('mousedown', e => {
     return;
   }
   const t = S.tool;
-  if (t === 'inspect' || t === 'picker' || t === 'bucket'){ act(i); return; }
+  // [hackone] 查看工具：按下只记录，松手且没拖动才执行，拖动即平移画布
+  if (t === 'inspect'){ S.pendingInspect = i; return; }
+  if (t === 'picker' || t === 'bucket'){ act(i); return; }
   if (t === 'pencil' || t === 'eraser'){
     if (t !== 'eraser' && !validPaint()) return;
     beginStroke();
@@ -2398,6 +2473,11 @@ canvas.addEventListener('mousemove', e => {
   }
 });
 window.addEventListener('mouseup', () => {
+  if (endPan()){ S.pendingInspect = -1; S.hoverCell = -1; requestDraw(); return; }
+  if (S.pendingInspect >= 0){
+    const pi = S.pendingInspect; S.pendingInspect = -1;
+    if (pi >= 0 && S.cells) act(pi);
+  }
   if (S.drag){
     const end = (S.drag.last !== undefined) ? S.drag.last : S.drag.start;
     commitShape(end);
@@ -2908,8 +2988,8 @@ const TOOL_HINT = {
   bucket:'点一格，填充与它相连的同色区域；4/8 连通可切换。'
 };
 document.querySelectorAll('#tools button').forEach(btn => btn.addEventListener('click', () => {
-  // [hackone] 选任何编辑工具即回到查看/编辑语义，避免标记模式吞掉铅笔
-  if (S.mode === 'mark') setMode('view');
+  // [hackone] 标记模式下工具栏锁定：不再静默踢回「浏览」，只提示
+  if (S.mode === 'mark'){ toast('标记模式下工具栏已锁定，先切回「浏览」再选工具'); return; }
   S.tool = btn.dataset.t;
   document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b === btn));
   $('toolHint').textContent = TOOL_HINT[S.tool] || '';
@@ -2936,9 +3016,13 @@ function setMode(m){
     document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b.dataset.t === 'inspect'));
     $('toolHint').textContent = TOOL_HINT.inspect;
   }
+  $('tools').classList.toggle('off', m === 'mark');
+  $('tools').setAttribute('aria-disabled', m === 'mark' ? 'true' : 'false');
+  $('modeHint').classList.toggle('warn', m === 'mark');
   $('modeHint').textContent = m === 'mark'
-    ? '标记模式：点格子标记完成 / 再点取消，不改图案'
-    : '浏览模式：点格子查色号，不改进度';
+    ? '标记模式：点格子标记完成 / 再点取消，不改图案；工具栏已锁定'
+    : '浏览模式：点格子查色号；放大后按住左键「拖动」可平移画布';
+  panCursor();
   requestDraw();
 }
 document.querySelectorAll('#modeSeg button').forEach(btn => {
@@ -3717,27 +3801,73 @@ renderProgress();
     fit();
     if (window.__docsCommitFromState) window.__docsCommitFromState(name || '分享的图纸');
   }
+  /* 短链服务（Cloudflare Worker + KV）：链接只有 40 来个字符，微信/QQ 能直接发；
+     没网时自动退回 #d= 长链接，再不行退回 .pinda.json 文件。 */
+  var SHARE_API = 'https://pinda-share.tianqi689.workers.dev';
+  var SHARE_SITE = 'https://hack.liutingqiu.xyz';
+
+  async function copyText(txt){
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      try { await navigator.clipboard.writeText(txt); return true; } catch(e){}
+    }
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch(e){ return false; }
+  }
+
   window.copyShareLink = async function(){
     if (!S.cells) { toast('先生成图纸'); return; }
     var code = await packDoc();
-    var url = location.href.split('#')[0] + '#d=' + code;
-    if (url.length > 70000){
-      var data = { v: 1, w: S.gw, h: S.gh, b: S.brandId, c: S.codeSys, m: S.maxColors, r: rle(S.base) };
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-      a.download = '拼豆图纸_' + S.gw + 'x' + S.gh + '.pinda.json';
-      a.click();
-      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
-      toast('链接太长，已导出 .pinda.json，发给对方拖进页面即可');
+    var kb = Math.max(1, Math.round(code.length / 1024));
+    toast('正在生成分享链接…');
+    try {
+      var r = await fetch(SHARE_API + '/api/save', { method: 'POST', body: code });
+      if (r.ok){
+        var j = await r.json();
+        if (j && j.id){
+          var shortUrl = SHARE_SITE + '/#s=' + j.id;
+          var copied = await copyText(shortUrl);
+          showLinkModal(shortUrl, (copied ? '短链接已生成并复制（' : '短链接已生成（') + shortUrl.length +
+            ' 字符，180 天内有效）' + (copied ? '' : '：复制下面这条发给对方'));
+          return;
+        }
+      }
+    } catch(e){ /* 没网 / 服务不可用，走兜底 */ }
+
+    var url = SHARE_SITE + '/#d=' + code;
+    if (url.length <= 4000){
+      var ok = await copyText(url);
+      showLinkModal(url, (ok ? '已复制到剪贴板（' : '请手动复制（') + url.length + ' 字符，离线直连链接）');
       return;
     }
-    var done = function(ok){ toast(ok ? '分享链接已复制（' + Math.round(url.length/1024) + ' KB）' : '复制失败，请手动复制'); };
-    if (navigator.clipboard && navigator.clipboard.writeText){
-      try { await navigator.clipboard.writeText(url); done(true); return; } catch(e){}
-    }
-    showLinkModal(url);
+    var data = { v: 1, w: S.gw, h: S.gh, b: S.brandId, c: S.codeSys, m: S.maxColors, r: rle(S.base) };
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    a.download = '拼豆图纸_' + S.gw + 'x' + S.gh + '.pinda.json';
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    toast('网络不通，已导出 .pinda.json（' + kb + ' KB），用「打开图纸」可以再打开');
   };
+
   async function loadShareHash(){
+    var sm = /(?:^|[#&])s=([A-Za-z0-9_-]{4,16})/.exec(location.hash || '');
+    if (sm){
+      try {
+        var resp = await fetch(SHARE_API + '/api/get/' + sm[1]);
+        if (!resp.ok) throw new Error('miss');
+        var code = (await resp.text()).trim();
+        var sp = await unpackDoc(code);
+        applyPacked(sp, '分享的图纸');
+        try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+        toast('已打开分享的图纸');
+        return true;
+      } catch(e){ toast('分享链接已失效或网络不通'); return false; }
+    }
     var m = /(?:^|[#&])d=([^&]+)/.exec(location.hash || '');
     if (!m) return false;
     try {
@@ -3769,13 +3899,14 @@ renderProgress();
     });
   }
 
-  function showLinkModal(url){
+  function showLinkModal(url, note){
     var old = $('linkModal'); if (old) old.remove();
     var m = document.createElement('div');
     m.id = 'linkModal';
     m.innerHTML = '<div class="lm-box"><div class="lm-h">分享链接<button id="lmClose">✕</button></div>' +
       '<div class="lm-body"><textarea id="lmTa" readonly></textarea>' +
-      '<div class="cap">复制后发给对方，打开就是这张图纸</div></div></div>';
+      '<div class="cap">' + (note || '发给对方，打开就是这张图纸') + '</div>' +
+      (note ? '' : '') + '</div></div>';
     document.body.appendChild(m);
     var ta = $('lmTa'); ta.value = url; ta.focus(); ta.select();
     $('lmClose').addEventListener('click', function(){ m.remove(); });
@@ -3969,7 +4100,8 @@ renderProgress();
     row.innerHTML = '<button id="btnShareCard" class="sm">进度卡片</button><button id="btnGuide" class="sm">拼装指南</button>';
     var row2 = document.createElement('div');
     row2.className = 'row2';
-    row2.innerHTML = '<button id="btnShareLink" class="sm">分享链接</button><button id="btnOpenDoc" class="sm">打开图纸</button>';
+    row2.innerHTML = '<button id="btnShareLink" class="sm" title="生成短链接，微信/QQ 直接发">分享链接</button>' +
+      '<button id="btnOpenDoc" class="sm" title="打开别人发来的 .pinda.json 图纸文件（没网时的备用通道）">打开图纸</button>';
     var docInp = document.createElement('input');
     docInp.type = 'file'; docInp.id = 'docFile'; docInp.accept = '.json,application/json'; docInp.hidden = true;
     dock.appendChild(docInp);
