@@ -38,3 +38,4 @@
 [12:26:23] ops       部署 P0 修复版                            证据: https://hack.liutingqiu.xyz (57.97KB gzip)
 [12:36:33] user-test 复测 12:26 部署：色号/整图/错误提示已修；新报手机 390 布局塌陷、主按钮与分板重复、预览图仍带红线、色名消失 证据: docs/user-testing/retest-2026-11-07-1238.md + audit-checklist.md + docs/evidence/user-testing/round2/（9 图 + 1 PDF）
 [12:36:38] chief     复测发现手机端 P0 回归，暂停第五棒先修 证据: BOARD T-20~T-23
+[12:36:46] dev       拼装引导第一段：按色高亮、patternHash+bitmask 进度持久化、按板统计；刷新/换图实测 证据: web/src/lib/progress.ts(+test)；docs/evidence/user-testing/t15-progress-highlight/reload/100x100.png；42 tests
