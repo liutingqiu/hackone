@@ -27,8 +27,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+!journal/*.log
 
 # 本地数据
 *.db
 *.sqlite3
 data/local/
+# 留痕要进版本库
+!journal/*.log
