@@ -735,6 +735,7 @@ export default function App() {
         onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files?.[0]); }}
       >
         <aside className="panel">
+          <div className="panel-group">
           <label className="row">
             <span>每行颗数（格）</span>
             <b>{cols}</b>
@@ -796,9 +797,10 @@ export default function App() {
           </div>
 
           <label className="switch"><input type="checkbox" checked={showCodes} onChange={(e) => setShowCodes(e.target.checked)} /> 显示色号</label>
+          </div>
 
           {mode === "pro" && (
-            <>
+            <div className="panel-group">
               <label className="row" title="出现次数低于阈值的颜色会合并到最接近的高频色">
                 <span>合并相近颜色（阈值）</span>
                 <b>{minCount} 颗</b>
@@ -813,7 +815,7 @@ export default function App() {
               />
 
               <label className="switch"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> 显示网格</label>
-            </>
+            </div>
           )}
 
           {!pattern && <p className="hint">把图片拖进来，或点右上角上传</p>}
@@ -879,10 +881,12 @@ export default function App() {
         </section>
 
         <aside className="panel stats">
-          <div className="row"><span>图纸</span><b>{pattern ? `${pattern.cols} × ${pattern.rows}` : "—"}</b></div>
-          <div className="row"><span>总颗数</span><b>{total || "—"}</b></div>
-          <div className="row"><span>颜色数</span><b>{stats.length || "—"}</b></div>
-          <div className="palette-note">色板：MARD {PALETTE.length}</div>
+          <div className="panel-group">
+            <div className="row"><span>图纸</span><b>{pattern ? `${pattern.cols} × ${pattern.rows}` : "—"}</b></div>
+            <div className="row"><span>总颗数</span><b>{total || "—"}</b></div>
+            <div className="row"><span>颜色数</span><b>{stats.length || "—"}</b></div>
+            <div className="palette-note">色板：MARD {PALETTE.length}</div>
+          </div>
 
           <section className="board-section">
             <h2>分板</h2>
@@ -945,6 +949,7 @@ export default function App() {
             )}
           </section>
 
+          <section className="usage-section">
           <div className="usage-head">
             <h2>用量清单</h2>
             <button
@@ -997,6 +1002,7 @@ export default function App() {
             })}
             {!stats.length && <p className="hint">导入图片后显示</p>}
           </div>
+          </section>
           <div className="footnote">
             {hoverInfo
               ? `色号：${hoverInfo.code} · ${stats.find((s) => s.bead.code === hoverInfo.code)?.count ?? 0} 颗`
