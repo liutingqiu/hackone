@@ -7,24 +7,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  smoke:
+  build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
     steps:
       - uses: actions/checkout@v7
-      - name: Show environment
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
         run: |
-          echo "runner: $RUNNER_OS $RUNNER_ARCH"
-          node -v || true
-          npm -v || true
-      - name: Build (if package.json exists)
-        run: |
-          if [ -f package.json ]; then
-            npm ci || npm install
-            npm run build --if-present
-          else
-            echo "no package.json yet, skipping build"
-          fi
-      - name: Check docs
-        run: |
-          test -f README.md && echo "README ok"
-          test -f docs/PLAN.md && echo "PLAN ok"
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
