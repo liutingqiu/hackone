@@ -14,3 +14,7 @@
 [11:30:03] research  实测4个竞品的分板/板号/顺序/库存/导出/收费 证据: docs/market-research.md 新增「竞品实测（2026-11-07）」；证据 docs/evidence/{zippland,ldb,jett-*,mypindou-1}.png
 [11:31:31] chief     采纳竞品实测结论，板尺寸改为可选（29/52），话术修正 证据: docs/decisions.md D-03/D-04
 [11:33:40] ops       首次部署 Cloudflare Pages 成功           证据: https://hackone.pages.dev (项目 hackone, 3 文件 3.99s)
+[11:35:11] dev       分板 UI 接入：画布红色板界+圆角板号、右栏分板块、板尺寸输入、A4 分板拼装图导出 证据: web/src/App.tsx + styles.css + lib/split-export.ts(+2 单测)；17 tests；53.87KB gzip；docs/evidence/split-export.png
+[11:35:11] dev       导出实测 4 板+总览=5 页 A4；修复 .sheet:last-child 导致的末页多一张空白页 证据: Page.printToPDF 页数 5；docs/evidence/split-export.png + split-export-overview.png
+[11:35:11] dev       范围说明：小白/专业模式开关尚未实现，板尺寸输入暂常显可改（默认 29），待模式接入后按小白固定 证据: web/src/App.tsx board-section
+[11:36:15] ops       自定义域名生效                          证据: https://hack.liutingqiu.xyz HTTP/2 200
