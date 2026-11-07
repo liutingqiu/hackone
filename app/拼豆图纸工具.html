@@ -3824,9 +3824,11 @@ renderProgress();
     if (!S.cells) { toast('先生成图纸'); return; }
     var code = await packDoc();
     var kb = Math.max(1, Math.round(code.length / 1024));
+    var fail = '网络不通';
     toast('正在生成分享链接…');
     try {
       var r = await fetch(SHARE_API + '/api/save', { method: 'POST', body: code });
+      if (!r.ok) fail = r.status === 413 ? '图纸太大（超过 400 KB）' : '分享服务返回 ' + r.status;
       if (r.ok){
         var j = await r.json();
         if (j && j.id){
@@ -3851,7 +3853,7 @@ renderProgress();
     a.download = '拼豆图纸_' + S.gw + 'x' + S.gh + '.pinda.json';
     a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
-    toast('网络不通，已导出 .pinda.json（' + kb + ' KB），用「打开图纸」可以再打开');
+    toast(fail + '，已导出 .pinda.json（' + kb + ' KB），用「打开图纸」可以再打开');
   };
 
   async function loadShareHash(){
