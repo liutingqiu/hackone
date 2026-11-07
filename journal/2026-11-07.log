@@ -48,3 +48,6 @@
 [13:04:04] ops       部署演示就绪版（390修复/触屏取色/草稿/文案） 证据: hack.liutingqiu.xyz 61.29KB gzip
 [13:09:36] dev       查看/标记显式模式：查看只取色、标记切完成；移动端纵向布局+fit 兜底 证据: web/src/App.tsx + styles.css；docs/evidence/user-testing/mode-*.png；47 tests
 [13:11:29] ops       部署查看/标记模式版                   证据: hack.liutingqiu.xyz 61.48KB gzip
+[13:18:33] dev       采购闭环：复制 MARD 采购清单（clipboard+降级）、每行去购买淘宝搜索 证据: web/src/lib/purchase.ts(+test)；docs/evidence/user-testing/purchase-*.png；51 tests
+[13:20:32] user-test 复测查看/标记版：按钮 72x44 状态清楚；标记10→10、取消→9、查看不误改、刷新保留；390 新图完整可见（草稿带回桌面尺寸会溢出）；导出预览仍 5.2s 证据: docs/user-testing/retest-2026-11-07-1320.md + demo-runbook.md（v3）+ docs/evidence/user-testing/round5/（3 图）
+[13:21:05] chief     功能冻结（13:20），转入演出物料   证据: docs/pitch.md 五分局稿
