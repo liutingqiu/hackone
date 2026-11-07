@@ -120,3 +120,16 @@ button.wide { width: 100%; }
 }
 .mode-switch button.active { background: var(--accent); color: #fff; }
 .mode-switch button:active { transform: none; }
+
+.actions button { white-space: nowrap; }
+
+/* 导出反馈 toast：顶部居中，避开底部浏览器/扩展浮层 */
+.toast {
+  position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+  z-index: 50; max-width: calc(100vw - 32px);
+  padding: 9px 16px; border-radius: 10px;
+  background: rgba(17, 24, 39, .94); color: #fff;
+  font-size: 13px; text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+  pointer-events: none;
+}
