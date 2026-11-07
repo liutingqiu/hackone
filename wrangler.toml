@@ -1,0 +1,15 @@
+# Cloudflare Pages 配置 —— 深度思烤 / hackone
+# 决策来源：docs/adr.md ADR-002（Pages 静态托管 + hack.liutingqiu.xyz）
+# 形态：Direct Upload（构建在 CI 或本地完成，Pages 只托管 web/dist 静态文件）
+#
+# 注意：本文件一旦用于部署，就成为 Pages 项目这些字段的「唯一事实来源」，
+# Dashboard 里对应字段会变成只读。改配置请改本文件，不要两边改。
+# 本文件不含任何凭据；token 只走环境变量 / GitHub Secrets。
+
+name = "hackone"                       # Pages 项目名 → https://hackone.pages.dev
+compatibility_date = "2026-11-07"      # 纯静态站点，仅用于满足 wrangler 的配置校验
+pages_build_output_dir = "./web/dist"  # 相对本文件；等价于 wrangler pages deploy web/dist
+
+# 纯静态、无 Pages Functions、无绑定、无环境变量：
+# 演示前不引入任何可变配置，减少出错面。V2 若需要服务端能力（见 ADR-002），
+# 再加 functions/ 目录与绑定，并重新走一次评审。
