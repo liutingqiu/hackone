@@ -1200,6 +1200,12 @@ function progressPatternHash(){
 function progressByteCount(){
   return S.cells ? Math.ceil(S.cells.length / 8) : 0;
 }
+// 只有"换了一张图/新建一张画布"才主动清进度；撤销、整理、翻转都不清
+function resetProgress(){
+  S.progress = new Uint8Array(progressByteCount());
+  S.progressHash = '';
+  S.statsDirty = true;
+}
 function syncProgress(){
   if (!S.cells){
     S.progress = new Uint8Array(0);
@@ -1509,8 +1515,6 @@ function draw(){
 function installDoc(nw, nh, base){
   S.gw = nw; S.gh = nh; S.base = base;
   S.cells = limitColors(base, S.maxColors);
-  S.progress = new Uint8Array(Math.ceil(S.cells.length / 8));
-  S.progressHash = '';
   S.selCell = -1; S.highlight = -1; S.hlCells = null;
   S.preview = null; S.drag = null; S.stroke = null; S.dragging = false;
   S.buf = null; S.bufCtx = null;
@@ -1645,6 +1649,7 @@ function newBlank(w, h){
   S.flip = false; updateFlipBtn();
   $('srcInfo').textContent = `空白图纸 ${w}×${h}（没有导入图片）`;
   installDoc(w, h, new Int32Array(w*h).fill(-1));
+  resetProgress();
   fit();
   toast(`已新建 ${w}×${h} 空白图纸`);
 }
@@ -1674,7 +1679,12 @@ function setCellSize(cs){
 
 /* ------------------------------------------------ 撤销 / 重做 ----------- */
 function entryBytes(e){
-  if (e.t === 'd') return e.before.base.byteLength + (e.after ? e.after.base.byteLength : 0);
+  if (e.t === 'd'){
+    var n = e.before.base.byteLength + (e.after ? e.after.base.byteLength : 0);
+    if (e.before.prog) n += e.before.prog.byteLength;
+    if (e.after && e.after.prog) n += e.after.prog.byteLength;
+    return n;
+  }
   return e.pos.byteLength + e.before.byteLength + e.after.byteLength;
 }
 function pushHist(e){
@@ -1686,7 +1696,9 @@ function pushHist(e){
   }
 }
 function snapDoc(){
-  return { gw:S.gw, gh:S.gh, base:Int32Array.from(S.base) };
+  // 进度一起拍快照：撤销「新建空白」「整理」「改尺寸」时已拼记录不该丢
+  return { gw:S.gw, gh:S.gh, base:Int32Array.from(S.base),
+           prog: (S.progress && S.progress.length) ? Uint8Array.from(S.progress) : null };
 }
 function pushSnap(){
   if (!S.base) return;
@@ -1719,6 +1731,14 @@ function applyEntry(e, dir){
   if (e.t === 'd'){
     const s = (dir === 'undo') ? e.before : (e.after || e.before);
     installDoc(s.gw, s.gh, Int32Array.from(s.base));
+    if (s.prog && s.prog.length === progressByteCount()){
+      S.progress = Uint8Array.from(s.prog);
+      S.progressHash = progressPatternHash();
+      renderProgress();
+      requestDraw();
+    } else {
+      resetProgress();
+    }
     return;
   }
   const arr = dir === 'undo' ? e.before : e.after;
@@ -2525,6 +2545,7 @@ function loadImage(src, name){
     S.history.length = 0; S.future.length = 0; S.histBytes = 0;
     S.dirtyImg = false;
     mapCells();
+    resetProgress();
     syncDocInputs(true);
     fit();
     if (window.__docAfterImport) window.__docAfterImport(name || '图片');
@@ -3759,6 +3780,7 @@ renderProgress();
     colourSystemOptions();
     buildPalette({ remap:false });
     installDoc(p.w, p.h, p.base);
+    resetProgress();
     fit();
     if (window.__docsCommitFromState) window.__docsCommitFromState(name || '分享的图纸');
   }
