@@ -508,6 +508,18 @@
   <!-- ================= 左侧控制 ================= -->
   <aside id="side">
 
+    <div class="grp" data-g="new">
+      <div class="gt"><span>新建画布</span><i class="chev"></i></div>
+      <div class="gb">
+        <div class="row2"><span class="lb">宽度</span>
+          <div class="stepper"><button data-for="newW" data-d="-1">−</button><input id="newW" type="number" min="1" max="400" value="32"><button data-for="newW" data-d="1">+</button></div>
+        </div>
+        <div class="row2"><span class="lb">高度</span>
+          <div class="stepper"><button data-for="newH" data-d="-1">−</button><input id="newH" type="number" min="1" max="400" value="32"><button data-for="newH" data-d="1">+</button></div>
+        </div>
+        <div class="row2"><span class="lb">空白画布</span><button id="newGo" class="sm">创建</button></div>
+      </div>
+    </div>
     <div class="grp" data-g="size">
       <div class="gt"><span>尺寸</span><i class="chev"></i></div>
       <div class="gb">
@@ -3014,25 +3026,44 @@ renderProgress();
 /* [hackone] v3：步进器 / 导入按钮 / 空白图纸 */
 (function(){
   var $ = function(id){ return document.getElementById(id); };
-  function stepOnce(b){
-    var inp = $(b.dataset.for); if (!inp) return;
+  function bump(b){
+    var inp = $(b.dataset.for); if (!inp) return false;
     var v = (parseInt(inp.value, 10) || 0) + (+b.dataset.d);
     var lo = inp.min !== '' ? +inp.min : -9999, hi = inp.max !== '' ? +inp.max : 9999;
     var nv = Math.max(lo, Math.min(hi, v));
-    if (nv === (parseInt(inp.value, 10) || 0)) return;
+    var cur = parseInt(inp.value, 10) || 0;
+    if (nv === cur) return false;
     inp.value = nv;
-    inp.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+  function commit(inp){
+    if (inp) inp.dispatchEvent(new Event('change', { bubbles: true }));
   }
   document.querySelectorAll('.stepper button').forEach(function(b){
-    var timer = 0, repeat = 0;
-    function stop(){ clearTimeout(timer); clearInterval(repeat); timer = 0; repeat = 0; }
+    var timer = 0, repeat = 0, changed = false;
+    function stop(apply){
+      clearTimeout(timer); clearInterval(repeat); timer = 0; repeat = 0;
+      if (apply !== false && changed){
+        changed = false;
+        commit($(b.dataset.for));
+      }
+    }
     b.addEventListener('pointerdown', function(e){
       e.preventDefault();
-      stepOnce(b);
-      timer = setTimeout(function(){ repeat = setInterval(function(){ stepOnce(b); }, 45); }, 350);
+      changed = bump(b) || changed;
+      timer = setTimeout(function(){
+        repeat = setInterval(function(){ changed = bump(b) || changed; }, 45);
+      }, 320);
     });
-    ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ b.addEventListener(ev, stop); });
-    window.addEventListener('blur', stop);
+    ['pointerup','pointercancel'].forEach(function(ev){ b.addEventListener(ev, function(){ stop(true); }); });
+    b.addEventListener('pointerleave', function(){ stop(false); });
+    window.addEventListener('blur', function(){ stop(false); });
+  });
+  var ng = $('newGo');
+  if (ng) ng.addEventListener('click', function(){
+    var w = parseInt(($('newW')||{}).value, 10) || 32;
+    var h = parseInt(($('newH')||{}).value, 10) || 32;
+    newBlank(w, h);
   });
   var pill = $('importPill');
   if (pill) pill.addEventListener('click', function(){ $('file').click(); });
