@@ -43,3 +43,6 @@
 [12:42:49] chief     新增演示可用性任务（触屏取色/触摸尺寸/滑杆精度/文案） 证据: BOARD T-24~T-27 + demo-runbook
 [12:43:49] dev       修 390 布局回归/导出按钮去重/预览去红线/色名空白+小白显色号；390 scrollWidth=390、canvas 384 证据: web/src/App.tsx + styles.css + fit.test.ts；docs/evidence/user-testing/fix-05-*.png；43 tests
 [12:51:22] chief     去掉离开确认弹窗，改自动保存草稿 证据: BOARD T-28
+[12:54:48] dev       演示可用性：触屏取色、44px 热区、滑杆步进、1024 画布 528px/11px、文案与色板标注 证据: web/src/App.tsx + styles.css + label-fit/fit tests；docs/evidence/user-testing/demo-*.png；45 tests
+[13:01:26] dev       删 beforeunload 后补静默草稿：图/格子/色号/板尺寸恢复条 + 重新开始；触屏固定色号条 证据: web/src/App.tsx + progress.ts(+test)；docs/evidence/user-testing/draft-*.png；47 tests
+[13:04:04] ops       部署演示就绪版（390修复/触屏取色/草稿/文案） 证据: hack.liutingqiu.xyz 61.29KB gzip
