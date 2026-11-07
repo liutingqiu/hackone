@@ -39,3 +39,5 @@
 [12:36:33] user-test 复测 12:26 部署：色号/整图/错误提示已修；新报手机 390 布局塌陷、主按钮与分板重复、预览图仍带红线、色名消失 证据: docs/user-testing/retest-2026-11-07-1238.md + audit-checklist.md + docs/evidence/user-testing/round2/（9 图 + 1 PDF）
 [12:36:38] chief     复测发现手机端 P0 回归，暂停第五棒先修 证据: BOARD T-20~T-23
 [12:36:46] dev       拼装引导第一段：按色高亮、patternHash+bitmask 进度持久化、按板统计；刷新/换图实测 证据: web/src/lib/progress.ts(+test)；docs/evidence/user-testing/t15-progress-highlight/reload/100x100.png；42 tests
+[12:42:24] user-test 完成审计第 3/4 类 + 演示路径专项：触摸目标全<44px、平板 1024 fit 但格子 9px、手机 390 溢出 603px、冷启动 4s、打印框是最大冷场点 证据: docs/user-testing/audit-checklist.md（第三/四/五节）+ demo-runbook.md + docs/evidence/user-testing/round3/（5 图）
+[12:42:49] chief     新增演示可用性任务（触屏取色/触摸尺寸/滑杆精度/文案） 证据: BOARD T-24~T-27 + demo-runbook
