@@ -694,7 +694,6 @@ export default function App() {
     <div className="app">
       <header>
         <div className="brand">
-          <span className="logo">◉</span>
           <div>
             <h1>拼豆图纸</h1>
             <p>传图 → 出图 → 按色号摆</p>
