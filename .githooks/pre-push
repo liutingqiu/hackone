@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# pre-push：推送前跑本地 CI。团队统一由 core.hooksPath=.githooks 启用。
+# 紧急情况可绕过：git push --no-verify
+exec "$(git rev-parse --show-toplevel)/.ci/check.sh" --fast

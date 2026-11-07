@@ -28,6 +28,21 @@ git push -u origin feat/你的功能  # 首次推送
 git switch main && git pull --rebase
 ```
 
+
+## CI（两层）
+
+**本地 CI**（默认生效，零依赖）：推送前自动跑，不依赖 GitHub。
+
+```bash
+git config core.hooksPath .githooks   # 每台机器执行一次
+.ci/check.sh          # 手动跑全量
+.ci/check.sh --fast   # 跳过依赖安装（日常）
+```
+
+**GitHub Actions**：`.github/workflows/ci.yml`，push / PR 自动触发。
+它在 GitHub 服务器上跑，故障时会排队或失败——这就是本地那层存在的理由。
+需要看日志：`gh run list` / `gh run view <id> --log-failed`
+
 ## 目录
 
 ```
