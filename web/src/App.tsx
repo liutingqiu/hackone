@@ -149,6 +149,7 @@ export default function App() {
   const [tool, setTool] = useState<"view" | "mark">("view");
   const [busy, setBusy] = useState<null | "print" | "png">(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastLeaving, setToastLeaving] = useState(false);
   const [, setExportedPattern] = useState<Pattern | null>(null);
   const [selectedColor, setSelectedColor] = useState<number | null>(() => draftSettings?.selectedColor ?? null);
   const [marked, setMarked] = useState<Uint8Array>(EMPTY_MASK);
@@ -163,10 +164,22 @@ export default function App() {
   const fitTokenRef = useRef(0);
   const dragRef = useRef<{ id: number; x: number; y: number; pointerType: string } | null>(null);
 
+  const rangeBackground = (value: number, min: number, max: number) => {
+    const pct = ((value - min) / (max - min)) * 100;
+    return `linear-gradient(to right, var(--accent) 0 ${pct}%, var(--line) ${pct}% 100%)`;
+  };
+
   const notify = useCallback((text: string) => {
     setToast(text);
+    setToastLeaving(false);
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+    toastTimer.current = window.setTimeout(() => {
+      setToastLeaving(true);
+      toastTimer.current = window.setTimeout(() => {
+        setToast(null);
+        setToastLeaving(false);
+      }, 120);
+    }, 2480);
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
@@ -357,10 +370,10 @@ export default function App() {
       }
     }
 
-    // 分板叠加：红色分隔线 + 左上角红色圆角板号标签；格子太小时只画线
+    // 分板叠加：中性分隔线 + 墨色板号标签；格子太小时只画线
     if (showBoardIds && grid) {
       const lineW = Math.max(1.5, Math.min(3, cell * 0.12));
-      ctx.strokeStyle = "rgba(220, 38, 38, 0.92)";
+      ctx.strokeStyle = "rgba(154, 158, 166, 0.9)";
       ctx.lineWidth = lineW;
       ctx.beginPath();
       for (const b of grid.boards) {
@@ -389,8 +402,8 @@ export default function App() {
           const bh = fontSize + 6;
           const lx = b.x0 * cell + 3;
           const ly = b.y0 * cell + 3;
-          ctx.fillStyle = "rgba(220, 38, 38, 0.96)";
-          roundRect(ctx, lx, ly, bw, bh, 4);
+          ctx.fillStyle = "rgba(17, 18, 20, 0.86)";
+          roundRect(ctx, lx, ly, bw, bh, 6);
           ctx.fill();
           ctx.fillStyle = "#fff";
           ctx.fillText(label, lx + bw / 2, ly + bh / 2 + 0.5);
@@ -439,17 +452,22 @@ export default function App() {
     const ctx = cv.getContext("2d")!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#1F6FEB";
     const totalCells = pattern.cols * pattern.rows;
     for (let i = 0; i < totalCells; i++) {
       if (!hasMark(activeMask, i)) continue;
       const x = i % pattern.cols;
       const y = (i / pattern.cols) | 0;
-      ctx.fillStyle = "rgba(16, 185, 129, 0.42)";
+      ctx.globalAlpha = 0.42;
+      ctx.fillStyle = accent;
       ctx.fillRect(x * cell, y * cell, cell, cell);
+      ctx.globalAlpha = 1;
       if (cell >= 6) {
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.95)";
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = accent;
         ctx.lineWidth = Math.max(1, cell * 0.08);
         ctx.strokeRect(x * cell + 0.5, y * cell + 0.5, cell - 1, cell - 1);
+        ctx.globalAlpha = 1;
       }
     }
   }, [pattern, cell, activeMask]);
@@ -694,7 +712,6 @@ export default function App() {
     <div className="app">
       <header>
         <div className="brand">
-          <span className="logo">◉</span>
           <div>
             <h1>拼豆图纸</h1>
             <p>传图 → 出图 → 按色号摆</p>
@@ -705,11 +722,11 @@ export default function App() {
           <button type="button" className={mode === "pro" ? "active" : ""} aria-pressed={mode === "pro"} onClick={() => setMode("pro")}>专业</button>
         </div>
         <div className="actions">
-          <button className="ghost" onClick={() => fileRef.current?.click()}>上传图片</button>
-          <button onClick={exportPrintable} disabled={!pattern || !!busy}>
+          <button className="btn-secondary" onClick={() => fileRef.current?.click()}>上传图片</button>
+          <button className="btn-primary" onClick={exportPrintable} disabled={!pattern || !!busy}>
             {busy === "print" ? "生成中…" : "打印拼装图（A4）"}
           </button>
-          <button className="ghost" onClick={exportPreview} disabled={!pattern || !!busy}>
+          <button className="btn-secondary" onClick={exportPreview} disabled={!pattern || !!busy}>
             {busy === "png" ? "生成中…" : "导出预览图（不含色号）"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
@@ -719,7 +736,7 @@ export default function App() {
       {draftBannerOpen && restored && (
         <div className="draft-banner" role="status">
           <span>恢复了上次的图纸</span>
-          <button type="button" className="ghost" onClick={resetDraft}>重新开始</button>
+          <button type="button" className="btn-secondary" onClick={resetDraft}>重新开始</button>
           <button
             type="button"
             className="draft-close"
@@ -736,6 +753,7 @@ export default function App() {
         onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files?.[0]); }}
       >
         <aside className="panel">
+          <div className="panel-group">
           <label className="row">
             <span>每行颗数（格）</span>
             <b>{cols}</b>
@@ -757,6 +775,7 @@ export default function App() {
               step={4}
               value={cols}
               disabled={restored}
+              style={{ background: rangeBackground(cols, 16, 120) }}
               onChange={(e) => setCols(+e.target.value)}
             />
             <button
@@ -784,7 +803,14 @@ export default function App() {
             >
               −
             </button>
-            <input type="range" min={3} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
+            <input
+              type="range"
+              min={3}
+              max={40}
+              value={cell}
+              style={{ background: rangeBackground(cell, 3, 40) }}
+              onChange={(e) => setCell(+e.target.value)}
+            />
             <button
               type="button"
               className="step-btn"
@@ -797,9 +823,10 @@ export default function App() {
           </div>
 
           <label className="switch"><input type="checkbox" checked={showCodes} onChange={(e) => setShowCodes(e.target.checked)} /> 显示色号</label>
+          </div>
 
           {mode === "pro" && (
-            <>
+            <div className="panel-group">
               <label className="row" title="出现次数低于阈值的颜色会合并到最接近的高频色">
                 <span>合并相近颜色（阈值）</span>
                 <b>{minCount} 颗</b>
@@ -810,11 +837,12 @@ export default function App() {
                 max={20}
                 value={minCount}
                 disabled={restored}
+                style={{ background: rangeBackground(minCount, 1, 20) }}
                 onChange={(e) => setMinCount(+e.target.value)}
               />
 
               <label className="switch"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> 显示网格</label>
-            </>
+            </div>
           )}
 
           {!pattern && <p className="hint">把图片拖进来，或点右上角上传</p>}
@@ -880,10 +908,12 @@ export default function App() {
         </section>
 
         <aside className="panel stats">
-          <div className="row"><span>图纸</span><b>{pattern ? `${pattern.cols} × ${pattern.rows}` : "—"}</b></div>
-          <div className="row"><span>总颗数</span><b>{total || "—"}</b></div>
-          <div className="row"><span>颜色数</span><b>{stats.length || "—"}</b></div>
-          <div className="palette-note">色板：MARD {PALETTE.length}</div>
+          <div className="panel-group">
+            <div className="row"><span>图纸</span><b>{pattern ? `${pattern.cols} × ${pattern.rows}` : "—"}</b></div>
+            <div className="row"><span>总颗数</span><b>{total || "—"}</b></div>
+            <div className="row"><span>颜色数</span><b>{stats.length || "—"}</b></div>
+            <div className="palette-note">色板：MARD {PALETTE.length}</div>
+          </div>
 
           <section className="board-section">
             <h2>分板</h2>
@@ -946,11 +976,12 @@ export default function App() {
             )}
           </section>
 
+          <section className="usage-section">
           <div className="usage-head">
             <h2>用量清单</h2>
             <button
               type="button"
-              className="copy-btn"
+              className="copy-btn btn-secondary"
               onClick={copyPurchaseList}
               disabled={!stats.length}
             >
@@ -998,6 +1029,7 @@ export default function App() {
             })}
             {!stats.length && <p className="hint">导入图片后显示</p>}
           </div>
+          </section>
           <div className="footnote">
             {hoverInfo
               ? `色号：${hoverInfo.code} · ${stats.find((s) => s.bead.code === hoverInfo.code)?.count ?? 0} 颗`
@@ -1015,7 +1047,7 @@ export default function App() {
         </div>
       )}
       {toast && (
-        <div className="toast" role="status" aria-live="polite">{toast}</div>
+        <div className={`toast${toastLeaving ? " out" : ""}`} role="status" aria-live="polite">{toast}</div>
       )}
     </div>
   );
