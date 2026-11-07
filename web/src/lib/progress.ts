@@ -6,6 +6,7 @@ export const PALETTE_VERSION = "mard291";
 const STORAGE_PREFIX = "pindou:progress:v1:";
 const PATTERN_KEY = "pindou:last-pattern:v1";
 const CELL_KEY = "pindou:last-cell:v1";
+const SETTINGS_KEY = "pindou:draft-settings:v1";
 
 /** 空 bitmask（0 格）；模块级常量，避免每次渲染新建引用 */
 export const EMPTY_MASK = new Uint8Array(0);
@@ -14,6 +15,13 @@ export type PatternLike = { cols: number; rows: number; cells: ArrayLike<number>
 
 /** 刷新后恢复用的最后一张图纸（cells 为普通数组，可 JSON 序列化） */
 export type StoredPattern = { cols: number; rows: number; cells: number[] };
+
+/** 草稿里的界面参数；图本身在 StoredPattern */
+export type DraftSettings = {
+  minCount: number;
+  boardSize: number;
+  selectedColor: number | null;
+};
 
 export type BoardProgress = {
   index: number;
@@ -172,6 +180,71 @@ export function loadLastCell(): number | null {
 export function saveLastCell(cell: number): void {
   try {
     getStorage()?.setItem(CELL_KEY, String(cell));
+  } catch {
+    // 忽略
+  }
+}
+
+export function parseDraftSettings(raw: string | null | undefined): DraftSettings | null {
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw) as Partial<DraftSettings>;
+    const minCount = data.minCount;
+    const boardSize = data.boardSize;
+    const selectedColor = data.selectedColor;
+    if (!Number.isInteger(minCount) || (minCount as number) < 1 || (minCount as number) > 20) {
+      return null;
+    }
+    if (boardSize !== 29 && boardSize !== 52) return null;
+    if (
+      selectedColor !== null &&
+      (!Number.isInteger(selectedColor) ||
+        (selectedColor as number) < 0 ||
+        (selectedColor as number) >= PALETTE.length)
+    ) {
+      return null;
+    }
+    return {
+      minCount: minCount as number,
+      boardSize: boardSize as number,
+      selectedColor: selectedColor as number | null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function loadDraftSettings(): DraftSettings | null {
+  try {
+    return parseDraftSettings(getStorage()?.getItem(SETTINGS_KEY));
+  } catch {
+    return null;
+  }
+}
+
+export function saveDraftSettings(settings: DraftSettings): void {
+  try {
+    getStorage()?.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // 忽略
+  }
+}
+
+/** 清空最后一张图/格子/设置（「重新开始」） */
+export function clearDraft(): void {
+  try {
+    const storage = getStorage();
+    storage?.removeItem(PATTERN_KEY);
+    storage?.removeItem(CELL_KEY);
+    storage?.removeItem(SETTINGS_KEY);
+  } catch {
+    // 忽略
+  }
+}
+
+export function clearProgress(hash: string): void {
+  try {
+    getStorage()?.removeItem(progressStorageKey(hash));
   } catch {
     // 忽略
   }

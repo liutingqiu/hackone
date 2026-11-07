@@ -8,6 +8,7 @@ import {
   encodeMask,
   hashPattern,
   hasMark,
+  parseDraftSettings,
   parseLastCell,
   parseStoredPattern,
   percent,
@@ -98,6 +99,29 @@ describe("last pattern / last cell", () => {
     expect(parseLastCell("2")).toBeNull();
     expect(parseLastCell("41")).toBeNull();
     expect(parseLastCell(null)).toBeNull();
+  });
+});
+
+describe("draft settings", () => {
+  it("合法参数恢复", () => {
+    expect(parseDraftSettings(JSON.stringify({ minCount: 4, boardSize: 52, selectedColor: 7 }))).toEqual({
+      minCount: 4,
+      boardSize: 52,
+      selectedColor: 7,
+    });
+    expect(parseDraftSettings(JSON.stringify({ minCount: 2, boardSize: 29, selectedColor: null }))).toEqual({
+      minCount: 2,
+      boardSize: 29,
+      selectedColor: null,
+    });
+  });
+
+  it("越界/损坏参数拒绝", () => {
+    expect(parseDraftSettings(null)).toBeNull();
+    expect(parseDraftSettings("{bad")).toBeNull();
+    expect(parseDraftSettings(JSON.stringify({ minCount: 0, boardSize: 29, selectedColor: null }))).toBeNull();
+    expect(parseDraftSettings(JSON.stringify({ minCount: 2, boardSize: 30, selectedColor: null }))).toBeNull();
+    expect(parseDraftSettings(JSON.stringify({ minCount: 2, boardSize: 29, selectedColor: 9999 }))).toBeNull();
   });
 });
 

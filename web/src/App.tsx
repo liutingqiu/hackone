@@ -13,11 +13,15 @@ import {
   EMPTY_MASK,
   hashPattern,
   hasMark,
+  clearDraft,
+  clearProgress,
+  loadDraftSettings,
   loadLastCell,
   loadLastPattern,
   loadProgress,
   percent,
   percentText,
+  saveDraftSettings,
   saveLastCell,
   saveLastPattern,
   saveProgress,
@@ -123,10 +127,12 @@ function roundRect(
 export default function App() {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [restoredPattern, setRestoredPattern] = useState<Pattern | null>(() => loadLastPattern());
+  const [draftSettings] = useState(() => loadDraftSettings());
+  const [draftBannerOpen, setDraftBannerOpen] = useState(() => restoredPattern !== null);
   const [cols, setCols] = useState(() => restoredPattern?.cols ?? 48);
   const [cell, setCell] = useState(() => loadLastCell() ?? 14);
-  const [minCount, setMinCount] = useState(2);
-  const [boardSize, setBoardSize] = useState(29);
+  const [minCount, setMinCount] = useState(() => draftSettings?.minCount ?? 2);
+  const [boardSize, setBoardSize] = useState(() => draftSettings?.boardSize ?? 29);
   const [mode, setMode] = useState<Mode>("beginner");
   const [showCodes, setShowCodes] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
@@ -142,7 +148,7 @@ export default function App() {
   const [busy, setBusy] = useState<null | "print" | "png">(null);
   const [toast, setToast] = useState<string | null>(null);
   const [, setExportedPattern] = useState<Pattern | null>(null);
-  const [selectedColor, setSelectedColor] = useState<number | null>(null);
+  const [selectedColor, setSelectedColor] = useState<number | null>(() => draftSettings?.selectedColor ?? null);
   const [marked, setMarked] = useState<Uint8Array>(EMPTY_MASK);
   const [loadedHash, setLoadedHash] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -151,6 +157,7 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
+  const skipDraftSaveRef = useRef(false);
   const dragRef = useRef<{ id: number; x: number; y: number; pointerType: string } | null>(null);
 
   const notify = useCallback((text: string) => {
@@ -159,6 +166,12 @@ export default function App() {
     toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+
+  // 草稿参数静默保存（图/格数/色号/板尺寸），不弹任何离开确认
+  useEffect(() => {
+    if (skipDraftSaveRef.current) return;
+    saveDraftSettings({ minCount, boardSize, selectedColor });
+  }, [minCount, boardSize, selectedColor]);
 
   const rows = useMemo(() => {
     if (!img) return 0;
@@ -180,12 +193,13 @@ export default function App() {
   const restored = img === null && restoredPattern !== null;
 
   useEffect(() => {
-    if (!pattern) return;
+    if (!pattern || skipDraftSaveRef.current) return;
     const t = window.setTimeout(() => saveLastPattern(pattern), 250);
     return () => window.clearTimeout(t);
   }, [pattern]);
 
   useEffect(() => {
+    if (skipDraftSaveRef.current) return;
     saveLastCell(cell);
   }, [cell]);
 
@@ -456,6 +470,7 @@ export default function App() {
           notify("这张图几乎是空的，可能不是你要的");
         }
         setRestoredPattern(null);
+        setDraftBannerOpen(false);
         setImg(im);
         // 等布局完成（窄屏媒体查询切换）再测容器；小于 8px 不再压缩，允许滚动
         requestAnimationFrame(() => {
@@ -561,6 +576,30 @@ export default function App() {
     notify("进度已清空");
   }, [pattern, patternHash, notify]);
 
+  // 「重新开始」：清空本地草稿（图/格子/参数/本图进度），回到空白页
+  const resetDraft = useCallback(() => {
+    skipDraftSaveRef.current = true;
+    window.setTimeout(() => {
+      skipDraftSaveRef.current = false;
+    }, 100);
+    if (patternHash) clearProgress(patternHash);
+    clearDraft();
+    setRestoredPattern(null);
+    setImg(null);
+    setMarked(EMPTY_MASK);
+    setLoadedHash(null);
+    setSelectedColor(null);
+    setCell(14);
+    setCols(48);
+    setMinCount(2);
+    setBoardSize(29);
+    setShowCodes(true);
+    setShowGrid(true);
+    setHover(null);
+    setDraftBannerOpen(false);
+    notify("已清空草稿");
+  }, [patternHash, notify]);
+
   // 次按钮：保留原来的纯色块 PNG（无标注），异步 toBlob 让 loading 态能渲染
   const exportPreview = useCallback(() => {
     if (!pattern || busy) return;
@@ -638,6 +677,21 @@ export default function App() {
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
         </div>
       </header>
+
+      {draftBannerOpen && restored && (
+        <div className="draft-banner" role="status">
+          <span>恢复了上次的图纸</span>
+          <button type="button" className="ghost" onClick={resetDraft}>重新开始</button>
+          <button
+            type="button"
+            className="draft-close"
+            aria-label="关闭提示"
+            onClick={() => setDraftBannerOpen(false)}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <main
         onDragOver={(e) => e.preventDefault()}
@@ -870,6 +924,13 @@ export default function App() {
           </div>
         </aside>
       </main>
+      {coarsePointer && (
+        <div className="code-bar" role="status">
+          {hoverInfo
+            ? `色号：${hoverInfo.code} · ${stats.find((s) => s.bead.code === hoverInfo.code)?.count ?? 0} 颗`
+            : "点击格子看色号"}
+        </div>
+      )}
       {toast && (
         <div className="toast" role="status" aria-live="polite">{toast}</div>
       )}
