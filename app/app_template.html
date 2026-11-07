@@ -97,6 +97,14 @@
   #bar b{color:var(--ink)}
   #bar .sp{flex:1}
   #barPos{font-variant-numeric:tabular-nums;color:var(--ink3);min-width:120px;text-align:right}
+  /* [hackone] 画布上方模式条 */
+  #modebar{
+    display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--panel);
+    border-bottom:1px solid var(--line);font-size:12px;color:var(--ink2);flex:0 0 auto;
+  }
+  #modeSeg{flex:0 0 150px}
+  #modeSeg button{padding:5px 8px}
+  #modeHint{color:var(--ink3);font-size:11.5px}
   #view{flex:1;overflow:auto;display:grid;place-items:center;padding:20px;min-height:0}
   #grid{image-rendering:pixelated;background:#fff;box-shadow:0 1px 10px #0006;cursor:crosshair}
   #empty{text-align:center;color:var(--ink3);font-size:13px;line-height:2}
@@ -131,6 +139,19 @@
   #sim .r .d{font-size:10px;color:var(--ink3);font-variant-numeric:tabular-nums;margin-left:auto}
   #sim .tip{font-size:11px;color:var(--ink3);line-height:1.6}
 
+  /* [hackone] 拼装进度 */
+  #progWrap{padding:9px 13px 10px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  #progHead{display:flex;justify-content:space-between;align-items:center;gap:8px;
+            font-size:11px;color:var(--ink3);letter-spacing:.03em}
+  #progHead b{color:var(--ink);font-size:11.5px;font-variant-numeric:tabular-nums}
+  #progBar{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:6px}
+  #progFill{display:block;height:100%;width:0;background:#16a34a;border-radius:999px}
+  #progBoards{margin-top:6px;display:flex;flex-direction:column;gap:2px;max-height:150px;overflow-y:auto}
+  .pb{display:grid;grid-template-columns:1fr 70px 38px;align-items:center;gap:6px;
+      font-size:10.5px;color:var(--ink3)}
+  .pb i{display:block;height:4px;background:var(--line);border-radius:999px;overflow:hidden}
+  .pb i b{display:block;height:100%;background:#16a34a;border-radius:999px}
+  .pb span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink2)}
   #useWrap{flex:1;overflow-y:auto;min-height:0}
   #use{padding:5px 7px 14px}
   .u{display:flex;align-items:center;gap:7px;padding:3px 6px;border-radius:5px;cursor:pointer}
@@ -291,7 +312,8 @@
       </div>
       <label class="chk"><input type="checkbox" id="showCode" checked>显示色号</label>
       <label class="chk"><input type="checkbox" id="showGrid" checked>网格线</label>
-      <label class="chk"><input type="checkbox" id="showBoard">每 29 格画底板线</label>
+      <!-- [hackone] 分板显示：29 格板界 + 行优先编号 -->
+      <label class="chk"><input type="checkbox" id="showBoard" checked>每 29 格画分板线 + 编号</label>
       <div class="row">
         <button id="fit" style="flex:1">适应窗口</button>
         <button id="zoomOut">−</button><button id="zoomIn">＋</button>
@@ -331,8 +353,12 @@
       </div>
       <div class="hint">镜像整张图纸，用于熨烫后从背面看、或做对称图案。再点一次翻回来；
         翻转不会丢手改的格子，缩放后也保持。</div>
+      <!-- [hackone] A4 拼装图导出：总览 + 每板一页 -->
       <div class="row" style="margin-top:9px">
-        <button class="pri" id="expPng" style="flex:1">导出图纸 PNG</button>
+        <button class="pri" id="expA4" style="flex:1">导出 A4 拼装图</button>
+      </div>
+      <div class="row">
+        <button id="expPng" style="flex:1">导出图纸 PNG</button>
       </div>
       <div class="row">
         <button id="expCsv" style="flex:1">导出用量 CSV</button>
@@ -348,6 +374,14 @@
       <span id="barInfo">导入图片或新建空白图纸后开始</span>
       <span class="sp"></span>
       <span id="barPos">—</span>
+    </div>
+    <!-- [hackone] 查看 / 标记：标记模式只改完成态，不改图案 -->
+    <div id="modebar">
+      <div class="seg" id="modeSeg" role="group" aria-label="画布模式">
+        <button data-m="view" class="on">查看</button>
+        <button data-m="mark">标记</button>
+      </div>
+      <span id="modeHint">查看模式：点格子查色号，不改进度</span>
     </div>
     <div id="view">
       <canvas id="grid" hidden></canvas>
@@ -368,6 +402,12 @@
     <div id="simWrap" hidden>
       <div id="simHead"><span>相近色推荐</span><b id="simFor">—</b></div>
       <div id="sim"></div>
+    </div>
+    <!-- [hackone] 拼装进度：总进度 + 按 29 格板统计 -->
+    <div id="progWrap">
+      <div id="progHead"><span>拼装进度</span><b id="progTotal">—</b></div>
+      <div id="progBar"><i id="progFill"></i></div>
+      <div id="progBoards"></div>
     </div>
     <div id="useHead"><span>用量统计</span><b id="useTotal">—</b></div>
     <div id="useWrap"><div id="use"></div></div>
@@ -482,8 +522,10 @@ const S = {
   brandId:'standard', codeSys:'mard',
   algo:'de2000', sample:'nearest', maxColors:0, down:'nearest',
   dither:false, dropBg:false,
-  cell:16, showCode:true, showGrid:true, showBoard:false,
+  cell:16, showCode:true, showGrid:true, showBoard:true,   // [hackone] 默认显示分板
   flip:false, tool:'inspect', paintIdx:0,
+  // [hackone] 进度：模式 + bitmask + 图案 hash；doc 单独存，刷新可恢复
+  mode:'view', progress:new Uint8Array(0), progressHash:'',
   brush:1, conn:4, shapeFill:false,
   counts:new Map(), used:null, palette:[], ext:null,
   sel:-1, selCell:-1, hoverCell:-1, highlight:-1, hlCells:null,
@@ -823,6 +865,143 @@ function updateFlipBtn(){
   b.style.color = S.flip ? '#2f6fed' : '';
 }
 
+/* ------------------------------------------------ [hackone] 拼装进度 -------------- */
+const PROGRESS_KEY = 'hackone:progress:v1';
+const DOC_KEY = 'hackone:doc:v1';
+
+function progressPatternHash(){
+  if (!S.cells) return '';
+  let h = 2166136261;
+  h = Math.imul(h ^ S.gw, 16777619);
+  h = Math.imul(h ^ S.gh, 16777619);
+  for (let i = 0; i < S.cells.length; i++) h = Math.imul(h ^ (S.cells[i] + 1), 16777619);
+  return (h >>> 0).toString(16);
+}
+function progressByteCount(){
+  return S.cells ? Math.ceil(S.cells.length / 8) : 0;
+}
+function syncProgress(){
+  if (!S.cells){
+    S.progress = new Uint8Array(0);
+    S.progressHash = '';
+    return;
+  }
+  const h = progressPatternHash();
+  if (h === S.progressHash) return;
+  S.progressHash = h;
+  const n = progressByteCount();
+  S.progress = new Uint8Array(n);
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d && d.patternHash === h && Array.isArray(d.bitmask) && d.bitmask.length === n){
+      S.progress = Uint8Array.from(d.bitmask);
+    }
+  } catch (e) { /* 隐私模式/损坏数据 */ }
+}
+function saveProgress(){
+  if (!S.cells) return;
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({
+      patternHash: S.progressHash,
+      bitmask: Array.from(S.progress)
+    }));
+  } catch (e) { /* 配额满时只保留当前会话 */ }
+}
+function hasProgress(i){
+  return !!(S.progress && S.progress[i >> 3] & (1 << (i & 7)));
+}
+function pctText(done, total){
+  if (!total) return '0%';
+  const p = done / total * 100;
+  if (p <= 0) return '0%';
+  if (p < 0.1) return '<0.1%';
+  return (p < 1 ? p.toFixed(1) : Math.round(p)) + '%';
+}
+function renderProgress(){
+  syncProgress();
+  const totalBeads = S.used ? S.used.reduce((a, u) => a + u.c, 0) : 0;
+  if (!S.cells || !totalBeads){
+    $('progTotal').textContent = '—';
+    $('progFill').style.width = '0%';
+    $('progBoards').innerHTML = '';
+    return;
+  }
+  let done = 0;
+  for (let i = 0; i < S.cells.length; i++){
+    if (S.cells[i] >= 0 && hasProgress(i)) done++;
+  }
+  $('progTotal').textContent = done + ' / ' + totalBeads + ' 颗 · ' + pctText(done, totalBeads);
+  $('progFill').style.width = (totalBeads ? done / totalBeads * 100 : 0) + '%';
+  const bc = boardCols(), br = boardRows();
+  let html = '';
+  for (let by = 0; by < br; by++) for (let bx = 0; bx < bc; bx++){
+    let bd = 0, bt = 0;
+    const x0 = bx * BOARD_SIZE, y0 = by * BOARD_SIZE;
+    const xe = Math.min(S.gw, x0 + BOARD_SIZE), ye = Math.min(S.gh, y0 + BOARD_SIZE);
+    for (let y = y0; y < ye; y++) for (let x = x0; x < xe; x++){
+      const i = y * S.gw + x;
+      if (S.cells[i] < 0) continue;
+      bt++;
+      if (hasProgress(i)) bd++;
+    }
+    if (!bt) continue;
+    const p = bd / bt * 100;
+    html += '<div class="pb"><span>第 ' + boardNo(bx, by) + ' 块板</span><i><b style="width:' + p.toFixed(1) + '%"></b></i><span>' + pctText(bd, bt) + '</span></div>';
+  }
+  $('progBoards').innerHTML = html;
+}
+function toggleProgress(i){
+  if (!S.cells) return;
+  if (i < 0 || i >= S.cells.length) return;
+  if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
+  syncProgress();
+  const byte = i >> 3, bit = 1 << (i & 7);
+  S.progress[byte] ^= bit;
+  saveProgress();
+  renderProgress();
+  requestDraw();
+}
+function saveDoc(){
+  if (!S.cells || !S.base) return;
+  try {
+    localStorage.setItem(DOC_KEY, JSON.stringify({
+      gw:S.gw, gh:S.gh, base:Array.from(S.base), cells:Array.from(S.cells),
+      brandId:S.brandId, codeSys:S.codeSys, maxColors:S.maxColors
+    }));
+  } catch (e) { /* 配额满时忽略 */ }
+}
+function restoreDoc(){
+  try {
+    const raw = localStorage.getItem(DOC_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.base) || !Array.isArray(d.cells)) return false;
+    if (d.gw * d.gh !== d.cells.length || d.base.length !== d.cells.length) return false;
+    if (d.brandId && d.brandId !== S.brandId){
+      S.brandId = d.brandId;
+      if ($('brand')) $('brand').value = d.brandId;
+      colourSystemOptions();
+    }
+    if (d.codeSys) S.codeSys = d.codeSys;
+    buildPalette({ remap:false });
+    S.gw = d.gw; S.gh = d.gh;
+    S.base = d.base; S.cells = d.cells;
+    S.maxColors = d.maxColors || 0;
+    if ($('maxc')) $('maxc').value = S.maxColors;
+    S.buf = null; S.bufCtx = null;
+    syncDocInputs();
+    ensureBuffer();
+    recount(); renderUsage(); renderSimilar(); requestDraw();
+    fit();
+    if ($('srcInfo')) $('srcInfo').textContent = '已恢复上次图纸；重新导入图片可覆盖';
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 /* ------------------------------------------------ 统计 ------------------ */
 function recount(){
   const cnt = new Map();
@@ -840,6 +1019,8 @@ function recount(){
   if (!S.cells){
     $('barInfo').textContent = '导入图片或新建空白图纸后开始';
     $('useTotal').textContent = '—';
+    // [hackone] 无图时进度归零
+    renderProgress();
     return;
   }
   const cols = Math.ceil(S.gw/29), rows = Math.ceil(S.gh/29);
@@ -847,6 +1028,9 @@ function recount(){
     + ` · 约 <b>${cols*rows}</b> 块 29×29 底板`
     + (S.flip ? ' · <b style="color:#2f6fed">⇄ 已左右翻转</b>' : '');
   $('useTotal').textContent = total ? total + ' 颗' : '—';
+  // [hackone] 图案变了就同步 hash/bitmask；文档自动保存，刷新可恢复
+  saveDoc();
+  renderProgress();
 }
 function cellsWith(v){
   const out = [];
@@ -861,6 +1045,12 @@ function setHighlight(i){
 }
 
 /* ------------------------------------------------ 绘制 ------------------ */
+// [hackone] 分板：29×29，先行后列编号；屏幕与 A4 导出共用
+const BOARD_SIZE = 29;
+function boardCols(){ return Math.max(1, Math.ceil(S.gw / BOARD_SIZE)); }
+function boardRows(){ return Math.max(1, Math.ceil(S.gh / BOARD_SIZE)); }
+function boardNo(bx, by){ return by * boardCols() + bx + 1; }
+
 const canvas = $('grid');
 const ctx = canvas.getContext('2d');
 let rafId = 0;
@@ -923,6 +1113,16 @@ function draw(){
   if (S.buf) ctx.drawImage(S.buf, 0, 0, S.gw, S.gh, 0, 0, W, H);
 
   const R = visibleRange();
+  // [hackone] 已完成格：半透明绿，画在色号下面保证可读
+  if (S.progress && S.progress.length === Math.ceil(S.cells.length / 8)){
+    ctx.fillStyle = 'rgba(22,163,74,.32)';
+    for (let y = R.y0; y < R.y1; y++) for (let x = R.x0; x < R.x1; x++){
+      const i = y*S.gw + x;
+      if (S.cells[i] >= 0 && (S.progress[i >> 3] & (1 << (i & 7)))){
+        ctx.fillRect(x*cs, y*cs, cs, cs);
+      }
+    }
+  }
   const showCodes = S.showCode && cs >= 9;
   if (showCodes){
     ctx.font = `600 ${Math.max(6, Math.min(11, Math.round(cs*0.38)))}px "SF Mono",Consolas,monospace`;
@@ -952,18 +1152,40 @@ function draw(){
     ctx.stroke();
   }
   if (S.showBoard){
+    // [hackone] 红色板界 + 每块左上角行优先编号
     ctx.strokeStyle = 'rgba(200,30,30,.75)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    for (let x = 29; x < S.gw; x += 29){
+    for (let x = BOARD_SIZE; x < S.gw; x += BOARD_SIZE){
       if (x < R.x0 || x > R.x1) continue;
       const px = Math.round(x*cs) + .5; ctx.moveTo(px, R.y0*cs); ctx.lineTo(px, R.y1*cs);
     }
-    for (let y = 29; y < S.gh; y += 29){
+    for (let y = BOARD_SIZE; y < S.gh; y += BOARD_SIZE){
       if (y < R.y0 || y > R.y1) continue;
       const py = Math.round(y*cs) + .5; ctx.moveTo(R.x0*cs, py); ctx.lineTo(R.x1*cs, py);
     }
+    ctx.moveTo(.5, .5); ctx.lineTo(W - .5, .5);
+    ctx.moveTo(W - .5, .5); ctx.lineTo(W - .5, H - .5);
+    ctx.moveTo(W - .5, H - .5); ctx.lineTo(.5, H - .5);
+    ctx.moveTo(.5, H - .5); ctx.lineTo(.5, .5);
     ctx.stroke();
+    if (cs >= 5){
+      const bc = boardCols(), br = boardRows();
+      const badge = Math.max(14, Math.min(24, cs * 1.4));
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `700 ${Math.max(9, Math.round(badge * 0.65))}px Consolas,monospace`;
+      for (let by = 0; by < br; by++) for (let bx = 0; bx < bc; bx++){
+        const label = String(boardNo(bx, by));
+        const x = bx * BOARD_SIZE * cs + 3;
+        const y = by * BOARD_SIZE * cs + 3;
+        if (x > W || y > H) continue;
+        ctx.fillStyle = 'rgba(200,30,30,.92)';
+        ctx.fillRect(x, y, badge, badge);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, x + badge / 2, y + badge / 2 + .5);
+      }
+    }
   }
   if (S.highlight >= 0 && cs >= 3 && S.hlCells){
     ctx.strokeStyle = 'rgba(47,111,237,.95)';
@@ -1755,6 +1977,14 @@ canvas.addEventListener('mousedown', e => {
   if (S.palOpen) closePalette();
   const i = cellFromEvent(e);
   if (i < 0 || !S.cells) return;
+  // [hackone] 标记模式：只切完成态，原有工具/取色不受影响
+  if (S.mode === 'mark'){
+    toggleProgress(i);
+    S.selCell = i;
+    inspect(i);
+    requestDraw();
+    return;
+  }
   const t = S.tool;
   if (t === 'inspect' || t === 'picker' || t === 'bucket'){ act(i); return; }
   if (t === 'pencil' || t === 'eraser'){
@@ -1950,6 +2180,174 @@ function exportPNG(){
   });
 }
 
+/* ------------------------------------------------ [hackone] A4 拼装图导出 ---------- */
+/* 复用 S.cells / S.palette / textOn 的渲染语义；不碰配色与匹配函数。 */
+const A4_PAGE_W = 1240;
+const A4_PAGE_H = 1754;
+const A4_MARGIN = 64;
+
+function a4Canvas(){ const cv = document.createElement('canvas'); cv.width = A4_PAGE_W; cv.height = A4_PAGE_H; return cv; }
+function a4CropMarks(c){
+  c.strokeStyle = '#444'; c.lineWidth = 1.5;
+  const m = 26, L = 18;
+  const corners = [[m,m,1,1],[A4_PAGE_W-m,m,-1,1],[m,A4_PAGE_H-m,1,-1],[A4_PAGE_W-m,A4_PAGE_H-m,-1,-1]];
+  c.beginPath();
+  for (const [x,y,sx,sy] of corners){
+    c.moveTo(x,y); c.lineTo(x + L*sx,y);
+    c.moveTo(x,y); c.lineTo(x,y + L*sy);
+  }
+  c.stroke();
+}
+function a4DrawCells(c, ox, oy, cs, startX, startY, cols, rows){
+  const showCodes = cs >= 10;
+  if (showCodes){
+    c.font = `600 ${Math.max(7, Math.min(16, Math.round(cs*0.34)))}px Consolas,monospace`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+  }
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++){
+    const v = S.cells[(startY+y)*S.gw + startX+x];
+    const px = ox + x*cs, py = oy + y*cs;
+    if (v < 0){ c.fillStyle = '#f4f6f9'; c.fillRect(px, py, cs, cs); continue; }
+    const p = S.palette[v];
+    c.fillStyle = p.hex; c.fillRect(px, py, cs, cs);
+    if (showCodes){ c.fillStyle = textOn(p.rgb); c.fillText(p.code, px + cs/2, py + cs/2 + .5); }
+  }
+  c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = 1;
+  c.beginPath();
+  for (let x = 0; x <= cols; x++){ const px = ox + x*cs + .5; c.moveTo(px, oy); c.lineTo(px, oy + rows*cs); }
+  for (let y = 0; y <= rows; y++){ const py = oy + y*cs + .5; c.moveTo(ox, py); c.lineTo(ox + cols*cs, py); }
+  c.stroke();
+}
+function a4EdgeNumbers(c, ox, oy, cs, startX, startY, cols, rows, every){
+  c.fillStyle = '#6a7280'; c.font = '10px Consolas,monospace';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let x = 0; x < cols; x += every){
+    const px = ox + x*cs + cs/2, n = String(startX + x + 1);
+    c.fillText(n, px, oy - 14);
+    c.fillText(n, px, oy + rows*cs + 14);
+  }
+  c.textAlign = 'right';
+  for (let y = 0; y < rows; y += every){
+    const py = oy + y*cs + cs/2, n = String(startY + y + 1);
+    c.fillText(n, ox - 8, py);
+    c.textAlign = 'left'; c.fillText(n, ox + cols*cs + 8, py); c.textAlign = 'right';
+  }
+  c.textAlign = 'left';
+}
+function a4Footer(c, text, page, total){
+  c.strokeStyle = '#e2e6ec'; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(A4_MARGIN, A4_PAGE_H - 82); c.lineTo(A4_PAGE_W - A4_MARGIN, A4_PAGE_H - 82); c.stroke();
+  c.fillStyle = '#5a626e'; c.font = '13px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText(text, A4_MARGIN, A4_PAGE_H - 56);
+  c.textAlign = 'right';
+  c.fillText(`第 ${page} / ${total} 页`, A4_PAGE_W - A4_MARGIN, A4_PAGE_H - 56);
+  c.textAlign = 'left';
+}
+function a4Header(c, title, sub){
+  c.fillStyle = '#15181d'; c.font = '700 28px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  c.fillText(title, A4_MARGIN, 62);
+  c.fillStyle = '#5a626e'; c.font = '15px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillText(sub, A4_MARGIN, 92);
+}
+function a4BoardOverlay(c, ox, oy, cs, cols, rows){
+  // 总览页的 29×29 板界 + 行优先编号
+  c.strokeStyle = 'rgba(200,30,30,.8)'; c.lineWidth = 2;
+  c.beginPath();
+  for (let x = BOARD_SIZE; x < cols; x += BOARD_SIZE){ const px = ox + x*cs + .5; c.moveTo(px, oy); c.lineTo(px, oy + rows*cs); }
+  for (let y = BOARD_SIZE; y < rows; y += BOARD_SIZE){ const py = oy + y*cs + .5; c.moveTo(ox, py); c.lineTo(ox + cols*cs, py); }
+  c.moveTo(ox + .5, oy + .5); c.lineTo(ox + cols*cs - .5, oy + .5);
+  c.lineTo(ox + cols*cs - .5, oy + rows*cs - .5); c.lineTo(ox + .5, oy + rows*cs - .5); c.closePath();
+  c.stroke();
+  const bc = boardCols(), br = boardRows();
+  const badge = Math.max(18, Math.min(28, cs*1.6));
+  c.font = `700 ${Math.max(10, Math.round(badge*.62))}px Consolas,monospace`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let by = 0; by < br; by++) for (let bx = 0; bx < bc; bx++){
+    const x = ox + bx*BOARD_SIZE*cs + 3, y = oy + by*BOARD_SIZE*cs + 3;
+    c.fillStyle = 'rgba(200,30,30,.92)'; c.fillRect(x, y, badge, badge);
+    c.fillStyle = '#fff'; c.fillText(String(boardNo(bx, by)), x + badge/2, y + badge/2 + .5);
+  }
+  c.textAlign = 'left';
+}
+function renderA4Overview(page, totalPages){
+  const cv = a4Canvas(), c = cv.getContext('2d');
+  c.fillStyle = '#fff'; c.fillRect(0, 0, A4_PAGE_W, A4_PAGE_H);
+  a4CropMarks(c);
+  const totalBeads = S.used.reduce((a, u) => a + u.c, 0);
+  const bc = boardCols(), br = boardRows();
+  a4Header(c, '拼豆拼装图 · 总览', `${S.gw}×${S.gh} 格 · ${S.used.length} 色 / ${totalBeads} 颗 · ${bc*br} 块 29×29 底板`);
+  const areaW = A4_PAGE_W - A4_MARGIN*2, areaH = A4_PAGE_H - 300;
+  const cs = Math.max(4, Math.floor(Math.min(areaW / S.gw, areaH / S.gh)));
+  const ox = A4_MARGIN + Math.floor((areaW - S.gw*cs)/2);
+  const oy = 138 + Math.floor((areaH - S.gh*cs)/2);
+  a4DrawCells(c, ox, oy, cs, 0, 0, S.gw, S.gh);
+  a4EdgeNumbers(c, ox, oy, cs, 0, 0, S.gw, S.gh, 5);
+  a4BoardOverlay(c, ox, oy, cs, S.gw, S.gh);
+  a4Footer(c, `总览 · 共 ${bc*br} 块 29×29 底板 · 每块板单独一页`, page, totalPages);
+  return cv;
+}
+function renderA4Board(bx, by, page, totalPages){
+  const cv = a4Canvas(), c = cv.getContext('2d');
+  c.fillStyle = '#fff'; c.fillRect(0, 0, A4_PAGE_W, A4_PAGE_H);
+  a4CropMarks(c);
+  const sx = bx*BOARD_SIZE, sy = by*BOARD_SIZE;
+  const cols = Math.min(BOARD_SIZE, S.gw - sx), rows = Math.min(BOARD_SIZE, S.gh - sy);
+  const no = boardNo(bx, by);
+  const totalBeads = S.used.reduce((a, u) => a + u.c, 0);
+  a4Header(c, `第 ${no} 块板 · 第 ${by+1} 行 第 ${bx+1} 列`, `全局第 ${sx+1}–${sx+cols} 列 / 第 ${sy+1}–${sy+rows} 行 · ${S.used.length} 色 / ${totalBeads} 颗`);
+  const areaW = A4_PAGE_W - A4_MARGIN*2 - 40, areaH = A4_PAGE_H - 310;
+  const cs = Math.max(10, Math.floor(Math.min(areaW / cols, areaH / rows)));
+  const ox = A4_MARGIN + 20 + Math.floor((areaW - cols*cs)/2);
+  const oy = 138 + Math.floor((areaH - rows*cs)/2);
+  a4DrawCells(c, ox, oy, cs, sx, sy, cols, rows);
+  a4EdgeNumbers(c, ox, oy, cs, sx, sy, cols, rows, 1);
+  c.strokeStyle = 'rgba(200,30,30,.85)'; c.lineWidth = 2;
+  c.strokeRect(ox + .5, oy + .5, cols*cs - 1, rows*cs - 1);
+  const bc = boardCols(), br = boardRows();
+  const n = (dx, dy) => {
+    const nx = bx + dx, ny = by + dy;
+    return (nx >= 0 && nx < bc && ny >= 0 && ny < br) ? String(nx + ny*bc + 1) : '—';
+  };
+  a4Footer(c, `相邻：上 ${n(0,-1)} · 下 ${n(0,1)} · 左 ${n(-1,0)} · 右 ${n(1,0)}`, page, totalPages);
+  return cv;
+}
+function buildA4Pages(){
+  if (!S.cells || !S.used || !S.used.length) return [];
+  const bc = boardCols(), br = boardRows(), totalPages = 1 + bc*br;
+  const pages = [];
+  pages.push({ label: '总览', url: renderA4Overview(1, totalPages).toDataURL('image/png') });
+  let page = 2;
+  for (let by = 0; by < br; by++) for (let bx = 0; bx < bc; bx++){
+    pages.push({ label: `第 ${boardNo(bx, by)} 块板`, url: renderA4Board(bx, by, page++, totalPages).toDataURL('image/png') });
+  }
+  return pages;
+}
+function exportA4(){
+  if (!S.cells || !S.used.length){ toast('先生成网格'); return; }
+  const pages = buildA4Pages();
+  if (!pages.length){ toast('没有可导出的内容'); return; }
+  const win = window.open('', '_blank');
+  if (!win){ toast('浏览器拦截了新窗口，请允许后重试'); return; }
+  const doc = win.document;
+  doc.open();
+  doc.write('<!doctype html><html><head><meta charset="utf-8"><title>拼豆 A4 拼装图</title><style>@page{size:A4;margin:0}html,body{margin:0;background:#fff}img{display:block;width:210mm;height:297mm;break-after:page}img:last-child{break-after:auto}</style></head><body></body></html>');
+  for (const p of pages){
+    const img = doc.createElement('img');
+    img.src = p.url; img.alt = p.label; img.loading = 'eager';
+    doc.body.appendChild(img);
+  }
+  const imgs = Array.from(doc.images || []);
+  doc.close();
+  // [hackone] 等所有 A4 页解码完再唤起打印，避免前几页空白
+  const ready = Promise.all(imgs.map(img => (img.decode ? img.decode().catch(() => {}) : Promise.resolve())));
+  ready.then(() => {
+    setTimeout(() => { try { win.focus(); win.print(); } catch (e) { /* 交给用户手动打印 */ } }, 100);
+  });
+  toast(`已生成 ${pages.length} 页 A4，打印窗口已打开`);
+}
+
 function exportCSV(){
   if (!S.cells || !S.used.length){ toast('先生成网格'); return; }
   const b = paletteOf(S.brandId);
@@ -2123,6 +2521,8 @@ const TOOL_HINT = {
   bucket:'点一格，填充与它相连的同色区域；4/8 连通可切换。'
 };
 document.querySelectorAll('#tools button').forEach(btn => btn.addEventListener('click', () => {
+  // [hackone] 选任何编辑工具即回到查看/编辑语义，避免标记模式吞掉铅笔
+  if (S.mode === 'mark') setMode('view');
   S.tool = btn.dataset.t;
   document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b === btn));
   $('toolHint').textContent = TOOL_HINT[S.tool] || '';
@@ -2140,7 +2540,27 @@ document.querySelectorAll('#bucket button').forEach(btn => btn.addEventListener(
 }));
 $('shapeFill').addEventListener('change', () => { S.shapeFill = $('shapeFill').checked; });
 
+// [hackone] 查看 / 标记模式；标记模式强制 inspect，不触发画笔
+function setMode(m){
+  S.mode = m;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  if (m === 'mark'){
+    S.tool = 'inspect';
+    document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b.dataset.t === 'inspect'));
+    $('toolHint').textContent = TOOL_HINT.inspect;
+  }
+  $('modeHint').textContent = m === 'mark'
+    ? '标记模式：点格子标记完成 / 再点取消，不改图案'
+    : '查看模式：点格子查色号，不改进度';
+  requestDraw();
+}
+document.querySelectorAll('#modeSeg button').forEach(btn => {
+  btn.addEventListener('click', () => setMode(btn.dataset.m));
+});
+
 /* 导出 / 撤销 / 翻转 */
+// [hackone] A4 总览 + 每板一页
+$('expA4').addEventListener('click', exportA4);
 $('expPng').addEventListener('click', exportPNG);
 $('expCsv').addEventListener('click', exportCSV);
 $('flip').addEventListener('click', flipGrid);
@@ -2194,6 +2614,9 @@ document.querySelectorAll('#bucket button').forEach(b => {
   b.classList.toggle('on', +b.dataset.c === S.conn);
 });
 updateSizeInfo();
+// [hackone] 恢复上次图纸（含进度 bitmask 对应的 patternHash）
+restoreDoc();
+renderProgress();
 </script>
 <!--
   色板数据来源（均为公开仓库中的社区色卡，非官方光谱测量值）：
