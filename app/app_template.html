@@ -500,6 +500,24 @@
   #importPill:hover{border-color:var(--accent);color:var(--accent)}
 
   #use:empty::before{content:'还没有生成网格';display:block;color:var(--ink3);font-size:11.5px;padding:6px 0;text-align:center}
+
+  /* v7 画布列表 */
+  #docList{display:flex;flex-direction:column;gap:4px}
+  .doc{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:7px;border:1px solid transparent;
+       cursor:pointer;font-size:12px;color:var(--ink2)}
+  .doc:hover{background:#f4f6fa}
+  .doc.on{background:#eaf1ff;border-color:#cfe0ff;color:var(--ink)}
+  .doc .dname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .doc .dsize{color:var(--ink3);font-size:10.5px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+  .doc .ddel{opacity:0;padding:0 3px;border:0;background:transparent;color:var(--ink3);font-size:11px;line-height:1}
+  .doc:hover .ddel{opacity:1}
+  .doc .ddel:hover{color:#c2410c;background:transparent}
+  .doc input{width:100%;font:inherit;border:1px solid var(--accent);border-radius:4px;padding:1px 4px;color:var(--ink)}
+  .dempty{color:var(--ink3);font-size:11.5px;padding:4px 0;text-align:center}
+
+  .doc .dren{opacity:0;padding:0 3px;border:0;background:transparent;color:var(--ink3);font-size:11px;line-height:1}
+  .doc:hover .dren{opacity:1}
+  .doc .dren:hover{color:var(--accent);background:transparent}
 </style>
 </head>
 <body>
@@ -507,6 +525,11 @@
 
   <!-- ================= 左侧控制 ================= -->
   <aside id="side">
+
+    <div class="grp" data-g="docs">
+      <div class="gt"><span>画布</span><span class="gmeta"><b id="docCount">0</b></span><i class="chev"></i></div>
+      <div class="gb"><div id="docList"></div></div>
+    </div>
 
     <div class="grp" data-g="new">
       <div class="gt"><span>新建画布</span><i class="chev"></i></div>
@@ -2380,6 +2403,7 @@ function defaultGridFor(w, h){
 function loadImage(src, name){
   const img = new Image();
   img.onload = () => {
+    if (window.__docBeforeImport) window.__docBeforeImport();
     S.img = img; S.srcW = img.naturalWidth; S.srcH = img.naturalHeight;
     $('srcInfo').innerHTML = `已导入：<b>${name || '图片'}</b><br>原图 <b>${S.srcW}×${S.srcH}</b> 像素`;
     const g = defaultGridFor(S.srcW, S.srcH);
@@ -2390,6 +2414,7 @@ function loadImage(src, name){
     mapCells();
     syncDocInputs(true);
     fit();
+    if (window.__docAfterImport) window.__docAfterImport(name || '图片');
     toast('已生成网格，点格子可查看色号');
   };
   img.onerror = () => toast('图片加载失败');
@@ -3081,6 +3106,274 @@ renderProgress();
       try { localStorage.setItem(key, g.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
     });
   });
+})();
+</script>
+<script>
+/* [hackone] 多画布管理：IndexedDB 持久化 + 切换 */
+(function(){
+  var DOCS = window.__DOCS = { list: [], activeId: null, db: null, dirty: false, ready: false };
+  var $ = function(id){ return document.getElementById(id); };
+  function now(){ return Date.now(); }
+  function newId(){ return 'd' + now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function esc(t){ return String(t).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+
+  function openDB(){
+    return new Promise(function(res, rej){
+      if (!window.indexedDB) { rej(new Error('no-idb')); return; }
+      var req = indexedDB.open('hackone', 1);
+      req.onupgradeneeded = function(){ req.result.createObjectStore('docs', { keyPath: 'id' }); };
+      req.onsuccess = function(){ res(req.result); };
+      req.onerror = function(){ rej(req.error); };
+    });
+  }
+  function tx(mode, fn){
+    return new Promise(function(res, rej){
+      if (!DOCS.db) { rej(new Error('no-db')); return; }
+      var t = DOCS.db.transaction('docs', mode);
+      var s = t.objectStore('docs');
+      var r = fn(s);
+      t.oncomplete = function(){ res(r ? r.result : undefined); };
+      t.onerror = function(){ rej(t.error); };
+    });
+  }
+
+  function autoName(){
+    var mx = 0;
+    DOCS.list.forEach(function(d){
+      var m = /^画布\s*(\d+)$/.exec(d.name || '');
+      if (m) mx = Math.max(mx, +m[1]);
+    });
+    return '画布 ' + (mx + 1);
+  }
+  function findDoc(id){ for (var i = 0; i < DOCS.list.length; i++) if (DOCS.list[i].id === id) return DOCS.list[i]; return null; }
+  function activeDoc(){ return DOCS.activeId ? findDoc(DOCS.activeId) : null; }
+
+  function snap(){
+    if (!S.cells || !S.base || !DOCS.activeId) return null;
+    var d = activeDoc() || {};
+    return {
+      id: DOCS.activeId, name: d.name || '画布',
+      gw: S.gw, gh: S.gh,
+      base: Int16Array.from(S.base),
+      progress: Uint8Array.from(S.progress || []),
+      brandId: S.brandId, codeSys: S.codeSys, maxColors: S.maxColors,
+      updatedAt: now()
+    };
+  }
+  function saveActive(){
+    if (!DOCS.ready || !DOCS.activeId) return;
+    var rec = snap();
+    if (!rec) return;
+    DOCS.dirty = false;
+    for (var i = 0; i < DOCS.list.length; i++) if (DOCS.list[i].id === rec.id){ DOCS.list[i] = rec; break; }
+    tx('readwrite', function(st){ return st.put(rec); }).catch(function(){});
+  }
+
+  function renderList(){
+    var box = $('docList');
+    if (!box) return;
+    if ($('docCount')) $('docCount').textContent = DOCS.list.length;
+    if (!DOCS.list.length){ box.innerHTML = '<div class="dempty">还没有画布</div>'; return; }
+    var arr = DOCS.list.slice().sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    box.innerHTML = arr.map(function(d){
+      var on = d.id === DOCS.activeId ? ' on' : '';
+      return '<div class="doc' + on + '" data-id="' + d.id + '">'
+        + '<span class="dname">' + esc(d.name || '画布') + '</span>'
+        + '<span class="dsize">' + d.gw + '×' + d.gh + '</span>'
+        + '<button class="dren" title="改名">✎</button>'
+        + '<button class="ddel" title="删除">✕</button></div>';
+    }).join('');
+  }
+
+  function applyDoc(d, focus){
+    if (!d) return;
+    if (S.palOpen) closePalette();
+    S.brandId = d.brandId || S.brandId;
+    if ($('brand')) $('brand').value = S.brandId;
+    colourSystemOptions();
+    S.codeSys = d.codeSys || S.codeSys;
+    buildPalette({ remap:false });
+    if ($('maxc')) $('maxc').value = S.maxColors;
+    S.img = null; S.srcW = 0; S.srcH = 0;
+    S.history.length = 0; S.future.length = 0; S.histBytes = 0;
+    installDoc(d.gw, d.gh, Int32Array.from(d.base || []));
+    var n = S.cells ? Math.ceil(S.cells.length / 8) : 0;
+    S.progress = (d.progress && d.progress.length === n) ? Uint8Array.from(d.progress) : new Uint8Array(n);
+    S.progressHash = progressPatternHash();
+    DOCS.activeId = d.id;
+    if ($('srcInfo')) $('srcInfo').textContent = d.name || '';
+    renderProgress(); renderList(); requestDraw();
+    if (focus !== false) fit();
+  }
+
+  function createDoc(w, h, name){
+    if (!S.cells && !DOCS.list.length) { /* 允许 */ }
+    w = clampN(w); h = clampN(h);
+    saveActive();
+    var rec = {
+      id: newId(), name: name || autoName(),
+      gw: w, gh: h, base: Int16Array.from(new Int32Array(w * h).fill(-1)),
+      progress: new Uint8Array(Math.ceil(w * h / 8)),
+      brandId: S.brandId, codeSys: S.codeSys, maxColors: S.maxColors,
+      updatedAt: now()
+    };
+    DOCS.list.push(rec);
+    applyDoc(rec);
+    saveActive();
+    toast('已新建 ' + w + '×' + h + ' 画布');
+    return rec;
+  }
+
+  function openDoc(id){
+    var d = findDoc(id);
+    if (!d || d.id === DOCS.activeId) return;
+    saveActive();
+    applyDoc(d);
+  }
+
+  function deleteDoc(id){
+    var d = findDoc(id);
+    if (!d) return;
+    if (!confirm('删除「' + (d.name || '画布') + '」？删了找不回来')) return;
+    tx('readwrite', function(st){ return st.delete(id); }).catch(function(){});
+    DOCS.list = DOCS.list.filter(function(x){ return x.id !== id; });
+    if (DOCS.activeId === id){
+      DOCS.activeId = null;
+      var next = null;
+      for (var i = 0; i < DOCS.list.length; i++) if (!next || (DOCS.list[i].updatedAt || 0) > (next.updatedAt || 0)) next = DOCS.list[i];
+      if (next) applyDoc(next);
+      else { S.cells = null; S.base = null; S.gw = 0; S.gh = 0; S.progress = new Uint8Array(0); requestDraw(); renderProgress(); renderList(); }
+    }
+    renderList();
+    toast('已删除');
+  }
+
+  function commitFromState(name){
+    var rec = {
+      id: newId(), name: name || autoName(),
+      gw: S.gw, gh: S.gh,
+      base: Int16Array.from(S.base),
+      progress: new Uint8Array(Math.ceil(S.cells.length / 8)),
+      brandId: S.brandId, codeSys: S.codeSys, maxColors: S.maxColors,
+      updatedAt: now()
+    };
+    DOCS.list.push(rec);
+    DOCS.activeId = rec.id;
+    renderList();
+    saveActive();
+  }
+
+  function startRename(row){
+    var d = findDoc(row.dataset.id);
+    if (!d) return;
+    var nameEl = row.querySelector('.dname');
+    if (!nameEl) return;
+    var inp = document.createElement('input');
+    inp.value = d.name || '';
+    nameEl.replaceWith(inp);
+    inp.focus(); inp.select();
+    var done = false;
+    function finish(save){
+      if (done) return;
+      done = true;
+      if (save){
+        var v = inp.value.trim();
+        if (v) d.name = v;
+      }
+      renderList();
+      if (save) saveActive();
+    }
+    inp.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
+    });
+    inp.addEventListener('blur', function(){ finish(true); });
+  }
+
+  /* ---- 事件 ---- */
+  var list = $('docList');
+  if (list){
+    list.addEventListener('click', function(e){
+      var del = e.target.closest ? e.target.closest('.ddel') : null;
+      var ren = e.target.closest ? e.target.closest('.dren') : null;
+      var row = e.target.closest ? e.target.closest('.doc') : null;
+      if (del && row){ e.stopPropagation(); deleteDoc(row.dataset.id); return; }
+      if (ren && row){ e.stopPropagation(); startRename(row); return; }
+      if (row) openDoc(row.dataset.id);
+    });
+    list.addEventListener('dblclick', function(e){
+      var name = e.target.closest ? e.target.closest('.dname') : null;
+      if (name && name.closest('.doc')) startRename(name.closest('.doc'));
+    });
+  }
+
+  /* ---- 钩子：导入 / 新建 / 自动保存 ---- */
+  window.__docBeforeImport = function(){ saveActive(); };
+  window.__docAfterImport = function(name){ commitFromState(name); };
+
+  var origNewBlank = window.newBlank;
+  if (typeof origNewBlank === 'function'){
+    window.newBlank = function(w, h){
+      if (DOCS.ready){ createDoc(w, h); return; }
+      return origNewBlank.apply(null, arguments);
+    };
+  }
+  var origDraw = window.requestDraw;
+  if (typeof origDraw === 'function'){
+    window.requestDraw = function(){
+      if (DOCS.ready && DOCS.activeId) DOCS.dirty = true;
+      return origDraw.apply(null, arguments);
+    };
+  }
+  var origSaveProgress = window.saveProgress;
+  if (typeof origSaveProgress === 'function'){
+    window.saveProgress = function(){
+      if (DOCS.ready && DOCS.activeId){
+        var d = activeDoc();
+        if (d){ d.progress = Uint8Array.from(S.progress || []); DOCS.dirty = true; }
+      }
+      return origSaveProgress.apply(null, arguments);
+    };
+  }
+
+  /* ---- 启动 ---- */
+  function boot(){
+    openDB().then(function(db){
+      DOCS.db = db;
+      return tx('readonly', function(st){ return st.getAll(); });
+    }).then(function(rows){
+      return rows || [];
+    }).catch(function(){
+      if (window.toast) toast('浏览器本地存储不可用，画布只在本次会话保留');
+      return [];
+    }).then(function(rows){
+      DOCS.list = rows;
+      DOCS.ready = true;
+      if (!DOCS.list.length){
+        try {
+          var raw = localStorage.getItem('hackone:doc:v1');
+          if (raw){
+            var d = JSON.parse(raw);
+            if (d && d.base && d.gw && d.gh && d.base.length === d.gw * d.gh){
+              DOCS.list.push({ id: newId(), name: '上次的图纸', gw: d.gw, gh: d.gh,
+                base: Int16Array.from(d.base), progress: new Uint8Array(Math.ceil(d.gw * d.gh / 8)),
+                brandId: d.brandId, codeSys: d.codeSys, maxColors: d.maxColors || 0, updatedAt: now() });
+            }
+          }
+        } catch (e) {}
+      }
+      if (DOCS.list.length){
+        DOCS.list.sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); });
+        applyDoc(DOCS.list[0]);
+      } else if (S.cells){
+        commitFromState('画布 1');
+      }
+      renderList();
+      setInterval(function(){ if (DOCS.dirty) saveActive(); }, 1500);
+      window.addEventListener('beforeunload', function(){ if (DOCS.dirty) saveActive(); });
+    });
+  }
+  boot();
 })();
 </script>
 </body>
