@@ -58,7 +58,7 @@ Dashboard → 任一 Zone 概览页 → 右侧 **API** 区域 → **Account ID**
 | --- | --- |
 | Node / npm | v22.23.4 / 10.9.9 |
 | npm registry | `web/.npmrc` 指向 `https://registry.npmmirror.com`（国内直连官方源 >160s，已实测） |
-| wrangler | **未安装**（全局、本地均无）。用 `npx` 首次拉取需走 npmmirror，预计 1–5 分钟，**装之前先问 YG** |
+| wrangler | **未安装**（全局、本地均无）。注意：仓库根**没有** `.npmrc`，根目录执行 `npx` 会直连官方源（国内 >160s/packument，极易超时），必须显式加镜像前缀（见 §1.5）。镜像上最新为 4.158.0，解包 15.6 MB。**装之前先问 YG** |
 | 域名 DNS | `liutingqiu.xyz` 的 NS 已是 `elly.ns.cloudflare.com` / `ivan.ns.cloudflare.com`（Cloudflare 托管，绑定域名会很顺） |
 | `hack` 子域 | **当前无任何 A/CNAME 记录**（`dig +short hack.liutingqiu.xyz` 为空），可安全新建 |
 
@@ -76,6 +76,23 @@ npx wrangler@4 whoami          # 确认已登录、确认 account 正确
 
 > `wrangler@4` 是显式主版本，避免 `@latest` 某天升到 v5 引入破坏性变更。
 > 长期方案：把 `wrangler` 固定进 `web/package.json` 的 devDependencies（需开发部同意，本文件不代改）。
+
+### 1.5 wrangler 首次安装（**必须注意 registry**）
+
+`web/.npmrc` 只在 `web/` 目录生效；而 `wrangler pages deploy` 要在**仓库根**执行（那里才有 `wrangler.toml`）。
+直接在根目录 `npx wrangler@4` 会用 npm 默认源，国内实测单个 packument >160s，大概率卡住或超时。
+
+**首次安装时显式指定镜像**（只需一次，之后命中 npx 缓存）：
+
+```bash
+npm_config_registry=https://registry.npmmirror.com npx --yes wrangler@4 --version
+# 期望输出：4.x.y（2026-11-07 镜像上为 4.158.0）
+```
+
+- `--yes` 跳过 "Ok to proceed?" 交互，避免脚本里挂住；
+- 装好后再执行本文其他 `npx wrangler@4 ...` 不需要再加前缀；
+- 换机器 / 清了 npm 缓存 / 升级版本时，重新加前缀；
+- 也可临时 `export npm_config_registry=https://registry.npmmirror.com`，但只对该 shell 有效。
 
 ---
 
@@ -153,6 +170,8 @@ npm --prefix web run preview -- --port 4173
 ---
 
 ## 3. 首次部署（只在 YG 确认凭据后执行，且只做一次）
+
+> 以下命令在**仓库根**执行；若这台机器还没装过 wrangler，先按 §1.5 用镜像前缀装一次。
 
 ```bash
 cd /home/liutingqiu/hackone
@@ -357,6 +376,8 @@ echo | openssl s_client -connect hack.liutingqiu.xyz:443 -servername hack.liutin
 | `vite: not found` / `sh: tsc: not found` | 没装依赖或在错误目录 | `npm --prefix web ci`；确认 `web/package.json` 存在 |
 | 本地成功、CI 失败 | 大小写敏感 / 路径分隔符（Linux vs macOS） | 用与 import 完全一致的大小写；CI 看 `web/` 下真实文件名 |
 | `heap out of memory` | 构建内存不足（少见） | `NODE_OPTIONS=--max-old-space-size=4096` 重试 |
+| `compatibility date ... in the future` / 日期不被支持 | `wrangler.toml` 的 `compatibility_date` 比本地 wrangler 认识的日期新 | 改成该 wrangler 版本发布日（如 `2026-06-01`）；纯静态站不依赖该日期，改小无副作用 |
+| `npx` 长时间卡在 `Installing...` 或 `ETIMEDOUT` | 在仓库根执行，没吃到 `web/.npmrc`，走的是官方源 | 加镜像前缀：`npm_config_registry=https://registry.npmmirror.com npx --yes wrangler@4 ...`（见 §1.5） |
 
 > 排障顺序固定：**先在本地用与 CI 完全相同的命令复现** → 再看 CI 日志 → 再怀疑环境。
 
@@ -383,7 +404,7 @@ echo | openssl s_client -connect hack.liutingqiu.xyz:443 -servername hack.liutin
 | --- | --- | --- |
 | `npm ci`（冷缓存，npmmirror） | 40–90 s | 依赖 138 个包，本机已装过 |
 | `npm run build` | 1–2 s | 实测 vite 416 ms + tsc |
-| 首次 `npx wrangler@4` 下载 | **1–5 min** | npmmirror，含 workerd 平台包；**装之前先问 YG** |
+| 首次 `npx wrangler@4` 下载 | **1–5 min**（加镜像前缀后） | 解包 15.6 MB + workerd 平台包；不加前缀走官方源可能 >5 min 甚至失败；**装之前先问 YG** |
 | `pages project create` | 5–10 s | 一次 API |
 | `pages deploy`（3 文件 / ~155 KB） | 5–15 s | 上传量极小 |
 | 自定义域生效（同区） | 1–5 min（多数 < 1 min） | DNS 即时 + 证书签发 |
