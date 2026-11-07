@@ -20,3 +20,4 @@
 [11:36:15] ops       自定义域名生效                          证据: https://hack.liutingqiu.xyz HTTP/2 200
 [11:37:12] dev       板尺寸按 D-03 改为 29/52 可选（默认 29），导出按所选尺寸切 证据: web/src/App.tsx + split-export.test.ts；52 实测 2 页、13px/格；17 tests；53.86KB gzip
 [11:42:10] chief     新增用户测试部（与测试部职责分离） 证据: org/user-test/ROLE.md + agent 68377363
+[11:44:47] chief     设计部门流水线与回退链路           证据: docs/pipeline.md + docs/pipeline/BOARD.md
