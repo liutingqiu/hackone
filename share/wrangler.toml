@@ -1,0 +1,12 @@
+name = "pinda-share"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+account_id = "d3c55ee32fe18ae655a9bf98b43175c4"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "PINDA"
+id = "532b4994ddbe4ff6814aa3d862d1dfec"
+
+[vars]
+APP_URL = "https://hack.liutingqiu.xyz"
