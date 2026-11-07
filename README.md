@@ -47,3 +47,28 @@ gh run watch <id>                 # 盯着它跑完
 ├── docs/          # 方案、接口、分工
 └── .gitignore
 ```
+## 部署
+
+应用是单文件 HTML，构建后直接同步到 Pages：
+
+```bash
+python3 app/build_html.py
+cp app/拼豆图纸工具.html product/index.html
+npx wrangler pages deploy ./product --project-name hackone --branch main
+```
+
+分享短链由独立 Worker 承担（KV 存图纸，180 天过期，单张上限 400 KB）：
+
+```bash
+cd share && npx wrangler deploy     # https://pinda-share.tianqi689.workers.dev
+```
+
+线上：https://hack.liutingqiu.xyz
+
+## 画布操作
+
+| 操作 | 手势 |
+| --- | --- |
+| 平移（放大后拖动画布） | 中键拖动 / 空格 + 左键拖动 / 「查看」工具下左键拖动 |
+| 缩放 | 滚轮（以光标为中心） |
+| 适应窗口 | 右上角「显示设置」→ 适应窗口 |
