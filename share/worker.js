@@ -21,15 +21,39 @@ function makeId(n){
   return s;
 }
 
+async function readBodyLimited(req){
+  const declared = Number(req.headers.get('content-length') || 0);
+  if (declared > LIMIT) return null;
+  if (!req.body) return '';
+  const reader = req.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true){
+      const part = await reader.read();
+      if (part.done) break;
+      size += part.value.byteLength;
+      if (size > LIMIT){ await reader.cancel(); return null; }
+      chunks.push(part.value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks){ bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return new TextDecoder('utf-8', { fatal:true }).decode(bytes);
+}
+
 export default {
   async fetch(req, env){
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
 
     if (url.pathname === '/api/save' && req.method === 'POST'){
-      const body = await req.text();
+      let body;
+      try { body = await readBodyLimited(req); }
+      catch (e){ return json({ error: 'invalid_body' }, 400); }
+      if (body === null) return json({ error: 'too_large', limit: LIMIT }, 413);
       if (!body) return json({ error: 'empty' }, 400);
-      if (body.length > LIMIT) return json({ error: 'too_large', limit: LIMIT, size: body.length }, 413);
       let id = '';
       for (let i = 0; i < 6 && !id; i++){
         const cand = makeId(7);
