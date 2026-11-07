@@ -135,7 +135,7 @@ export default function App() {
   const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
   const [busy, setBusy] = useState<null | "print" | "png">(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [exportedPattern, setExportedPattern] = useState<Pattern | null>(null);
+  const [, setExportedPattern] = useState<Pattern | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLElement>(null);
@@ -172,19 +172,7 @@ export default function App() {
   const stats = useMemo(() => (pattern ? usedColors(pattern) : []), [pattern]);
   const total = useMemo(() => stats.reduce((s, x) => s + x.count, 0), [stats]);
 
-  // 只有「当前这份 pattern」被导出过才算已导出；换图/改参数后自动失效
-  const hasExport = pattern !== null && exportedPattern === pattern;
-
-  // 有未导出的图纸时，刷新/关闭前提示
-  useEffect(() => {
-    if (!pattern || hasExport) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [pattern, hasExport]);
+  // 离开确认已移除（2026-11-07）：图纸可由原图重算，拦截刷新只会让人烦
 
   // 渲染
   useEffect(() => {
