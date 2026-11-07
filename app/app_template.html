@@ -414,6 +414,59 @@
     #expA4{top:auto;left:auto;right:12px;bottom:16px;width:auto;min-height:46px;padding:0 18px}
     #dock #expA4{width:auto;flex:none}
   }
+
+  /* ================= [hackone] v4 视觉：卡片分组 / 图标按钮 ================= */
+  #side{background:#f2f4f9;padding:8px;display:flex;flex-direction:column;gap:8px;overflow-x:hidden}
+  #side .grp{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px 10px}
+  #side .gt{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;
+            font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.02em;padding:2px 0 3px}
+  #side .gt .chev{width:0;height:0;border:4px solid transparent;border-top-color:var(--ink3);
+                  transition:transform .16s ease;margin-right:2px}
+  #side .grp.collapsed .gb{display:none}
+  #side .grp.collapsed .gt .chev{transform:rotate(-90deg)}
+  #side .gb{margin-top:5px}
+  #side .gt:hover{color:var(--accent)}
+  #dock{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px 10px}
+
+  .iconbtn{width:30px;height:30px;padding:0;display:grid;place-items:center;border:0;border-radius:7px;
+           background:transparent;color:#1c1f26;flex:0 0 auto;position:relative}
+  .iconbtn:hover{background:#e9edf4}
+  .iconbtn:active{transform:none;background:#dfe5ef}
+  .iconbtn.on{background:#e6eefc;color:#2f6fed}
+  .iconbtn svg{display:block}
+  [data-tip]::after{content:attr(data-tip);position:absolute;left:50%;top:calc(100% + 7px);
+    transform:translateX(-50%) translateY(-2px);background:#1c1f26;color:#fff;font-size:11px;line-height:1;
+    padding:5px 7px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;
+    transition:opacity .12s ease .28s, transform .12s ease .28s;z-index:95}
+  [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (hover:none){[data-tip]::after{display:none}}
+  #bar .iconbtn{margin-left:2px}
+  #barPos{min-width:96px;text-align:right}
+
+  /* v4 修正：工具栏不压缩 */
+  #modebar{flex-wrap:nowrap}
+  #modebar .tools{flex:0 0 auto;overflow:visible;max-width:none}
+  #modebar .tools button{width:32px;height:32px}
+  #modebar .tools svg{width:17px;height:17px}
+  #bar .iconbtn svg{width:17px;height:17px}
+  #bar .iconbtn{width:32px;height:32px}
+  @media (max-width:900px){
+    #modebar .tools{flex:1 1 100%;overflow-x:auto;flex-wrap:wrap;max-width:100%}
+  }
+
+  #sizeInfo{background:none;padding:0;margin:0;font-size:11px;line-height:1.55;color:var(--ink3)}
+  #sizeInfo b{color:var(--ink2);font-weight:600}
+
+  @media (max-width: 900px){
+    #modebar{flex-wrap:wrap;gap:6px 8px;padding:6px 10px}
+    #modeSeg{flex:0 0 100%}
+    #modebar .tools{flex:1 1 100%;width:100%;overflow:visible;flex-wrap:wrap;justify-content:space-between}
+    #modebar .tools button{width:36px;height:36px}
+    #bar{padding:8px 10px;gap:6px}
+    #barInfo{flex:1 1 100%;font-size:11.5px}
+    #barPos{min-width:0}
+    #side{padding:6px}
+  }
 </style>
 </head>
 <body>
@@ -422,78 +475,55 @@
   <!-- ================= 左侧控制 ================= -->
   <aside id="side">
 
-    <div class="grp">
-      <div class="gt">尺寸</div>
-      <div class="row2"><span class="lb">宽度</span>
-        <div class="stepper"><button data-for="gw" data-d="-1">−</button><input id="gw" type="number" min="1" max="400" value="32"><button data-for="gw" data-d="1">＋</button></div>
-      </div>
-      <div class="row2"><span class="lb">高度</span>
-        <div class="stepper"><button data-for="gh" data-d="-1">−</button><input id="gh" type="number" min="1" max="400" value="32"><button data-for="gh" data-d="1">＋</button></div>
-      </div>
-      <div class="row2"><span class="lb">等比</span>
-        <label class="switch"><input type="checkbox" id="square" checked><i></i></label>
-      </div>
-      <div class="row2"><span class="lb">倍数</span>
-        <div class="seg mini" id="mults"><button data-m="2">×2</button><button data-m="4">×4</button><button data-m="8">×8</button></div>
-      </div>
-      <div class="cap"><span id="sizeInfo">—</span></div>
-    </div>
-
-    <div class="grp">
-      <div class="gt">配色</div>
-      <div class="row2"><span class="lb">品牌</span><select id="brand"></select></div>
-      <div class="row2" id="codeSysRow"><span class="lb">色号</span><select id="codeSys"></select></div>
-      <div class="row2"><span class="lb">最多色数</span>
-        <div class="rg"><input id="maxc" type="range" min="0" max="291" value="0"><span class="val" id="maxcV">不限</span></div>
-      </div>
-      <div class="row2"><span class="lb">抖动</span>
-        <label class="switch"><input type="checkbox" id="dither"><i></i></label>
-      </div>
-      <div class="row2"><span class="lb">去背景</span>
-        <label class="switch"><input type="checkbox" id="dropbg"><i></i></label>
-      </div>
-      <div class="row2"><span class="lb">重新识别</span><button id="redetect" class="sm">应用</button></div>
-      <div class="hint" id="redetectHint" hidden></div>
-    </div>
-
-    <div class="grp">
-      <div class="gt">识别</div>
-      <div class="row2"><span class="lb">算法</span>
-        <select id="algo">
-          <option value="de2000">CIEDE2000</option>
-          <option value="de76">Lab 欧氏</option>
-          <option value="rgb">RGB 加权</option>
-        </select>
-      </div>
-      <div class="row2"><span class="lb">取样</span>
-        <select id="sample">
-          <option value="nearest">最近邻</option>
-          <option value="smooth">平滑缩放</option>
-        </select>
-      </div>
-      <div class="row2"><span class="lb">缩小</span>
-        <select id="down">
-          <option value="nearest">最近邻</option>
-          <option value="area">面积平均</option>
-        </select>
+    <div class="grp" data-g="size">
+      <div class="gt"><span>尺寸</span><i class="chev"></i></div>
+      <div class="gb">
+        <div class="row2"><span class="lb">宽度</span>
+          <div class="stepper"><button data-for="gw" data-d="-1">−</button><input id="gw" type="number" min="1" max="400" value="32"><button data-for="gw" data-d="1">+</button></div>
+        </div>
+        <div class="row2"><span class="lb">高度</span>
+          <div class="stepper"><button data-for="gh" data-d="-1">−</button><input id="gh" type="number" min="1" max="400" value="32"><button data-for="gh" data-d="1">+</button></div>
+        </div>
+        <div class="row2"><span class="lb">等比</span>
+          <label class="switch"><input type="checkbox" id="square" checked><i></i></label>
+        </div>
+        <div class="row2"><span class="lb">倍数</span>
+          <div class="seg mini" id="mults"><button data-m="2">×2</button><button data-m="4">×4</button><button data-m="8">×8</button></div>
+        </div>
+        <div class="cap"><span id="sizeInfo"></span></div>
       </div>
     </div>
 
-    <div class="grp">
-      <div class="gt">整理</div>
-      <div class="row2"><span class="lb">合并强度</span>
-        <select id="tidyPreset">
-          <option value="0">关</option>
-          <option value="4">轻 ΔE≤4</option>
-          <option value="8" selected>标准 ΔE≤8</option>
-          <option value="15">强 ΔE≤15</option>
-        </select>
+    <div class="grp" data-g="pal">
+      <div class="gt"><span>配色</span><i class="chev"></i></div>
+      <div class="gb">
+        <div class="row2"><span class="lb">品牌</span><select id="brand"></select></div>
+        <div class="row2" id="codeSysRow"><span class="lb">色号</span><select id="codeSys"></select></div>
+        <div class="row2"><span class="lb">最多色数</span><div class="rg"><input id="maxc" type="range" min="0" max="291" value="0"><span class="val" id="maxcV">不限</span></div></div>
+        <div class="row2"><span class="lb">抖动</span><label class="switch"><input type="checkbox" id="dither"><i></i></label></div>
+        <div class="row2"><span class="lb">去背景</span><label class="switch"><input type="checkbox" id="dropbg"><i></i></label></div>
+        <div class="row2"><span class="lb">重新识别</span><button id="redetect" class="sm">应用</button></div>
+        <div class="hint" id="redetectHint" hidden></div>
       </div>
-      <div class="row2"><span class="lb">零星清理</span>
-        <div class="stepper"><button data-for="tidyMin" data-d="-1">−</button><input id="tidyMin" type="number" min="0" max="20" value="0"><button data-for="tidyMin" data-d="1">＋</button></div>
+    </div>
+
+    <div class="grp" data-g="algo">
+      <div class="gt"><span>识别</span><i class="chev"></i></div>
+      <div class="gb">
+        <div class="row2"><span class="lb">算法</span><select id="algo"><option value="de2000">CIEDE2000</option><option value="de76">Lab 欧氏</option><option value="rgb">RGB 加权</option></select></div>
+        <div class="row2"><span class="lb">取样</span><select id="sample"><option value="nearest">最近邻</option><option value="smooth">平滑缩放</option></select></div>
+        <div class="row2"><span class="lb">缩小</span><select id="down"><option value="nearest">最近邻</option><option value="area">面积平均</option></select></div>
       </div>
-      <div class="row2"><span class="lb">应用整理</span><button id="tidyGo" class="sm">执行</button></div>
-      <div class="hint" id="tidyInfo" hidden></div>
+    </div>
+
+    <div class="grp" data-g="tidy">
+      <div class="gt"><span>整理</span><i class="chev"></i></div>
+      <div class="gb">
+        <div class="row2"><span class="lb">合并强度</span><select id="tidyPreset"><option value="0">关</option><option value="4">轻 ΔE≤4</option><option value="8" selected>标准 ΔE≤8</option><option value="15">强 ΔE≤15</option></select></div>
+        <div class="row2"><span class="lb">零星清理</span><div class="stepper"><button data-for="tidyMin" data-d="-1">−</button><input id="tidyMin" type="number" min="0" max="20" value="0"><button data-for="tidyMin" data-d="1">+</button></div></div>
+        <div class="row2"><span class="lb">应用整理</span><button id="tidyGo" class="sm">执行</button></div>
+        <div class="hint" id="tidyInfo" hidden></div>
+      </div>
     </div>
 
     <input type="hidden" id="sideLen" value="32">
@@ -503,7 +533,6 @@
     <input type="file" id="file" accept="image/*" hidden>
 
     <div id="dock">
-      <div class="gt">导出</div>
       <button class="pri" id="expA4">导出 A4 拼装图</button>
       <div class="row2 dockrow"><button id="expPng">PNG</button><button id="expCsv">CSV</button></div>
     </div>
@@ -512,25 +541,19 @@
   <!-- ================= 中间画布 ================= -->
   <main>
     <div id="bar">
-      <button id="importBtn" class="sm">导入图片</button>
+      <button id="importBtn" class="iconbtn" data-tip="导入图片" aria-label="导入图片" ><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10"/><path d="m8.5 10 3.5 3.5L15.5 10"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg></button>
       <span id="srcInfo" hidden></span>
       <span id="barInfo">拼豆图纸生成器</span>
       <span class="sp"></span>
       <span id="barPos">—</span>
-      <button id="undo" title="撤销 Ctrl+Z">撤销</button>
-      <button id="redo" title="重做 Ctrl+Shift+Z">重做</button>
-      <div id="viewWrap">
-        <button id="viewOptsBtn" aria-expanded="false">显示</button>
+      <button id="undo" class="iconbtn" data-tip="撤销" aria-label="撤销" title="撤销 Ctrl+Z"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 5 4 9.5l4.5 4.5"/><path d="M4 9.5h9.5a5.5 5.5 0 1 1 0 11H9"/></svg></button>
+      <button id="redo" class="iconbtn" data-tip="重做" aria-label="重做" title="重做 Ctrl+Shift+Z"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 5 20 9.5l-4.5 4.5"/><path d="M20 9.5H10.5a5.5 5.5 0 1 0 0 11H15"/></svg></button>
+      <div id="viewWrap"><button id="viewOptsBtn" class="iconbtn" data-tip="显示设置" aria-label="显示设置" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h8.5"/><circle cx="15" cy="7" r="2.2"/><path d="M17.2 7H20"/><path d="M4 17h2.8"/><circle cx="9" cy="17" r="2.2"/><path d="M11.2 17H20"/></svg></button>
         <div id="viewOpts" hidden>
-          <div class="row"><label>格子 px</label>
-            <input id="cell" type="range" min="2" max="60" value="16"><span class="val" id="cellV">16</span>
-          </div>
+          <div class="row"><label>格子 px</label><input id="cell" type="range" min="2" max="60" value="16"><span class="val" id="cellV">16</span></div>
           <div class="row2"><span class="lb">色号</span><label class="switch"><input type="checkbox" id="showCode" checked><i></i></label></div>
           <div class="row2"><span class="lb">网格线</span><label class="switch"><input type="checkbox" id="showGrid" checked><i></i></label></div>
-          <div class="row">
-            <button id="fit" style="flex:1">适应窗口</button>
-            <button id="zoomOut">−</button><button id="zoomIn">＋</button>
-          </div>
+          <div class="row"><button id="fit" style="flex:1">适应窗口</button><button id="zoomOut">−</button><button id="zoomIn">+</button></div>
         </div>
       </div>
     </div>
@@ -540,15 +563,15 @@
         <button data-m="mark">标记</button>
       </div>
       <div class="tools" id="tools">
-        <button data-t="inspect" class="on">查看</button>
-        <button data-t="pencil">铅笔</button>
-        <button data-t="eraser">橡皮</button>
-        <button data-t="picker">吸色</button>
-        <button data-t="line">直线</button>
-        <button data-t="rect">矩形</button>
-        <button data-t="ellipse">圆形</button>
-        <button data-t="bucket">油漆桶</button>
-        <button id="flip" title="左右翻转整张图纸">⇄</button>
+        <button data-t="inspect" class="iconbtn on" data-tip="查看" aria-label="查看"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.6 18.4 11l-5.3 1.4L10.7 18z"/></svg></button>
+        <button data-t="pencil" class="iconbtn" data-tip="铅笔" aria-label="铅笔"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L20 8l-4-4L4 16z"/><path d="m14.5 5.5 4 4"/></svg></button>
+        <button data-t="eraser" class="iconbtn" data-tip="橡皮" aria-label="橡皮"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 17.5 15 9l4.5 4.5-6 6H9z"/><path d="M4 20h9"/></svg></button>
+        <button data-t="picker" class="iconbtn" data-tip="吸色" aria-label="吸色"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 4.5 5 5-2.5 2.5-5-5z"/><path d="m12.5 6.5-7 7V18h4.5l7-7"/></svg></button>
+        <button data-t="line" class="iconbtn" data-tip="直线" aria-label="直线"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 19 14-14"/></svg></button>
+        <button data-t="rect" class="iconbtn" data-tip="矩形" aria-label="矩形"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="6.5" width="15" height="11" rx="1.5"/></svg></button>
+        <button data-t="ellipse" class="iconbtn" data-tip="圆形" aria-label="圆形"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/></svg></button>
+        <button data-t="bucket" class="iconbtn" data-tip="油漆桶" aria-label="油漆桶"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 11.5 6l7 7-6.5 6.5z"/><path d="M20 16.4c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8c0-.9 1.2-2.1 1.8-2.9.6.8 1.8 2 1.8 2.9z"/></svg></button>
+        <button id="flip" class="iconbtn" data-tip="左右翻转" aria-label="左右翻转" title="左右翻转整张图纸"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8.5 8.5 5 12l3.5 3.5"/><path d="M15.5 8.5 19 12l-3.5 3.5"/></svg></button>
       </div>
       <span id="modeHint" hidden></span>
     </div>
@@ -1045,11 +1068,10 @@ function mirrorPositions(h){
 }
 function updateFlipBtn(){
   const b = $('flip');
+  if (!b) return;
   b.classList.toggle('on', S.flip);
-  b.textContent = S.flip ? '⇄ 已翻转' : '⇄ 左右翻转';
-  b.style.background = S.flip ? '#eaf1ff' : '';
-  b.style.borderColor = S.flip ? '#2f6fed' : '';
-  b.style.color = S.flip ? '#2f6fed' : '';
+  b.setAttribute('data-tip', S.flip ? '已翻转（再点还原）' : '左右翻转');
+  b.setAttribute('aria-label', S.flip ? '已翻转（再点还原）' : '左右翻转');
 }
 
 /* ------------------------------------------------ [hackone] 拼装进度 -------------- */
@@ -2188,22 +2210,45 @@ function act(cellIdx){
   endStroke();
   renderUsage();
 }
-/* [hackone] v3 滚轮缩放：以光标为锚点，普通滚轮即缩放 */
+/* [hackone] v4 滚轮缩放：缓动动画，以光标为锚点 */
+let zoomTarget = 0, zoomRaf = 0, zoomAnchor = null;
+function syncCellUi(){
+  const cs = Math.round(S.cell);
+  if ($('cell')) $('cell').value = Math.max(2, Math.min(60, cs));
+  if ($('cellV')) $('cellV').textContent = Math.max(2, Math.min(60, cs));
+}
+function applyZoomAnchor(){
+  if (!zoomAnchor) return;
+  const v = $('view'), r = canvas.getBoundingClientRect();
+  v.scrollLeft += r.left + zoomAnchor.gx * S.cell - zoomAnchor.ax;
+  v.scrollTop  += r.top  + zoomAnchor.gy * S.cell - zoomAnchor.ay;
+}
+function animateZoom(target, ax, ay){
+  if (!S.cells) return;
+  target = Math.max(2, Math.min(cellCap(), target));
+  const r = canvas.getBoundingClientRect();
+  if (r.width && ax != null){
+    zoomAnchor = { gx:(ax - r.left) / S.cell, gy:(ay - r.top) / S.cell, ax, ay };
+  }
+  zoomTarget = target;
+  if (zoomRaf) return;
+  const step = () => {
+    const diff = zoomTarget - S.cell;
+    if (Math.abs(diff) < 0.12){
+      S.cell = Math.round(zoomTarget * 100) / 100;
+      zoomRaf = 0; syncCellUi(); applyZoomAnchor(); requestDraw(); return;
+    }
+    S.cell += diff * 0.26;            // 指数缓出，起步快、收尾慢
+    syncCellUi(); applyZoomAnchor(); requestDraw();
+    zoomRaf = requestAnimationFrame(step);
+  };
+  zoomRaf = requestAnimationFrame(step);
+}
 $('view').addEventListener('wheel', e => {
   if (!S.cells) return;
   e.preventDefault();
-  const v = $('view'), r = canvas.getBoundingClientRect();
-  if (!r.width) return;
-  const gx = (e.clientX - r.left) / S.cell, gy = (e.clientY - r.top) / S.cell;
-  const step = Math.max(1, Math.round(S.cell * .15));
-  const next = Math.max(2, Math.min(cellCap(), S.cell + (e.deltaY < 0 ? step : -step)));
-  if (next === S.cell) return;
-  setCellSize(next);
-  requestAnimationFrame(() => {
-    const r2 = canvas.getBoundingClientRect();
-    v.scrollLeft += r2.left + gx*S.cell - e.clientX;
-    v.scrollTop  += r2.top  + gy*S.cell - e.clientY;
-  });
+  const k = e.deltaY < 0 ? 1.12 : 1/1.12;
+  animateZoom((zoomTarget || S.cell) * k, e.clientX, e.clientY);
 }, { passive:false });
 
 canvas.addEventListener('mousedown', e => {
@@ -2310,17 +2355,19 @@ function loadImage(src, name){
 
 /* ------------------------------------------------ 尺寸信息 -------------- */
 function updateSizeInfo(){
-  if (!S.gw || !S.gh){ $('sizeInfo').textContent = ''; return; }
+  const box = $('sizeInfo');
+  if (!box) return;
+  if (!S.gw || !S.gh){ box.textContent = ''; return; }
   const b = paletteOf(S.brandId);
   const cols = Math.ceil(S.gw/29), rows = Math.ceil(S.gh/29);
-  let s = `成品 <b>${S.gw} × ${S.gh}</b> 格位 · <b>${S.gw*S.gh}</b> 颗`;
+  const parts = [`<b>${S.gw} × ${S.gh}</b>`, `${S.gw*S.gh} 颗`];
   if (b.pitch){
-    const w = (S.gw*b.pitch/10).toFixed(1), h = (S.gh*b.pitch/10).toFixed(1);
-    s += `<br>约 <b>${w} × ${h} cm</b>（${b.pitch}mm 豆，未计熨烫收缩）· ${cols*rows} 块 29×29 底板`;
+    parts.push(`<b>${(S.gw*b.pitch/10).toFixed(1)} × ${(S.gh*b.pitch/10).toFixed(1)} cm</b>`);
+    parts.push(`${cols*rows} 块 29×29 底板`);
   } else {
-    s += `<br>${b.short} 是十字绣色卡，按色号配色用，不折算厘米 · ${cols*rows} 块底板`;
+    parts.push(`${b.short} 色卡 · ${cols*rows} 块底板`);
   }
-  $('sizeInfo').innerHTML = s;
+  box.innerHTML = parts.join(' · ');
 }
 
 /* ------------------------------------------------ 导出 ------------------ */
@@ -2951,6 +2998,20 @@ renderProgress();
   });
   var wm = $('blankNew');
   if (wm) wm.addEventListener('click', function(e){ e.stopPropagation(); $('blankNew').click(); });
+})();
+</script>
+
+<script>
+(function(){
+  document.querySelectorAll('#side .grp[data-g]').forEach(function(g){
+    var key = 'hc.g.' + g.dataset.g;
+    if (localStorage.getItem(key) === '1') g.classList.add('collapsed');
+    var t = g.querySelector('.gt');
+    t.addEventListener('click', function(){
+      g.classList.toggle('collapsed');
+      try { localStorage.setItem(key, g.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
+    });
+  });
 })();
 </script>
 </body>
