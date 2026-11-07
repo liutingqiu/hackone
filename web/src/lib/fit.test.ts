@@ -15,6 +15,11 @@ describe("fitCellSize", () => {
     expect(fitCellSize(48, 48, 0, 0)).toBe(3);
   });
 
+  it("390px 窄屏算到 7px 时抬到 8px，允许滚动而不是压到看不清", () => {
+    expect(fitCellSize(48, 48, 342, 700)).toBe(7);
+    expect(fitCellSize(48, 48, 342, 700, { min: 8 })).toBe(8);
+  });
+
   it("超大容器不超过 40px 上限", () => {
     expect(fitCellSize(8, 8, 1000, 1000)).toBe(40);
   });

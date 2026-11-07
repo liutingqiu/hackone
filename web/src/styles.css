@@ -80,20 +80,37 @@ canvas { box-shadow: var(--shadow); border-radius: 6px; image-rendering: pixelat
 .empty .sub { font-size: 13px; }
 
 .colors { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; overflow-y: auto; }
-.color { display: grid; grid-template-columns: 16px 42px 1fr auto; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 8px; }
+.color { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 8px; }
 .color:hover { background: rgba(127,127,127,.08); }
-.color i { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line); }
-.color .code { font: 12px ui-monospace, monospace; color: var(--muted); }
-.color .name { font-size: 12px; }
-.color .n { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.color i { flex: none; width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line); }
+.color .code { flex: none; width: 42px; font: 12px ui-monospace, monospace; color: var(--muted); }
+.color .name { flex: 1; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.color .n { flex: none; margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
 
 .footnote { margin-top: auto; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
 
 @media (max-width: 900px) {
-  main { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
-  .panel { flex-direction: row; flex-wrap: wrap; align-items: center; border: 0; border-bottom: 1px solid var(--line); }
-  .panel.stats { border: 0; border-top: 1px solid var(--line); max-height: 30vh; }
-  .colors { flex-direction: row; flex-wrap: wrap; }
+  header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .brand { flex: 1 1 auto; min-width: 0; }
+  .brand h1, .brand p { white-space: nowrap; }
+  .brand p { overflow: hidden; text-overflow: ellipsis; }
+  .actions { order: 3; width: 100%; flex-wrap: wrap; }
+  .actions button { flex: 1 1 auto; min-width: 0; }
+  main { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .panel {
+    flex-direction: column; align-items: stretch; flex-wrap: nowrap;
+    border: 0; border-bottom: 1px solid var(--line);
+  }
+  .panel.stats {
+    border: 0; border-top: 1px solid var(--line);
+    max-height: 38vh; overflow-y: auto;
+  }
+  .colors { flex-direction: column; flex-wrap: nowrap; }
+  .stage {
+    justify-content: flex-start; justify-content: safe center;
+    align-items: flex-start; align-items: safe center;
+    min-height: 0;
+  }
 }
 
 /* 分板区块 */

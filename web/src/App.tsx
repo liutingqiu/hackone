@@ -4,7 +4,7 @@ import { PALETTE } from "./lib/palette";
 import { imageToPattern, reduceNoise, usedColors, type Pattern } from "./lib/quantize";
 import { fitCellSize } from "./lib/fit";
 import { fitLabel } from "./lib/label-fit";
-import { splitBoards, type BoardGrid } from "./lib/split";
+import { splitBoards } from "./lib/split";
 import { openSplitPrintWindow } from "./lib/split-export";
 import {
   boardProgress,
@@ -32,7 +32,7 @@ const DEFAULT_BOARD = 29;
 type Mode = "beginner" | "pro";
 
 /** 无标注预览：纯色块 + 网格 + 板界红线，白底，不含色号/板号/用量 */
-function buildPreviewCanvas(pattern: Pattern, cell: number, grid: BoardGrid | null): HTMLCanvasElement {
+function buildPreviewCanvas(pattern: Pattern, cell: number): HTMLCanvasElement {
   const scale = 2;
   const w = pattern.cols * cell;
   const h = pattern.rows * cell;
@@ -75,26 +75,6 @@ function buildPreviewCanvas(pattern: Pattern, cell: number, grid: BoardGrid | nu
       ctx.moveTo(0, y * cell + 0.5);
       ctx.lineTo(w, y * cell + 0.5);
     }
-    ctx.stroke();
-  }
-
-  if (grid) {
-    const lineW = Math.max(1.5, Math.min(3, cell * 0.12));
-    ctx.strokeStyle = "rgba(220, 38, 38, 0.92)";
-    ctx.lineWidth = lineW;
-    ctx.beginPath();
-    for (const b of grid.boards) {
-      const x = b.x0 * cell + 0.5;
-      const y = b.y0 * cell + 0.5;
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-    }
-    ctx.moveTo(w - 0.5, 0);
-    ctx.lineTo(w - 0.5, h);
-    ctx.moveTo(0, h - 0.5);
-    ctx.lineTo(w, h - 0.5);
     ctx.stroke();
   }
 
@@ -468,14 +448,17 @@ export default function App() {
         if (im.naturalWidth < 2 || im.naturalHeight < 2 || isMostlyTransparent(im)) {
           notify("这张图几乎是空的，可能不是你要的");
         }
-        // 导入后按 stage 可用宽高自动 fit，保证默认整图可见；之后仍可用滑杆手调
-        const stage = stageRef.current;
-        if (stage && im.naturalWidth > 0 && im.naturalHeight > 0) {
-          const r = Math.max(1, Math.round((cols * im.naturalHeight) / im.naturalWidth));
-          setCell(fitCellSize(cols, r, stage.clientWidth - 48, stage.clientHeight - 48));
-        }
         setRestoredPattern(null);
         setImg(im);
+        // 等布局完成（窄屏媒体查询切换）再测容器；小于 8px 不再压缩，允许滚动
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const stage = stageRef.current;
+            if (!stage || im.naturalWidth <= 0 || im.naturalHeight <= 0) return;
+            const r = Math.max(1, Math.round((cols * im.naturalHeight) / im.naturalWidth));
+            setCell(fitCellSize(cols, r, stage.clientWidth - 48, stage.clientHeight - 48, { min: 8 }));
+          });
+        });
       };
       im.src = url;
     },
@@ -568,7 +551,7 @@ export default function App() {
   const exportPreview = useCallback(() => {
     if (!pattern || busy) return;
     const previewCell = Math.min(cell, 24);
-    const cv = buildPreviewCanvas(pattern, previewCell, grid);
+    const cv = buildPreviewCanvas(pattern, previewCell);
     setBusy("png");
     cv.toBlob((blob) => {
       if (!blob) {
@@ -586,7 +569,7 @@ export default function App() {
       setExportedPattern(pattern);
       notify("已导出");
     }, "image/png");
-  }, [pattern, cell, grid, busy, notify]);
+  }, [pattern, cell, busy, notify]);
 
   // 主按钮：可打印图纸（总览 + 每板一页，复用 split-export），弹窗被拦时 toast
   const exportPrintable = useCallback(() => {
@@ -663,6 +646,8 @@ export default function App() {
           </label>
           <input type="range" min={3} max={40} value={cell} onChange={(e) => setCell(+e.target.value)} />
 
+          <label className="switch"><input type="checkbox" checked={showCodes} onChange={(e) => setShowCodes(e.target.checked)} /> 显示色号</label>
+
           {mode === "pro" && (
             <>
               <label className="row">
@@ -678,7 +663,6 @@ export default function App() {
                 onChange={(e) => setMinCount(+e.target.value)}
               />
 
-              <label className="switch"><input type="checkbox" checked={showCodes} onChange={(e) => setShowCodes(e.target.checked)} /> 显示色号</label>
               <label className="switch"><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> 显示网格</label>
             </>
           )}
@@ -741,9 +725,6 @@ export default function App() {
               </label>
             )}
             <label className="switch"><input type="checkbox" checked={showBoardIds} onChange={(e) => setShowBoardIds(e.target.checked)} /> 画布显示板号</label>
-            <button className="wide" onClick={exportPrintable} disabled={!pattern || !grid || !!busy}>
-              {busy === "print" ? "生成中…" : "导出分板拼装图"}
-            </button>
           </section>
 
           <section className="progress-section">
@@ -809,7 +790,7 @@ export default function App() {
                 >
                   <i style={{ background: s.bead.hex }} />
                   <span className="code">{s.bead.code}</span>
-                  <span className="name">{s.bead.name !== s.bead.code ? s.bead.name : ""}</span>
+                  {s.bead.name !== s.bead.code && <span className="name">{s.bead.name}</span>}
                   <span className="n">{s.count}</span>
                 </div>
               );
