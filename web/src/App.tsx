@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PALETTE } from "./lib/palette";
 import { imageToPattern, reduceNoise, usedColors, type Pattern } from "./lib/quantize";
+import { fitCellSize } from "./lib/fit";
 import { fitLabel } from "./lib/label-fit";
 import { splitBoards } from "./lib/split";
 import { openSplitPrintWindow } from "./lib/split-export";
@@ -47,6 +48,7 @@ export default function App() {
   const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
 
   const rows = useMemo(() => {
     if (!img) return 0;
@@ -208,16 +210,25 @@ export default function App() {
     }
   }, [pattern, cell, showCodes, showGrid, showBoardIds, grid, hover]);
 
-  const onFile = useCallback((f: File | undefined | null) => {
-    if (!f || !f.type.startsWith("image/")) return;
-    const url = URL.createObjectURL(f);
-    const im = new Image();
-    im.onload = () => {
-      setImg(im);
-      URL.revokeObjectURL(url);
-    };
-    im.src = url;
-  }, []);
+  const onFile = useCallback(
+    (f: File | undefined | null) => {
+      if (!f || !f.type.startsWith("image/")) return;
+      const url = URL.createObjectURL(f);
+      const im = new Image();
+      im.onload = () => {
+        URL.revokeObjectURL(url);
+        // 导入后按 stage 可用宽高自动 fit，保证默认整图可见；之后仍可用滑杆手调
+        const stage = stageRef.current;
+        if (stage && im.naturalWidth > 0 && im.naturalHeight > 0) {
+          const r = Math.max(1, Math.round((cols * im.naturalHeight) / im.naturalWidth));
+          setCell(fitCellSize(cols, r, stage.clientWidth - 48, stage.clientHeight - 48));
+        }
+        setImg(im);
+      };
+      im.src = url;
+    },
+    [cols],
+  );
 
   const exportPng = () => {
     const cv = canvasRef.current;
@@ -296,7 +307,7 @@ export default function App() {
           {!img && <p className="hint">把图片拖进来，或点右上角上传</p>}
         </aside>
 
-        <section className="stage">
+        <section className="stage" ref={stageRef}>
           {pattern ? (
             <canvas
               ref={canvasRef}
