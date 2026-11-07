@@ -201,6 +201,99 @@
     #right{display:none}
   }
 
+
+  /* ================= [hackone] v2 左栏重构：三段 + 折叠 + 吸底导出 ================= */
+  #side{display:flex;flex-direction:column;padding:0;overflow-x:hidden}
+  #side .sec .row{gap:6px}
+  #side .sec{padding:11px 14px}
+  #side .sec.collapsed .body{display:none}
+  #side .h{cursor:pointer;user-select:none;justify-content:space-between;margin-bottom:0;
+           padding:2px 0;gap:8px}
+  #side .h .t{font-size:11.5px;font-weight:700;letter-spacing:.05em;color:var(--ink)}
+  #side .h .chev{width:12px;text-align:center;color:var(--ink3);font-size:10px;flex:0 0 12px}
+  #side .h .chev::before{content:"\25BE"}
+  #side .sec.collapsed .h .chev::before{content:"\25B8"}
+  #side .h:hover .t{color:var(--accent)}
+  #side .sec .body{margin-top:10px}
+
+  #secLoad{padding:10px 14px 12px}
+  #drop{padding:12px 10px;border-radius:9px;font-size:12.5px}
+  #drop .dim{font-size:11.5px}
+  .srcrow{display:flex;align-items:center;gap:8px;margin-top:9px}
+  .srcrow #srcInfo{flex:1;min-width:0;font-size:11px;color:var(--ink3);line-height:1.45;margin:0}
+  button.sm{padding:4px 9px;font-size:11.5px}
+  .chk.inline{margin-top:0;flex:0 0 auto}
+  .x{color:var(--ink3);flex:0 0 auto}
+  .dim{color:var(--ink3);font-size:11px}
+  .seg.mini{flex:0 0 auto}
+  .seg.mini button{padding:4px 6px;font-size:11px;min-width:30px}
+  .chkrow{display:flex;align-items:center;gap:10px;margin-top:8px}
+  #codeSysRow{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
+  .chkrow .chk{margin-top:0}
+  .chkrow button{margin-left:auto}
+
+  details.adv{margin-top:9px;border-top:1px dashed var(--line);padding-top:8px}
+  details.adv>summary{cursor:pointer;list-style:none;font-size:11.5px;color:var(--ink2);
+    display:flex;align-items:center;gap:6px;padding:1px 0}
+  details.adv>summary::-webkit-details-marker{display:none}
+  details.adv>summary::before{content:"\25B8";color:var(--ink3);font-size:9px}
+  details.adv[open]>summary::before{content:"\25BE"}
+  details.adv>summary:hover{color:var(--accent)}
+
+  #sizeInfo{margin-top:8px;padding:6px 8px;font-size:11px;background:#f6f8fb;border-radius:6px;
+            line-height:1.55;color:var(--ink2)}
+  #palInfo{font-size:10.5px;line-height:1.5;color:var(--ink3);margin-top:6px;
+           display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  #dock{position:sticky;bottom:0;margin-top:auto;padding:9px 14px 11px;background:#fff;
+        border-top:1px solid var(--line);box-shadow:0 -8px 16px #1c1f260d;
+        display:flex;flex-direction:column;gap:6px}
+  #dock .row{margin-top:0;gap:6px}
+  #dock button{flex:1}
+  #dock #expA4{width:100%}
+
+  #modebar{gap:8px;flex-wrap:wrap}
+  #modebar .sp{flex:1}
+  .tools{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;max-width:100%}
+  .tools button{padding:5px 8px;font-size:11.5px;border-radius:6px;flex:0 0 auto}
+  #toolHint{color:var(--ink3);font-size:11.5px;flex:1 1 auto;min-width:0;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #quickOps{display:flex;gap:4px}
+  #quickOps button{padding:5px 8px;font-size:11.5px}
+  #viewWrap{position:relative}
+  #viewOptsBtn{padding:5px 9px;font-size:11.5px}
+  #viewOptsBtn.on{background:var(--accent2);border-color:var(--accent);color:var(--accent)}
+  #viewOpts{position:absolute;top:calc(100% + 6px);right:0;z-index:80;width:238px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 36px #0002;padding:10px 11px}
+  #viewOpts[hidden]{display:none}
+  #viewOpts .row{margin-top:8px}
+
+  #paintbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:6px 14px;
+    background:#fbfcfe;border-bottom:1px solid var(--line);font-size:12px;flex:0 0 auto}
+  .pb-group{display:flex;align-items:center;gap:6px}
+  .pb-group[hidden]{display:none}
+  .pb-group label{color:var(--ink2);font-size:11.5px}
+  #side .row[hidden]{display:none}
+  #paintbar #toolHint{flex:1 1 200px}
+  #brand{flex:1.15;min-width:0}
+  #codeSys{flex:1;min-width:0}
+  #paintRow{display:inline-flex;align-items:center;gap:6px;padding:3px 7px;border:1px solid var(--line);
+    border-radius:6px;cursor:pointer;background:#fff;margin:0}
+  #paintRow:hover{border-color:var(--accent);background:var(--accent2)}
+
+  @media (max-width: 900px){
+    #expA4{position:fixed;bottom:14px;right:12px;top:auto;z-index:80;width:auto;min-height:44px;
+      padding:0 16px;font-size:12.5px;border-radius:999px;box-shadow:0 8px 22px #2f6fed59}
+    #dock{position:static;box-shadow:none;border-top:0;padding-top:0}
+    #dock .row{display:none}
+    #modebar{gap:6px 8px}
+    #tools{order:3;flex:1 1 100%;overflow-x:auto}
+    #viewWrap{margin-left:auto}
+    #quickOps{order:4}
+    #paintbar{padding:6px 10px;gap:10px}
+    #paintbar #toolHint{flex:1 1 100%}
+  }
+
 /* ------------------------------------------------ [hackone] 手机端单列布局 ---- */
 @media (max-width: 900px) {
   html, body { width: 100%; max-width: 100%; height: auto; min-height: 100%; overflow-x: hidden; }
@@ -252,6 +345,16 @@
   }
 }
 
+
+  @media (max-width: 900px){
+    #modeSeg{order:1;flex:0 0 100%}
+    .tools{order:2;flex:0 0 100%;flex-wrap:wrap;overflow:visible}
+    .tools button{padding:6px 9px;font-size:11.5px}
+    #quickOps{order:3;flex:0 0 auto}
+    #viewWrap{order:4;margin-left:auto}
+    #expA4{top:auto;left:auto;right:12px;bottom:16px;width:auto;min-height:46px;padding:0 18px}
+    #dock #expA4{width:auto;flex:none}
+  }
 </style>
 </head>
 <body>
@@ -260,166 +363,130 @@
   <!-- ================= 左侧控制 ================= -->
   <aside id="side">
 
-    <div class="sec">
-      <div class="h"><span class="n">1</span>图片与画布</div>
-      <div id="drop">点这里选图片，或把图片拖进来<br>
-        <span style="font-size:11px;opacity:.9">也支持 Ctrl+V 粘贴</span></div>
+    <!-- 导入 -->
+    <div class="sec" id="secLoad">
+      <div id="drop">＋ 导入图片<span class="dim"> · 拖入或 Ctrl+V 粘贴</span></div>
       <input type="file" id="file" accept="image/*" hidden>
-      <div class="hint" id="srcInfo">还没导入图片，也可以直接新建空白图纸</div>
-
-      <div class="row" style="margin-top:10px">
-        <label>画布</label>
-        <input id="cw" type="number" min="1" max="400" value="32">
-        <span style="color:var(--ink3)">×</span>
-        <input id="ch" type="number" min="1" max="400" value="32">
+      <div class="srcrow">
+        <span id="srcInfo">还没导入图片，也可以直接新建空白图纸</span>
+        <button id="blankNew" class="pri sm">新建空白</button>
       </div>
-      <div class="row">
-        <label>对齐</label>
-        <div class="anchor" id="anchor">
-          <button data-a="0" title="左上"></button><button data-a="1" title="上"></button><button data-a="2" title="右上"></button>
-          <button data-a="3" title="左"></button><button data-a="4" title="居中"></button><button data-a="5" title="右"></button>
-          <button data-a="6" title="左下"></button><button data-a="7" title="下"></button><button data-a="8" title="右下"></button>
+    </div>
+
+    <!-- 图纸 -->
+    <div class="sec" data-sec="size">
+      <div class="h" role="button" tabindex="0" aria-expanded="true">
+        <span class="t">图纸</span><span class="chev"></span>
+      </div>
+      <div class="body">
+        <div class="row">
+          <label for="sideLen">边长</label>
+          <input id="sideLen" type="number" min="1" max="400" value="32">
+          <label class="chk inline"><input type="checkbox" id="square" checked>正方形</label>
+          <div class="seg mini" id="mults">
+            <button data-m="2">×2</button><button data-m="4">×4</button><button data-m="8">×8</button>
+          </div>
         </div>
-      </div>
-      <div class="row">
-        <button id="applyCanvas" style="flex:1">扩展 / 裁切画布</button>
-        <button id="blankNew" class="pri" style="flex:1">新建空白</button>
-      </div>
-      <div class="hint">「扩展 / 裁切」只增删格子、<b>不缩放</b>内容，新格子留空不拼；「对齐」决定现有内容落在新画布的哪个位置。</div>
-    </div>
-
-    <div class="sec">
-      <div class="h"><span class="n">2</span>缩放与成品尺寸</div>
-      <div class="row">
-        <label for="sideLen">边长（格）</label>
-        <input id="sideLen" type="number" min="1" max="400" value="32">
-        <label class="chk" style="margin-top:0"><input type="checkbox" id="square" checked>正方形</label>
-      </div>
-      <div class="row">
-        <label>精确 宽×高</label>
-        <input id="gw" type="number" min="1" max="400" value="32">
-        <span style="color:var(--ink3)">×</span>
-        <input id="gh" type="number" min="1" max="400" value="32">
-      </div>
-      <div class="hint" id="sizeInfo">—</div>
-      <div class="row">
-        <label>快捷放大</label>
-        <div class="seg" id="mults">
-          <button data-m="2">×2</button><button data-m="4">×4</button><button data-m="8">×8</button>
+        <div class="row" id="exactRow">
+          <label>宽 × 高</label>
+          <input id="gw" type="number" min="1" max="400" value="32">
+          <span class="x">×</span>
+          <input id="gh" type="number" min="1" max="400" value="32">
         </div>
-      </div>
-      <div class="row"><label>缩小方式</label>
-        <select id="down">
-          <option value="nearest">最近邻（锐利）</option>
-          <option value="area">面积平均（更平滑）</option>
-        </select>
-      </div>
-      <div class="hint">所有尺寸操作都基于<b>当前画面</b>（含手改）重新排布，不会回头重新采样原图；
-        放大一律最近邻，<b>豆子数量按 N² 增长</b>。</div>
-    </div>
-
-    <div class="sec">
-      <div class="h"><span class="n">3</span>色板与配色</div>
-      <div class="row"><label>品牌</label><select id="brand"></select></div>
-      <div class="row" id="codeSysRow"><label>显示色号</label><select id="codeSys"></select></div>
-      <div id="palInfo"></div>
-      <div class="row"><label>匹配算法</label>
-        <select id="algo">
-          <option value="de2000">CIEDE2000（最佳，推荐）</option>
-          <option value="de76">Lab 欧氏距离</option>
-          <option value="rgb">RGB 加权距离</option>
-        </select>
-      </div>
-      <div class="row"><label>取样方式</label>
-        <select id="sample">
-          <option value="nearest">最近邻（像素/图片）</option>
-          <option value="smooth">平滑缩放（照片）</option>
-        </select>
-      </div>
-      <div class="row"><button id="redetect" style="flex:1">按原图重新识别</button></div>
-      <div class="hint" id="redetectHint">识别设置只在导入图片和「重新识别」时生效，<b>不会</b>覆盖手改。</div>
-      <div class="row"><label>最多色数</label>
-        <input id="maxc" type="range" min="0" max="291" value="0"><span class="val" id="maxcV">不限</span>
-      </div>
-      <label class="chk"><input type="checkbox" id="dither">抖动（渐变更顺，散点更多）</label>
-      <label class="chk"><input type="checkbox" id="dropbg">去掉周边纯色背景</label>
-
-      <div class="h" style="margin-top:14px">配色整理</div>
-      <div class="row"><label>合并强度</label>
-        <select id="tidyPreset">
-          <option value="0">关（只清杂色）</option>
-          <option value="4">轻 ΔE≤4</option>
-          <option value="8" selected>标准 ΔE≤8</option>
-          <option value="15">强 ΔE≤15</option>
-        </select>
-      </div>
-      <div class="row"><label>孤立杂色</label>
-        <input id="tidyMin" type="number" min="0" max="20" value="0">
-        <label>格以下清掉</label>
-      </div>
-      <div class="row"><button id="tidyGo" style="flex:1">应用整理（合并相近色）</button></div>
-      <div class="hint" id="tidyInfo">把相近的豆子色合并成同一种、清掉零星杂点，让图纸更好拼。可撤销。</div>
-    </div>
-
-    <div class="sec">
-      <div class="h"><span class="n">4</span>显示</div>
-      <div class="row"><label>格子 px</label>
-        <input id="cell" type="range" min="2" max="60" value="16"><span class="val" id="cellV">16</span>
-      </div>
-      <label class="chk"><input type="checkbox" id="showCode" checked>显示色号</label>
-      <label class="chk"><input type="checkbox" id="showGrid" checked>网格线</label>
-      <!-- [hackone] 分板显示：29 格板界 + 行优先编号 -->
-      <label class="chk"><input type="checkbox" id="showBoard" checked>每 29 格画分板线 + 编号</label>
-      <div class="row">
-        <button id="fit" style="flex:1">适应窗口</button>
-        <button id="zoomOut">−</button><button id="zoomIn">＋</button>
+        <div id="sizeInfo">—</div>
+        <details class="adv">
+          <summary>画布编辑 · 对齐与扩展 / 裁切</summary>
+          <div class="row">
+            <label>对齐</label>
+            <div class="anchor" id="anchor">
+              <button data-a="0" title="左上"></button><button data-a="1" title="上"></button><button data-a="2" title="右上"></button>
+              <button data-a="3" title="左"></button><button data-a="4" title="居中"></button><button data-a="5" title="右"></button>
+              <button data-a="6" title="左下"></button><button data-a="7" title="下"></button><button data-a="8" title="右下"></button>
+            </div>
+          </div>
+          <div class="row">
+            <label>画布</label>
+            <input id="cw" type="number" min="1" max="400" value="32">
+            <span class="x">×</span>
+            <input id="ch" type="number" min="1" max="400" value="32">
+            <button id="applyCanvas" class="sm">扩展 / 裁切</button>
+          </div>
+          <div class="hint">只增删格子、<b>不缩放</b>内容，新格子留空不拼；「对齐」决定现有内容落在新画布的哪个位置。</div>
+        </details>
       </div>
     </div>
 
-    <div class="sec">
-      <div class="h"><span class="n">5</span>工具与导出</div>
-      <div class="tools" id="tools">
-        <button data-t="inspect" class="on">查看</button>
-        <button data-t="pencil">铅笔</button>
-        <button data-t="eraser">橡皮</button>
-        <button data-t="picker">吸色</button>
-        <button data-t="line">直线</button>
-        <button data-t="rect">矩形</button>
-        <button data-t="ellipse">圆形</button>
-        <button data-t="bucket">油漆桶</button>
+    <!-- 配色 -->
+    <div class="sec" data-sec="pal">
+      <div class="h" role="button" tabindex="0" aria-expanded="true">
+        <span class="t">配色</span><span class="chev"></span>
       </div>
-      <div class="hint" id="toolHint">点击格子查看色号。切到铅笔可改单个格子。</div>
-      <div class="row"><label>笔刷</label>
-        <input id="brush" type="range" min="1" max="16" value="1"><span class="val" id="brushV">1</span>
-      </div>
-      <div class="row"><label>油漆桶</label>
-        <div class="seg" id="bucket">
-          <button data-c="4" class="on">4 连通</button><button data-c="8">8 连通</button>
+      <div class="body">
+        <div class="row">
+          <label>品牌</label><select id="brand"></select>
+          <span class="csrow" id="codeSysRow"><label>色号</label><select id="codeSys"></select></span>
         </div>
+        <div id="palInfo"></div>
+        <div class="row">
+          <label>最多色数</label>
+          <input id="maxc" type="range" min="0" max="291" value="0"><span class="val" id="maxcV">不限</span>
+        </div>
+        <div class="chkrow">
+          <label class="chk inline"><input type="checkbox" id="dither">抖动</label>
+          <label class="chk inline"><input type="checkbox" id="dropbg">去背景</label>
+          <button id="redetect" class="sm">重新识别</button>
+        </div>
+        <div class="hint" id="redetectHint">识别设置只在导入/重新识别时生效，不覆盖手改。</div>
+
+        <details class="adv">
+          <summary>识别参数 · 算法 / 取样 / 缩小</summary>
+          <div class="row"><label>算法</label>
+            <select id="algo">
+              <option value="de2000">CIEDE2000（最佳，推荐）</option>
+              <option value="de76">Lab 欧氏距离</option>
+              <option value="rgb">RGB 加权距离</option>
+            </select>
+          </div>
+          <div class="row"><label>取样</label>
+            <select id="sample">
+              <option value="nearest">最近邻（像素/图片）</option>
+              <option value="smooth">平滑缩放（照片）</option>
+            </select>
+          </div>
+          <div class="row"><label>缩小</label>
+            <select id="down">
+              <option value="nearest">最近邻（锐利）</option>
+              <option value="area">面积平均（更平滑）</option>
+            </select>
+          </div>
+        </details>
+
+        <details class="adv">
+          <summary>配色整理 · 合并相近色</summary>
+          <div class="row"><label>强度</label>
+            <select id="tidyPreset">
+              <option value="0">关（只清杂色）</option>
+              <option value="4">轻 ΔE≤4</option>
+              <option value="8" selected>标准 ΔE≤8</option>
+              <option value="15">强 ΔE≤15</option>
+            </select>
+          </div>
+          <div class="row">
+            <label>零星</label>
+            <input id="tidyMin" type="number" min="0" max="20" value="0">
+            <span class="dim">格以下清掉</span>
+          </div>
+          <div class="row"><button id="tidyGo" style="flex:1">应用整理</button></div>
+          <div class="hint" id="tidyInfo">把相近的豆子色合并成同一种、清掉零星杂点，让图纸更好拼。可撤销。</div>
+        </details>
       </div>
-      <label class="chk"><input type="checkbox" id="shapeFill">矩形 / 圆形实心</label>
-      <div class="row" id="paintRow" title="点击打开色卡选颜色">
-        <label>铅笔色</label>
-        <span class="pchip" id="paintSw"></span>
-        <b id="paintCode">—</b>
-        <span style="margin-left:auto;color:var(--ink3);font-size:11px">打开色卡 ▾</span>
-      </div>
-      <div class="row" style="margin-top:9px">
-        <button id="flip" style="flex:1" title="把整个图纸水平镜像">⇄ 左右翻转</button>
-      </div>
-      <div class="hint">镜像整张图纸，用于熨烫后从背面看、或做对称图案。再点一次翻回来；
-        翻转不会丢手改的格子，缩放后也保持。</div>
-      <!-- [hackone] A4 拼装图导出：总览 + 每板一页 -->
-      <div class="row" style="margin-top:9px">
-        <button class="pri" id="expA4" style="flex:1">导出 A4 拼装图</button>
-      </div>
+    </div>
+
+    <div id="dock">
+      <button class="pri" id="expA4">导出 A4 拼装图</button>
       <div class="row">
-        <button id="expPng" style="flex:1">导出图纸 PNG</button>
-      </div>
-      <div class="row">
-        <button id="expCsv" style="flex:1">导出用量 CSV</button>
-        <button id="undo" title="撤销（Ctrl+Z）">撤销</button>
-        <button id="redo" title="重做（Ctrl+Shift+Z / Ctrl+Y）">重做</button>
+        <button id="expPng">导出 PNG</button>
+        <button id="expCsv">导出 CSV</button>
       </div>
     </div>
   </aside>
@@ -431,13 +498,58 @@
       <span class="sp"></span>
       <span id="barPos">—</span>
     </div>
-    <!-- [hackone] 查看 / 标记：标记模式只改完成态，不改图案 -->
     <div id="modebar">
       <div class="seg" id="modeSeg" role="group" aria-label="画布模式">
         <button data-m="view" class="on">浏览</button>
         <button data-m="mark">标记</button>
       </div>
-      <span id="modeHint">浏览模式：点格子查色号，不改进度</span>
+      <div class="tools" id="tools">
+        <button data-t="inspect" class="on">查看</button>
+        <button data-t="pencil">铅笔</button>
+        <button data-t="eraser">橡皮</button>
+        <button data-t="picker">吸色</button>
+        <button data-t="line">直线</button>
+        <button data-t="rect">矩形</button>
+        <button data-t="ellipse">圆形</button>
+        <button data-t="bucket">油漆桶</button>
+      </div>
+      <span class="sp"></span>
+      <div id="quickOps">
+        <button id="undo" title="撤销（Ctrl+Z）">撤销</button>
+        <button id="redo" title="重做（Ctrl+Shift+Z）">重做</button>
+        <button id="flip" title="左右翻转整张图纸">⇄</button>
+      </div>
+      <div id="viewWrap">
+        <button id="viewOptsBtn" aria-expanded="false" title="显示设置">显示</button>
+        <div id="viewOpts" hidden>
+          <div class="row"><label>格子 px</label>
+            <input id="cell" type="range" min="2" max="60" value="16"><span class="val" id="cellV">16</span>
+          </div>
+          <label class="chk"><input type="checkbox" id="showCode" checked>显示色号</label>
+          <label class="chk"><input type="checkbox" id="showGrid" checked>网格线</label>
+          <label class="chk"><input type="checkbox" id="showBoard" checked>每 29 格分板线 + 编号</label>
+          <div class="row">
+            <button id="fit" style="flex:1">适应窗口</button>
+            <button id="zoomOut">−</button><button id="zoomIn">＋</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="paintbar">
+      <div class="pb-group" data-for="brush">
+        <label>笔刷</label><input id="brush" type="range" min="1" max="16" value="1"><span class="val" id="brushV">1</span>
+      </div>
+      <div class="pb-group" data-for="bucket">
+        <label>连通</label>
+        <div class="seg mini" id="bucket"><button data-c="4" class="on">4</button><button data-c="8">8</button></div>
+      </div>
+      <div class="pb-group" data-for="shape">
+        <label class="chk inline"><input type="checkbox" id="shapeFill">实心</label>
+      </div>
+      <div class="pb-group" data-for="paint">
+        <span id="paintRow" title="点击打开色卡选颜色"><span class="pchip" id="paintSw"></span><b id="paintCode">—</b><span class="dim">选色 ▾</span></span>
+      </div>
+      <span id="toolHint">点击格子查看色号。切到铅笔可改单个格子。</span>
     </div>
     <div id="view">
       <canvas id="grid" hidden></canvas>
@@ -652,8 +764,7 @@ function renderAlias(){
   const box = $('palInfo');
   const rel = ALIASES.filter(a => a.system === S.codeSys);
   if (S.brandId === 'standard' && rel.length && rel[0].labels.length){
-    box.innerHTML = `${paletteOf(S.brandId).label} · 共 ${S.palette.length} 色<br>
-      <span style="color:#c2410c">同款牌子：${rel[0].labels.join(' / ')}（同一套色卡换名，色号一致）</span>`;
+    box.innerHTML = `<span style="color:#c2410c">同款牌子：${rel[0].labels.join(' / ')}（色号通用）</span>`;
   }
 }
 function colourSystemOptions(){
@@ -2500,7 +2611,7 @@ function markDirtyImg(){
 function clearDirtyImg(){
   S.dirtyImg = false;
   $('redetect').classList.remove('pri');
-  $('redetectHint').innerHTML = '识别设置只在导入图片和「重新识别」时生效，<b>不会</b>覆盖手改。';
+  $('redetectHint').innerHTML = '识别设置只在导入/重新识别时生效，不覆盖手改。';
 }
 
 $('drop').addEventListener('click', () => $('file').click());
@@ -2740,5 +2851,65 @@ renderProgress();
     Jett-Wu/Perler_Beads_Generator    第三方校验
   HEX 为屏幕近似值，实际豆子颜色受显示器、光线与批次影响。
 -->
+
+<script>
+/* [hackone] v2：左栏折叠 / 显示设置弹层 / 工具上下文栏 */
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  document.querySelectorAll('#side .sec[data-sec]').forEach(function(sec){
+    var key = 'hc.sec.' + sec.dataset.sec, h = sec.querySelector('.h');
+    if (localStorage.getItem(key) === '1'){
+      sec.classList.add('collapsed'); h.setAttribute('aria-expanded','false');
+    }
+    function toggle(){
+      sec.classList.toggle('collapsed');
+      var c = sec.classList.contains('collapsed');
+      h.setAttribute('aria-expanded', String(!c));
+      try { localStorage.setItem(key, c ? '1' : '0'); } catch(e){}
+    }
+    h.addEventListener('click', toggle);
+    h.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } });
+  });
+
+  var vbtn = $('viewOptsBtn'), vpop = $('viewOpts');
+  function closePop(){ vpop.hidden = true; vbtn.setAttribute('aria-expanded','false'); vbtn.classList.remove('on'); }
+  vbtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    vpop.hidden = !vpop.hidden;
+    vbtn.setAttribute('aria-expanded', String(!vpop.hidden));
+    vbtn.classList.toggle('on', !vpop.hidden);
+  });
+  document.addEventListener('mousedown', function(e){
+    if (!vpop.hidden && !vpop.contains(e.target) && e.target !== vbtn) closePop();
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePop(); });
+
+  var GROUPS = {
+    inspect: [], pencil: ['brush','paint'], eraser: ['brush'], picker: [],
+    line: ['brush','paint'], rect: ['brush','paint','shape'],
+    ellipse: ['brush','paint','shape'], bucket: ['bucket','paint']
+  };
+  function sync(){
+    var on = document.querySelector('#tools button.on');
+    var t = on ? on.dataset.t : 'inspect';
+    var want = GROUPS[t] || [];
+    document.querySelectorAll('#paintbar .pb-group').forEach(function(g){
+      g.hidden = want.indexOf(g.dataset.for) < 0;
+    });
+    $('exactRow').hidden = $('square').checked;
+  }
+  $('square').addEventListener('change', function(){
+    $('exactRow').hidden = $('square').checked;
+  });
+  document.querySelectorAll('#tools button').forEach(function(b){
+    b.addEventListener('click', function(){ setTimeout(sync, 0); });
+  });
+  document.querySelectorAll('#modeSeg button').forEach(function(b){
+    b.addEventListener('click', function(){ setTimeout(sync, 0); });
+  });
+  sync();
+})();
+</script>
+
 </body>
 </html>

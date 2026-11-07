@@ -65,3 +65,4 @@
 [14:38:09] chief     功能全部冻结                             证据: product/index.html 303.9KB，A4+进度+采购+手机布局
 [14:38:44] chief     功能冻结完成；路演稿同步为最终按钮与能力 证据: docs/pitch.md
 [15:56:56] ops       清理工作区垃圾：web/node_modules、web/dist、.wrangler、Hackone.zip、/tmp 临时文件；git gc 重新打包；新增 hackbackup/ 离线版（线上同版单文件） 证据: 272M→61M；sha256 一致 48a518a5
+[16:11:42] ops       左栏重构 v2 预览（worktree 分支 feat/left-panel-v2）：三段折叠、尺寸合并、工具上画布、导出吸底 证据: 左栏 1978→900px，控件 58→36，导出按钮 y=820 无需滚动
