@@ -34,3 +34,5 @@
 [12:14:05] chief     定二阶段方针：不加新功能，拼完整度与细节；用户测试转细节审计 证据: docs/pipeline/BOARD.md T-15~T-17
 [12:15:52] dev       导出主次重排：主按钮可打印图纸、次按钮无标注预览；loading/toast、弹窗拦截提示 证据: web/src/App.tsx + styles.css；docs/evidence/user-testing/fix-02-*.png；31 tests
 [12:22:49] chief     新增对照视图与过渡动效两项待办  证据: BOARD T-18/T-19
+[12:24:08] dev       补错误与状态提示：非图片/空图 toast，未导出 beforeunload 拦截 证据: web/src/App.tsx；docs/evidence/user-testing/fix-04-fake.png / fix-04-empty.png；31 tests
+[12:26:23] ops       部署 P0 修复版                            证据: https://hack.liutingqiu.xyz (57.97KB gzip)
