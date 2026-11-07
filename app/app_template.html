@@ -536,6 +536,25 @@
   #simPop .sp-r b{font-size:11.5px;min-width:32px}
   #simPop .sp-r span{color:var(--ink3);font-size:10.5px}
   #simPop .sp-r em{margin-left:auto;font-style:normal;color:var(--ink3);font-size:10.5px}
+
+  /* v1.1 */
+  #guideModal{position:fixed;inset:0;background:#0d111788;z-index:200;display:flex;align-items:center;justify-content:center}
+  #guideModal .gm-box{background:#fff;border-radius:14px;max-width:560px;width:92vw;max-height:80vh;display:flex;flex-direction:column;
+    box-shadow:0 24px 60px #0004;overflow:hidden}
+  #guideModal .gm-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+    font-size:14px;font-weight:700;border-bottom:1px solid var(--line)}
+  #guideModal .gm-h button{border:0;background:transparent;font-size:16px;color:var(--ink3);padding:2px 6px}
+  #guideModal .gm-body{padding:6px 18px 18px;overflow-y:auto;font-size:12.5px;line-height:1.75;color:var(--ink2)}
+  #guideModal h4{margin:14px 0 4px;font-size:12.5px;color:var(--ink)}
+  #guideModal p{margin:0}
+
+  #linkModal{position:fixed;inset:0;background:#0d111788;z-index:200;display:flex;align-items:center;justify-content:center}
+  #linkModal .lm-box{background:#fff;border-radius:14px;max-width:520px;width:92vw;box-shadow:0 24px 60px #0004;overflow:hidden}
+  #linkModal .lm-h{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-size:13px;font-weight:700;border-bottom:1px solid var(--line)}
+  #linkModal .lm-h button{border:0;background:transparent;font-size:15px;color:var(--ink3)}
+  #linkModal .lm-body{padding:12px 14px 16px}
+  #linkModal textarea{width:100%;height:96px;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:none;color:var(--ink2)}
+  #linkModal .cap{margin-top:8px;font-size:11px;color:var(--ink3)}
 </style>
 </head>
 <body>
@@ -3409,6 +3428,563 @@ renderProgress();
     });
   }
   boot();
+})();
+</script>
+<script>
+/* [hackone] v1.1 —— 九项增强 */
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var A4W = 1240, A4H = 1754;   // 与 a4Canvas 一致（300dpi A4 的近似像素）
+
+  /* ---------- 通用：新分组 ---------- */
+  function mkGroup(key, title, innerHTML){
+    var g = document.createElement('div');
+    g.className = 'grp';
+    g.dataset.g = key;
+    g.innerHTML = '<div class="gt"><span>' + title + '</span><i class="chev"></i></div><div class="gb">' + innerHTML + '</div>';
+    var h = g.querySelector('.gt');
+    var lsKey = 'hc.g.' + key;
+    if (localStorage.getItem(lsKey) === '1') g.classList.add('collapsed');
+    h.addEventListener('click', function(){
+      g.classList.toggle('collapsed');
+      try { localStorage.setItem(lsKey, g.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
+    });
+    return g;
+  }
+
+  /* ---------- F5 目标尺寸反推 ---------- */
+  var SIZE_UI = '' +
+    '<div class="row2"><span class="lb">成品宽度</span>' +
+      '<div class="stepper"><button data-cm="-1">−</button><input id="cmW" type="number" min="5" max="300" value="30"><button data-cm="1">+</button></div>' +
+    '</div>' +
+    '<div class="row2"><span class="lb">高度</span>' +
+      '<div class="stepper"><button data-cmh="-1">−</button><input id="cmH" type="number" min="5" max="300" value="21"><button data-cmh="1">+</button></div>' +
+    '</div>' +
+    '<div class="cap" id="cmOut">—</div>' +
+    '<div class="row2"><span class="lb">按此新建</span><button id="cmGo" class="sm">创建</button></div>';
+  var sizeGrp = mkGroup('cmsize', '按尺寸反推', SIZE_UI);
+  var side = $('side');
+  var newGrp = side.querySelector('.grp[data-g="new"]');
+  if (newGrp && newGrp.nextSibling) side.insertBefore(sizeGrp, newGrp.nextSibling);
+  else side.appendChild(sizeGrp);
+
+  function pitchMm(){
+    var b = paletteOf(S.brandId);
+    return b.pitch || 2.6;
+  }
+  function calcCm(){
+    var w = Math.max(5, Math.min(300, +$('cmW').value || 30));
+    var h = Math.max(5, Math.min(300, +$('cmH').value || 21));
+    var p = pitchMm();
+    var gw = Math.max(1, Math.round(w * 10 / p));
+    var gh = Math.max(1, Math.round(h * 10 / p));
+    var boards = Math.ceil(gw / 29) * Math.ceil(gh / 29);
+    $('cmOut').innerHTML = '<b>' + gw + ' × ' + gh + '</b> 格 · 约 <b>' + (gw*gh) + '</b> 颗 · ' +
+      boards + ' 块 29×29 底板（' + p + 'mm 豆）';
+    return { gw: gw, gh: gh };
+  }
+  ['cmW','cmH'].forEach(function(id){ $(id).addEventListener('input', calcCm); });
+  document.querySelectorAll('#side .grp[data-g="cmsize"] .stepper button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var id = b.dataset.cm ? 'cmW' : 'cmH';
+      var inp = $(id);
+      var v = (+inp.value || 0) + (b.dataset.cm ? +b.dataset.cm : +b.dataset.cmh);
+      inp.value = Math.max(5, Math.min(300, v));
+      calcCm();
+    });
+  });
+  $('cmGo').addEventListener('click', function(){
+    var g = calcCm();
+    if (window.newBlank) newBlank(g.gw, g.gh);
+    toast('已按 ' + g.gw + '×' + g.gh + ' 新建画布');
+  });
+  calcCm();
+
+  /* ---------- F9 性能：增量统计 ---------- */
+  function ensureStats(){
+    if (!S.cells){ S.boardDone = new Int32Array(0); S.boardTot = new Int32Array(0); S.doneCount = 0; S.doneBoards = {}; return; }
+    var bc = boardCols(), br = boardRows();
+    if (!S.boardDone || S.boardDone.length !== bc*br){
+      S.boardDone = new Int32Array(bc*br);
+      S.boardTot = new Int32Array(bc*br);
+      S.boardDone.fill(0); S.boardTot.fill(0);
+      S.doneCount = 0; S.doneBoards = {};
+    }
+  }
+  window.refreshStats = function(force){
+    ensureStats();
+    if (!force || !S.cells) return;
+    var bc = boardCols();
+    S.boardDone.fill(0); S.boardTot.fill(0); S.doneCount = 0; S.doneBoards = {};
+    for (var y = 0; y < S.gh; y++) for (var x = 0; x < S.gw; x++){
+      var i = y*S.gw + x;
+      if (S.cells[i] < 0) continue;
+      var b = Math.floor(y/29)*bc + Math.floor(x/29);
+      S.boardTot[b]++;
+      if (hasProgress(i)){ S.boardDone[b]++; S.doneCount++; }
+    }
+    for (var k = 0; k < S.boardDone.length; k++) if (S.boardTot[k] && S.boardDone[k] >= S.boardTot[k]) S.doneBoards[k] = 1;
+  };
+  if (typeof window.installDoc === 'function'){
+    var oi = window.installDoc;
+    window.installDoc = function(){ var r = oi.apply(null, arguments); S.statsDirty = true; return r; };
+  }
+  if (typeof window.resizeTo === 'function'){
+    var orz = window.resizeTo;
+    window.resizeTo = function(){ var r = orz.apply(null, arguments); S.statsDirty = true; return r; };
+  }
+  if (typeof window.renderProgress === 'function'){
+    var orp = window.renderProgress;
+    window.renderProgress = function(){
+      if (S.statsDirty){ S.statsDirty = false; window.refreshStats(true); }
+      return orp.apply(null, arguments);
+    };
+  }
+
+  var origToggle = window.toggleProgress;
+  window.toggleProgress = function(i){
+    if (!S.cells || i < 0 || i >= S.cells.length) return;
+    if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
+    syncProgress();
+    var was = hasProgress(i);
+    var byte = i >> 3, bit = 1 << (i & 7);
+    S.progress[byte] ^= bit;
+    ensureStats();
+    var bc = boardCols();
+    var b = Math.floor((i / S.gw | 0) / 29) * bc + Math.floor((i % S.gw) / 29);
+    if (S.boardDone && S.boardDone.length > b){
+      S.boardDone[b] += was ? -1 : 1;
+      S.doneCount += was ? -1 : 1;
+      if (!was && S.boardTot[b] && S.boardDone[b] >= S.boardTot[b]){
+        if (!S.doneBoards) S.doneBoards = {};
+        if (!S.doneBoards[b]){ S.doneBoards[b] = 1; onBoardDone(b); }
+      }
+    }
+    saveProgress();
+    renderProgress();
+    requestDraw();
+  };
+
+  function onBoardDone(b){
+    var bc = boardCols();
+    var no = (b % bc) + Math.floor(b / bc) * bc + 1;
+    toast('第 ' + no + ' 块板拼完了 🎉 可以生成进度卡片');
+    if (window.__flashBoardCard) window.__flashBoardCard();
+  }
+
+  /* ---------- F3 板完成提示 + 进度卡片 ---------- */
+  window.shareCard = function(){
+    if (!S.cells) { toast('先生成图纸'); return; }
+    var bc = boardCols(), br = boardRows();
+    refreshStats(true);
+    var total = S.used.reduce(function(a, u){ return a + u.c; }, 0);
+    var done = S.doneCount || 0;
+    var pct = total ? done / total * 100 : 0;
+    var W = 900, H = 600;
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var c = cv.getContext('2d');
+    c.fillStyle = '#f4f6fa'; c.fillRect(0, 0, W, H);
+    // 缩略图
+    var k = Math.max(1, Math.ceil(Math.max(S.gw, S.gh) / 380));
+    var tw = Math.round(S.gw / k), th = Math.round(S.gh / k);
+    var tc = document.createElement('canvas'); tc.width = tw; tc.height = th;
+    var tx = tc.getContext('2d');
+    var img = tx.createImageData(tw, th), d = img.data;
+    for (var y = 0; y < th; y++) for (var x = 0; x < tw; x++){
+      var si = Math.min(S.gh-1, Math.floor(y*S.gh/th)) * S.gw + Math.min(S.gw-1, Math.floor(x*S.gw/tw));
+      var v = S.cells[si], o = (y*tw+x)*4;
+      if (v < 0){ d[o]=255; d[o+1]=255; d[o+2]=255; }
+      else { var p = S.palette[v]; d[o]=p.rgb[0]; d[o+1]=p.rgb[1]; d[o+2]=p.rgb[2]; }
+      d[o+3] = 255;
+    }
+    tx.putImageData(img, 0, 0);
+    c.fillStyle = '#fff';
+    c.fillRect(60, 60, 400, 480);
+    c.drawImage(tc, 80, 80, 360, 360);
+    c.fillStyle = '#8b93a1'; c.font = '20px sans-serif';
+    c.fillText(S.gw + ' × ' + S.gh + ' 格 · ' + S.used.length + ' 色', 80, 480);
+    // 右栏文字
+    c.fillStyle = '#1c1f26'; c.font = 'bold 40px sans-serif';
+    c.fillText('拼豆进度', 500, 120);
+    c.font = 'bold 120px sans-serif';
+    c.fillStyle = '#2f6fed';
+    c.fillText(Math.round(pct) + '%', 500, 260);
+    c.fillStyle = '#5a626e'; c.font = '24px sans-serif';
+    c.fillText('已完成 ' + done + ' / ' + total + ' 颗', 500, 310);
+    c.fillText('已完成 ' + Object.keys(S.doneBoards || {}).length + ' / ' + (bc*br) + ' 块板', 500, 350);
+    // 进度条
+    c.fillStyle = '#e2e6ec'; c.fillRect(500, 400, 320, 14);
+    c.fillStyle = '#16a34a'; c.fillRect(500, 400, 320 * pct / 100, 14);
+    c.fillStyle = '#8b93a1'; c.font = '18px sans-serif';
+    c.fillText(new Date().toLocaleDateString('zh-CN'), 500, 460);
+    c.fillText('拼豆图纸工具', 500, 490);
+    var a = document.createElement('a');
+    a.href = cv.toDataURL('image/png');
+    a.download = '拼豆进度_' + Math.round(pct) + '%.png';
+    a.click();
+    toast('进度卡片已生成');
+  };
+
+  /* ---------- F7 拼装 / 熨烫指南 ---------- */
+  window.openGuide = function(){
+    var old = $('guideModal'); if (old) old.remove();
+    var m = document.createElement('div');
+    m.id = 'guideModal';
+    var bc = boardCols(), br = boardRows();
+    m.innerHTML = '<div class="gm-box">' +
+      '<div class="gm-h">拼装与熨烫指南<button id="gmClose">✕</button></div>' +
+      '<div class="gm-body">' +
+      '<h4>1 · 备料</h4><p>按「用量统计」把颜色分装；建议每种色多备 5–10%。' +
+      (S.cells ? '本次共 ' + (S.gw*S.gh) + ' 格，' + bc*br + ' 块 29×29 底板。' : '') + '</p>' +
+      '<h4>2 · 拼装顺序</h4><p>按板号 1 → ' + (bc*br) + ' 依次拼（行优先：先上排左起）。每块板先拼外框再填内部，拼完立刻检查缺色，避免整张拼完才发现。</p>' +
+      '<h4>3 · 熨烫</h4><p>盖一层烘焙纸，熨斗中温（约 150–160℃）、不加水、不开蒸汽，匀速压 20–30 秒至豆子边缘融合；翻面再熨 10–15 秒。压重物冷却 5 分钟再揭纸。</p>' +
+      '<h4>4 · 拼接</h4><p>板与板之间按页面底部「相邻：上/下/左/右」的编号对接，先对齐边缘再点熨固定。</p>' +
+      '<h4>5 · 常见问题</h4><p>豆子不粘 → 温度不够或时间太短；翘边 → 冷却时没压平；缺色 → 用同色号补，别用相近色顶替。</p>' +
+      '</div></div>';
+    document.body.appendChild(m);
+    $('gmClose').addEventListener('click', function(){ m.remove(); });
+    m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
+  };
+
+  /* ---------- F6 分享链接 / 图纸文件 ---------- */
+  function rle(arr){
+    var out = [], prev = arr[0] | 0, n = 1;
+    for (var i = 1; i < arr.length; i++){
+      var v = arr[i] | 0;
+      if (v === prev && n < 60000) n++;
+      else { out.push((prev + 1).toString(36) + ':' + n.toString(36)); prev = v; n = 1; }
+    }
+    out.push((prev + 1).toString(36) + ':' + n.toString(36));
+    return out.join('.');
+  }
+  function unrle(str, len){
+    var out = new Int32Array(len), k = 0;
+    str.split('.').forEach(function(seg){
+      var p = seg.split(':'), v = parseInt(p[0], 36) - 1, n = parseInt(p[1], 36);
+      for (var i = 0; i < n && k < len; i++) out[k++] = v;
+    });
+    return out;
+  }
+  function b64url(bytes){
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function unb64url(str){
+    var s = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  async function packDoc(){
+    var raw = rle(S.base) + '|' + [S.gw, S.gh, S.brandId, S.codeSys, S.maxColors].join(',');
+    if (window.CompressionStream){
+      try {
+        var bytes = new TextEncoder().encode(raw);
+        var stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+        var buf = new Uint8Array(await new Response(stream).arrayBuffer());
+        return 'z' + b64url(buf);
+      } catch (e) { /* 退回未压缩 */ }
+    }
+    return 'r' + b64url(new TextEncoder().encode(raw));
+  }
+  async function unpackDoc(code){
+    var raw;
+    if (code[0] === 'z'){
+      var bytes = unb64url(code.slice(1));
+      var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      raw = await new Response(stream).text();
+    } else {
+      raw = new TextDecoder().decode(unb64url(code.slice(1)));
+    }
+    var k = raw.lastIndexOf('|');
+    var r = raw.slice(0, k), meta = raw.slice(k + 1).split(',');
+    var w = +meta[0], h = +meta[1];
+    var base = unrle(r, w * h);
+    if (!w || !h || base.length !== w * h) throw new Error('bad');
+    return { w: w, h: h, base: base, brand: meta[2], code: meta[3], max: +meta[4] || 0 };
+  }
+  function applyPacked(p, name){
+    S.gw = p.w; S.gh = p.h; S.base = p.base;
+    if (p.brand) S.brandId = p.brand;
+    if (p.code) S.codeSys = p.code;
+    S.maxColors = p.max || 0;
+    if ($('brand')) $('brand').value = S.brandId;
+    colourSystemOptions();
+    buildPalette({ remap:false });
+    installDoc(p.w, p.h, p.base);
+    fit();
+    if (window.__docsCommitFromState) window.__docsCommitFromState(name || '分享的图纸');
+  }
+  window.copyShareLink = async function(){
+    if (!S.cells) { toast('先生成图纸'); return; }
+    var code = await packDoc();
+    var url = location.href.split('#')[0] + '#d=' + code;
+    if (url.length > 70000){
+      var data = { v: 1, w: S.gw, h: S.gh, b: S.brandId, c: S.codeSys, m: S.maxColors, r: rle(S.base) };
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+      a.download = '拼豆图纸_' + S.gw + 'x' + S.gh + '.pinda.json';
+      a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+      toast('链接太长，已导出 .pinda.json，发给对方拖进页面即可');
+      return;
+    }
+    var done = function(ok){ toast(ok ? '分享链接已复制（' + Math.round(url.length/1024) + ' KB）' : '复制失败，请手动复制'); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      try { await navigator.clipboard.writeText(url); done(true); return; } catch(e){}
+    }
+    showLinkModal(url);
+  };
+  async function loadShareHash(){
+    var m = /(?:^|[#&])d=([^&]+)/.exec(location.hash || '');
+    if (!m) return false;
+    try {
+      var p = await unpackDoc(decodeURIComponent(m[1]));
+      applyPacked(p, '分享的图纸');
+      try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+      toast('已打开分享的图纸');
+      return true;
+    } catch(e){ toast('分享链接解析失败'); return false; }
+  }
+  window.openDocFile = function(){ $('docFile').click(); };
+  document.addEventListener('DOMContentLoaded', function(){});
+  function bindDocFile(){
+    var inp = $('docFile');
+    if (!inp) return;
+    inp.addEventListener('change', function(e){
+      var f = e.target.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function(){
+        try {
+          var d = JSON.parse(r.result);
+          var p = { w: d.w, h: d.h, base: Int32Array.from(d.r ? unrle(d.r, d.w*d.h) : d.base), brand: d.b, code: d.c, max: d.m };
+          applyPacked(p, (f.name || '图纸文件').replace(/\.(pinda\.)?json$/i, ''));
+          toast('已打开图纸文件');
+        } catch(err){ toast('文件读取失败'); }
+      };
+      r.readAsText(f);
+      e.target.value = '';
+    });
+  }
+
+  function showLinkModal(url){
+    var old = $('linkModal'); if (old) old.remove();
+    var m = document.createElement('div');
+    m.id = 'linkModal';
+    m.innerHTML = '<div class="lm-box"><div class="lm-h">分享链接<button id="lmClose">✕</button></div>' +
+      '<div class="lm-body"><textarea id="lmTa" readonly></textarea>' +
+      '<div class="cap">复制后发给对方，打开就是这张图纸</div></div></div>';
+    document.body.appendChild(m);
+    var ta = $('lmTa'); ta.value = url; ta.focus(); ta.select();
+    $('lmClose').addEventListener('click', function(){ m.remove(); });
+    m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
+  }
+  /* ---------- F1/F2/F8 A4 增强 ---------- */
+  var A4PX = 1240; // 页面像素宽，对应 210mm
+  function mmPx(mm){ return Math.round(mm * A4PX / 210); }
+  function scaleBar(c, x, y){
+    var w = mmPx(100);
+    c.strokeStyle = '#1c1f26'; c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(x, y); c.lineTo(x + w, y);
+    c.moveTo(x, y - 8); c.lineTo(x, y + 8);
+    c.moveTo(x + w, y - 8); c.lineTo(x + w, y + 8);
+    c.stroke();
+    c.fillStyle = '#5a626e'; c.font = '16px sans-serif'; c.textAlign = 'center';
+    c.fillText('10 cm（按 100% 打印，勿缩放）', x + w/2, y + 28);
+    c.textAlign = 'left';
+  }
+  function boardPaletteDraw(c, bx, by, x, y, maxW, maxRows){
+    var sx = bx * 29, sy = by * 29;
+    var cols = Math.min(29, S.gw - sx), rows = Math.min(29, S.gh - sy);
+    var map = new Map();
+    for (var yy = 0; yy < rows; yy++) for (var xx = 0; xx < cols; xx++){
+      var v = S.cells[(sy+yy)*S.gw + sx+xx];
+      if (v < 0) continue;
+      map.set(v, (map.get(v) || 0) + 1);
+    }
+    var list = Array.from(map.entries()).sort(function(a, b){ return b[1] - a[1]; });
+    if (!list.length) return;
+    c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    c.fillStyle = '#5a626e'; c.font = 'bold 14px sans-serif';
+    c.fillText('本板用色 ' + list.length + ' 色', x, y - 10);
+    var cx = x, cy = y, rowH = 24, row = 0, shown = 0;
+    c.font = '13px sans-serif';
+    for (var i = 0; i < list.length; i++){
+      var p = S.palette[list[i][0]], n = list[i][1];
+      var label = p.code + ' ×' + n;
+      var w = 20 + c.measureText(label).width + 12;
+      if (cx + w > x + maxW){
+        if (row + 1 >= maxRows) break;
+        row++; cx = x; cy += rowH;
+      }
+      c.fillStyle = p.hex; c.fillRect(cx, cy, 15, 15);
+      c.strokeStyle = '#00000033'; c.lineWidth = 1; c.strokeRect(cx + .5, cy + .5, 14, 14);
+      c.fillStyle = '#1c1f26'; c.fillText(label, cx + 20, cy + 12);
+      cx += w; shown++;
+    }
+    if (shown < list.length){
+      c.fillStyle = '#8b93a1';
+      c.fillText('+' + (list.length - shown) + ' 色（见总表）', cx + 4, cy + 12);
+    }
+  }
+  var origBoard = window.renderA4Board;
+  window.renderA4Board = function(bx, by, page, total){
+    var cv = origBoard(bx, by, page, total);
+    var c = cv.getContext('2d');
+    var cols = Math.min(29, S.gw - bx*29), rows = Math.min(29, S.gh - by*29);
+    var areaW = A4W - 140 - 40, areaH = A4H - 310;
+    var cs = Math.max(10, Math.floor(Math.min(areaW / cols, areaH / rows)));
+    var oy = 138 + Math.floor((areaH - rows*cs) / 2);
+    var y0 = Math.min(1588, oy + rows*cs + 58);
+    boardPaletteDraw(c, bx, by, 70, y0, A4W - 140, 2);
+    scaleBar(c, 70, 1614);
+    return cv;
+  };
+  var origOverview = window.renderA4Overview;
+  window.renderA4Overview = function(page, total){
+    var cv = origOverview(page, total);
+    var c = cv.getContext('2d');
+    scaleBar(c, 70, 1614);
+    return cv;
+  };
+
+  /* ---------- F4 拍照核验 ---------- */
+  var verifyHTML = '' +
+    '<div class="row2"><span class="lb">拍照核验</span><button id="vPick" class="sm">选照片</button></div>' +
+    '<div class="cap" id="vOut">把拼好的板拍正、裁到图纸边缘，再选照片</div>' +
+    '<input type="file" id="vFile" accept="image/*" capture="environment" hidden>';
+  var vCard = document.createElement('div');
+  vCard.className = 'grp';
+  vCard.dataset.g = 'verify';
+  vCard.innerHTML = '<div class="gt"><span>拍照核验</span><i class="chev"></i></div><div class="gb">' + verifyHTML + '</div>';
+  var right = $('right');
+  var useGrp = right.querySelector('.grp[data-g="use"]');
+  right.insertBefore(vCard, useGrp || null);
+  (function bindCollapse(){
+    var h = vCard.querySelector('.gt'), key = 'hc.g.verify';
+    if (localStorage.getItem(key) === '1') vCard.classList.add('collapsed');
+    h.addEventListener('click', function(){
+      vCard.classList.toggle('collapsed');
+      try { localStorage.setItem(key, vCard.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
+    });
+  })();
+
+  $('vPick').addEventListener('click', function(){ $('vFile').click(); });
+  $('vFile').addEventListener('change', function(e){
+    var f = e.target.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function(){ verifyPhoto(r.result); };
+    r.readAsDataURL(f);
+  });
+  window.verifyPhoto = function(src){
+    if (!S.cells){ toast('先生成图纸'); return; }
+    var img = new Image();
+    img.onload = function(){
+      var gw = S.gw, gh = S.gh;
+      var SS = 6;
+      var cv = document.createElement('canvas'); cv.width = gw*SS; cv.height = gh*SS;
+      var c = cv.getContext('2d');
+      c.drawImage(img, 0, 0, gw*SS, gh*SS);
+      var data;
+      try { data = c.getImageData(0, 0, gw*SS, gh*SS).data; }
+      catch(e){ toast('照片读取失败'); return; }
+      var used = S.used.map(function(u){ return { i: u.i, lab: S.palette[u.i].lab }; });
+      var mark = [], wrong = [], emptyN = 0, i = 0, total = gw*gh, skipWrong = false;
+      toast('正在核验，请稍候…');
+      function step(){
+        var budget = Date.now() + 24;
+        while (i < total && Date.now() < budget){
+          var dv = S.cells[i];
+          if (dv < 0){ i++; continue; }
+          var cx = i % gw, cy = (i / gw) | 0;
+          var r = 0, g = 0, b = 0, cnt = 0;
+          for (var sy = 0; sy < 2; sy++) for (var sx = 0; sx < 2; sx++){
+            var px = Math.min(gw*SS-1, (cx + 0.28 + sx*0.44) * SS | 0);
+            var py = Math.min(gh*SS-1, (cy + 0.28 + sy*0.44) * SS | 0);
+            var oo = (py*gw*SS + px) * 4;
+            r += data[oo]; g += data[oo+1]; b += data[oo+2]; cnt++;
+          }
+          r = Math.round(r/cnt); g = Math.round(g/cnt); b = Math.round(b/cnt);
+          var lab = srgbToLab([r, g, b]);
+          if (deltaE2000(lab, S.palette[dv].lab) < 12){ mark.push(i); i++; continue; }
+          if (r > 235 && g > 235 && b > 235){ emptyN++; i++; continue; }
+          if (skipWrong){ emptyN++; i++; continue; }
+          var hit = -1, best = 1e9;
+          for (var k = 0; k < used.length; k++){
+            var d2 = deltaE2000(lab, used[k].lab);
+            if (d2 < best){ best = d2; hit = used[k].i; }
+            if (best < 6) break;
+          }
+          if (best < 10 && hit !== dv) wrong.push(i); else emptyN++;
+          if (wrong.length > 4000) skipWrong = true;
+          i++;
+        }
+        if (i < total){ requestAnimationFrame(step); return; }
+        syncProgress();
+        mark.forEach(function(idx){ S.progress[idx >> 3] |= (1 << (idx & 7)); });
+        refreshStats(true); saveProgress(); renderProgress();
+        S.verifyWrong = new Set(wrong);
+        clearTimeout(window.__vwT);
+        window.__vwT = setTimeout(function(){ S.verifyWrong = null; requestDraw(); }, 8000);
+        requestDraw();
+        $('vOut').innerHTML = '已拼 <b>' + mark.length + '</b> 格 · 疑似错位 <b>' + wrong.length +
+          '</b> 格（红框标出 8 秒）· 未拼 ' + emptyN + ' 格';
+        toast('核验完成：' + mark.length + ' 格已拼');
+      }
+      step();
+    };
+    img.onerror = function(){ toast('照片加载失败'); };
+    img.src = src;
+  };
+
+
+  var origDrawFn = window.draw;
+  window.draw = function(){
+    origDrawFn.apply(null, arguments);
+    if (!S.verifyWrong || !S.verifyWrong.size || !S.cells) return;
+    var cv = document.getElementById('grid');
+    if (!cv || cv.hidden) return;
+    var cs = S.cell, W = S.gw * cs;
+    var dpr = cv.width / W;
+    var c = cv.getContext('2d');
+    c.save();
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.strokeStyle = '#e11d48'; c.lineWidth = 1.5;
+    S.verifyWrong.forEach(function(i){
+      var x = i % S.gw, y = (i / S.gw) | 0;
+      c.strokeRect(x*cs + 1, y*cs + 1, cs - 2, cs - 2);
+    });
+    c.restore();
+  };
+  /* ---------- 导出区按钮 ---------- */
+  var dock = $('dock');
+  if (dock){
+    var row = document.createElement('div');
+    row.className = 'row2';
+    row.style.marginTop = '6px';
+    row.innerHTML = '<button id="btnShareCard" class="sm">进度卡片</button><button id="btnGuide" class="sm">拼装指南</button>';
+    var row2 = document.createElement('div');
+    row2.className = 'row2';
+    row2.innerHTML = '<button id="btnShareLink" class="sm">分享链接</button><button id="btnOpenDoc" class="sm">打开图纸</button>';
+    var docInp = document.createElement('input');
+    docInp.type = 'file'; docInp.id = 'docFile'; docInp.accept = '.json,application/json'; docInp.hidden = true;
+    dock.appendChild(docInp);
+    dock.appendChild(row);
+    dock.appendChild(row2);
+    $('btnShareCard').addEventListener('click', window.shareCard);
+    $('btnGuide').addEventListener('click', window.openGuide);
+    $('btnShareLink').addEventListener('click', window.copyShareLink);
+    $('btnOpenDoc').addEventListener('click', function(){ $('docFile').click(); });
+    bindDocFile();
+  }
+
+  /* ---------- 启动 ---------- */
+  setTimeout(function(){ loadShareHash(); }, 400);
+  setTimeout(function(){ refreshStats(); renderProgress(); }, 900);
 })();
 </script>
 </body>
