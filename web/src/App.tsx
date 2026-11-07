@@ -145,6 +145,7 @@ export default function App() {
       return false;
     }
   });
+  const [tool, setTool] = useState<"view" | "mark">("view");
   const [busy, setBusy] = useState<null | "print" | "png">(null);
   const [toast, setToast] = useState<string | null>(null);
   const [, setExportedPattern] = useState<Pattern | null>(null);
@@ -158,6 +159,7 @@ export default function App() {
   const stageRef = useRef<HTMLElement>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const skipDraftSaveRef = useRef(false);
+  const fitTokenRef = useRef(0);
   const dragRef = useRef<{ id: number; x: number; y: number; pointerType: string } | null>(null);
 
   const notify = useCallback((text: string) => {
@@ -472,16 +474,18 @@ export default function App() {
         setRestoredPattern(null);
         setDraftBannerOpen(false);
         setImg(im);
-        // 等布局完成（窄屏媒体查询切换）再测容器；小于 8px 不再压缩，允许滚动
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const stage = stageRef.current;
-            if (!stage || im.naturalWidth <= 0 || im.naturalHeight <= 0) return;
-            const r = Math.max(1, Math.round((cols * im.naturalHeight) / im.naturalWidth));
-            const minCell = window.innerWidth >= 1000 ? 11 : 8;
-            setCell(fitCellSize(cols, r, stage.clientWidth - 48, stage.clientHeight - 48, { min: minCell }));
-          });
-        });
+        // 等布局完成（窄屏媒体查询切换）再测容器；rAF 在后台会被节流，用定时兜底
+        const token = ++fitTokenRef.current;
+        const applyFit = () => {
+          if (token !== fitTokenRef.current) return;
+          const stage = stageRef.current;
+          if (!stage || im.naturalWidth <= 0 || im.naturalHeight <= 0) return;
+          const r = Math.max(1, Math.round((cols * im.naturalHeight) / im.naturalWidth));
+          const minCell = window.innerWidth >= 1000 ? 11 : 8;
+          setCell(fitCellSize(cols, r, stage.clientWidth - 48, stage.clientHeight - 48, { min: minCell }));
+        };
+        requestAnimationFrame(() => requestAnimationFrame(applyFit));
+        window.setTimeout(applyFit, 200);
       };
       im.src = url;
     },
@@ -550,14 +554,12 @@ export default function App() {
       dragRef.current = null;
       if (!drag || drag.id !== e.pointerId) return;
       const c = cellFromPoint(e) ?? { x: drag.x, y: drag.y };
-      if (drag.pointerType === "mouse") {
+      if (pattern) setHover({ ...c, i: c.y * pattern.cols + c.x });
+      if (tool === "mark") {
         toggleCell(c.x, c.y);
-      } else if (pattern) {
-        // 触屏：点按选中格子看色号，不误标进度
-        setHover({ ...c, i: c.y * pattern.cols + c.x });
       }
     },
-    [cellFromPoint, toggleCell, pattern],
+    [cellFromPoint, toggleCell, pattern, tool],
   );
 
   const handlePointerCancel = useCallback(() => {
@@ -793,25 +795,45 @@ export default function App() {
           }}
         >
           {pattern ? (
-            <div
-              className="canvas-stack"
-              style={{ width: pattern.cols * cell, height: pattern.rows * cell }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
-              onPointerLeave={handlePointerLeave}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <canvas ref={canvasRef} className="pattern-canvas" />
-              <canvas ref={dimRef} className="pattern-overlay dim-layer" />
-              <canvas ref={markRef} className="pattern-overlay mark-layer" />
-              {hover && (
-                <div
-                  className="hover-ring"
-                  style={{ left: hover.x * cell, top: hover.y * cell, width: cell, height: cell }}
-                />
-              )}
+            <div className="canvas-area">
+              <div className="tool-switch" role="group" aria-label="画布操作模式">
+                <button
+                  type="button"
+                  className={tool === "view" ? "active" : ""}
+                  aria-pressed={tool === "view"}
+                  onClick={() => setTool("view")}
+                >
+                  查看
+                </button>
+                <button
+                  type="button"
+                  className={tool === "mark" ? "active" : ""}
+                  aria-pressed={tool === "mark"}
+                  onClick={() => setTool("mark")}
+                >
+                  标记
+                </button>
+              </div>
+              <div
+                className={`canvas-stack${tool === "mark" ? " marking" : ""}`}
+                style={{ width: pattern.cols * cell, height: pattern.rows * cell }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
+                onPointerLeave={handlePointerLeave}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <canvas ref={canvasRef} className="pattern-canvas" />
+                <canvas ref={dimRef} className="pattern-overlay dim-layer" />
+                <canvas ref={markRef} className="pattern-overlay mark-layer" />
+                {hover && (
+                  <div
+                    className="hover-ring"
+                    style={{ left: hover.x * cell, top: hover.y * cell, width: cell, height: cell }}
+                  />
+                )}
+              </div>
             </div>
           ) : (
             <div className="empty">
@@ -881,7 +903,7 @@ export default function App() {
                 <button type="button" className="link-button" onClick={resetProgress}>
                   重置本图进度
                 </button>
-                <p className="progress-hint">点格子标记完成；点右侧色号可高亮</p>
+                <p className="progress-hint">「标记」模式下点格子完成/取消；点色号可高亮</p>
               </>
             ) : (
               <p className="hint">导入图片后可记录拼装进度</p>

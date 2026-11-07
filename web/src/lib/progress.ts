@@ -113,6 +113,7 @@ export function percentText(done: number, total: number): string {
   if (total <= 0) return "0%";
   const p = (done / total) * 100;
   if (p <= 0) return "0%";
+  if (p < 0.1) return "<0.1%";
   if (p < 1) return `${p.toFixed(1)}%`;
   return `${Math.round(p)}%`;
 }
