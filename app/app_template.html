@@ -523,6 +523,19 @@
                object-fit:cover;background:#fff;image-rendering:pixelated}
   .doc .dname{font-size:11.5px}
   .iconbtn svg{width:18px;height:18px}
+
+  #simPop{position:fixed;z-index:121;background:#fff;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 12px 32px #00000026;padding:8px;font-size:12px}
+  #simPop[hidden]{display:none}
+  #simPop .sp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    font-size:10.5px;color:var(--ink3);letter-spacing:.04em;padding:0 4px 6px}
+  #simPop .sp-h b{color:var(--ink);font-size:11px}
+  #simPop .sp-r{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;cursor:pointer}
+  #simPop .sp-r:hover{background:var(--accent2)}
+  #simPop .sp-r i{width:16px;height:16px;border-radius:4px;border:1px solid #0002;flex:0 0 16px}
+  #simPop .sp-r b{font-size:11.5px;min-width:32px}
+  #simPop .sp-r span{color:var(--ink3);font-size:10.5px}
+  #simPop .sp-r em{margin-left:auto;font-style:normal;color:var(--ink3);font-size:10.5px}
 </style>
 </head>
 <body>
@@ -614,7 +627,6 @@
   <!-- ================= 中间画布 ================= -->
   <main>
     <div id="bar">
-      <button id="importBtn" class="iconbtn" data-tip="导入图片" aria-label="导入图片"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6v24"/><path d="m15 21 9 9 9-9"/><path d="M8 32v8a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2v-8"/></svg></button>
       <span id="srcInfo" hidden></span>
       <span id="barInfo">拼豆图纸生成器</span>
       <span class="sp"></span>
@@ -678,11 +690,6 @@
       <div class="gb"><div id="inspBody"><div class="empty2">点一个格子查看它的色号</div></div></div>
     </div>
 
-    <div class="grp" id="simWrap" data-g="sim" hidden>
-      <div class="gt"><span>相近色</span><span class="gmeta"><b id="simFor">—</b></span><i class="chev"></i></div>
-      <div class="gb"><div id="sim"></div></div>
-    </div>
-
     <div class="grp" data-g="prog">
       <div class="gt"><span>拼装进度</span><span class="gmeta"><b id="progTotal">—</b></span><i class="chev"></i></div>
       <div class="gb"><div id="progBar"><i id="progFill"></i></div></div>
@@ -705,6 +712,8 @@
   <div id="palNear" hidden></div>
   <div id="palGrid"></div>
 </div>
+
+<div id="simPop" hidden></div>
 
 <div id="toast"></div>
 
@@ -1980,34 +1989,7 @@ function similarList(base){
     .sort((a, b) => a.d - b.d)
     .slice(0, 4);
 }
-function renderSimilar(){
-  const wrap = $('simWrap');
-  if (S.highlight < 0 || !S.cells || !S.counts.has(S.highlight)){ wrap.hidden = true; return; }
-  const base = S.highlight;
-  const cands = similarList(base);
-  wrap.hidden = false;
-  $('simFor').textContent = S.palette[base].code;
-  if (!cands.length){
-    $('sim').innerHTML = '<div class="tip">没有其他在用颜色。</div>';
-    return;
-  }
-  const tip = cands[0].d > 15
-    ? '<div class="tip" style="margin-bottom:4px">没有明显相近的颜色，以下仅按色差排序。</div>' : '';
-  $('sim').innerHTML = tip + cands.map(c => `
-    <div class="r" data-i="${c.i}" title="把 ${S.palette[base].code} 全部换成 ${S.palette[c.i].code}">
-      <div class="c" style="background:${S.palette[c.i].hex}"></div>
-      <div class="code">${S.palette[c.i].code}</div>
-      <div class="n">${c.c} 颗</div>
-      <div class="d">ΔE ${c.d.toFixed(1)}</div>
-    </div>`).join('');
-}
-$('sim').addEventListener('click', e => {
-  const el = e.target && e.target.closest ? e.target.closest('.r') : null;
-  if (!el) return;
-  const to = +el.dataset.i, from = S.highlight;
-  if (from < 0 || from === to) return;
-  replaceColor(from, to);
-});
+function renderSimilar(){}
 function replaceColor(from, to){
   if (!S.cells || from === to || from < 0 || to < 0) return 0;
   beginStroke();
@@ -2154,6 +2136,10 @@ function openPalette(anchor){
   const h = Math.min(window.innerHeight * .7, 460);
   let left = r.right + 10;
   if (left + w > window.innerWidth - 10) left = Math.max(10, window.innerWidth - w - 10);
+  if (S.repFrom != null){
+    const pr = $('right') ? $('right').getBoundingClientRect() : null;
+    if (pr && pr.left > w + 30) left = Math.max(10, Math.round(pr.left - w - 10));
+  }
   let top = Math.min(window.innerHeight - h - 10, Math.max(10, r.top - 40));
   pop.style.left = left + 'px';
   pop.style.top = top + 'px';
@@ -2165,10 +2151,41 @@ function openPalette(anchor){
   const on = $('palGrid').querySelector && $('palGrid').querySelector('.on');
   if (on && on.scrollIntoView) on.scrollIntoView({ block:'center' });
   if ($('palSearch').focus) $('palSearch').focus();
+  if (S.repFrom != null) openSimPop(S.repFrom, Math.round(left), Math.round(top), w);
+  else if ($('simPop')) $('simPop').hidden = true;
 }
+function openSimPop(from, left, top, w){
+  const sp = $('simPop');
+  if (!sp) return;
+  const cands = similarList(from);
+  if (!cands.length){ sp.hidden = true; return; }
+  sp.innerHTML = '<div class="sp-h"><span>相近色 · 换成</span><b>' + S.palette[from].code + '</b></div>'
+    + cands.map(function(c){
+      return '<div class="sp-r" data-i="' + c.i + '">'
+        + '<i style="background:' + S.palette[c.i].hex + '"></i>'
+        + '<b>' + S.palette[c.i].code + '</b>'
+        + '<span>' + c.c + ' 颗</span>'
+        + '<em>ΔE ' + c.d.toFixed(1) + '</em></div>';
+    }).join('');
+  sp.style.left = left + 'px';
+  sp.style.width = Math.min(w, 320) + 'px';
+  sp.style.top = '10px';
+  sp.hidden = false;
+  const hh = sp.offsetHeight;
+  sp.style.top = Math.max(10, top - hh - 10) + 'px';
+}
+$('simPop').addEventListener('click', function(e){
+  const row = e.target.closest ? e.target.closest('.sp-r') : null;
+  if (!row) return;
+  const to = +row.dataset.i, from = S.repFrom;
+  closePalette();
+  if (from != null && from !== to) replaceColor(from, to);
+});
 function closePalette(){
   $('palPop').hidden = true;
+  if ($('simPop')) $('simPop').hidden = true;
   S.palOpen = false;
+  S.repFrom = null;
 }
 function pickPaletteIndex(i){
   if (S.repFrom != null){
