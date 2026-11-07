@@ -4,3 +4,7 @@
 [11:19:14] dev       实现分板切分算法层（先行后列编号 + 四邻查询） 证据: web/src/lib/split.ts + split.test.ts(10 用例) + lint/typecheck/test/build 全绿
 [11:20:41] dev       分板算法层已提交 feat/split(3915e23)，四道关与独立副本复验全绿 证据: web/src/lib/split.ts + split.test.ts(10 用例)；commit 3915e23
 [11:20:41] dev       共享工作区 HEAD 被其他部门切到 feat/ops，11:16:59 索引短暂全量删除后自愈；dev 用独立临时索引提交，未动他人分支 证据: git reflog feat/research->feat/split->feat/ops；git branch -vv feat/split=3915e23；线上索引未被我改写
+[11:24:06] qa        产出 V1 验收测试计划（功能/边界/性能/演练） 证据: wt/qa/docs/qa/test-plan.md @ feat/qa b1d9974：58 条用例，P0 27；文档冲突 C-01~C-04 待拍板
+[11:24:36] ops       核查 web 构建与静态托管兼容性（base ./） 证据: feat/ops 4fc2289 · 构建复现 3 文件/JS gzip 49.5KB · 无绝对路径/无动态 import/无路由
+[11:24:36] ops       写 wrangler Pages 配置 + runbook + 部署工作流草稿（未部署） 证据: wrangler.toml + docs/ops/runbook.md + docs/ops/deploy-workflow.md + .github/workflows/deploy.yml.disabled（feat/ops 4fc2289，未推 main）
+[11:24:49] chief     裁定 QA 四处文档冲突 + 定 UI 骨架   证据: docs/decisions.md + docs/ui-skeleton.md
