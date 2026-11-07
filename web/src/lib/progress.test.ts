@@ -131,6 +131,7 @@ describe("percent / boardProgress", () => {
     expect(percent(2, 3)).toBe(67);
     expect(percent(0, 0)).toBe(0);
     expect(percentText(10, 2304)).toBe("0.4%");
+    expect(percentText(1, 2304)).toBe("<0.1%");
     expect(percentText(1, 3)).toBe("33%");
     expect(percentText(0, 2304)).toBe("0%");
     expect(percentText(0, 0)).toBe("0%");
