@@ -467,6 +467,39 @@
     #barPos{min-width:0}
     #side{padding:6px}
   }
+
+  /* v5：数字框去箭头 / 右栏卡片 / 画布导入 */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield;appearance:textfield}
+
+  #right{background:#f2f4f9;padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;border-left:1px solid var(--line)}
+  #right .grp{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px 10px}
+  #right .gt{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:13px;
+             font-weight:700;color:var(--ink);padding:2px 0 3px}
+  #right .gt .gmeta{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11.5px;
+                    font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
+  #right .gt .chev{width:0;height:0;border:4px solid transparent;border-top-color:var(--ink3);
+                   transition:transform .16s;flex:0 0 auto}
+  #right .grp.collapsed .gb{display:none}
+  #right .grp.collapsed .gt .chev{transform:rotate(-90deg)}
+  #right .gb{margin-top:6px}
+  #right #useWrap{overflow-y:auto;max-height:38vh}
+  #right .empty2{padding:4px 0;text-align:center}
+
+  main{position:relative}
+  #empty{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer}
+  #empty .impPri{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:9px 22px;
+                 font-size:13.5px;font-weight:600;box-shadow:0 6px 18px #2f6fed3d}
+  #empty .impPri:hover{background:#2560d8}
+  #empty .wm2{font-size:11.5px;color:#b9c1cd}
+  #empty .ghost{margin-top:2px}
+  #importPill{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;background:#fff;
+    border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12px;color:var(--ink2);
+    box-shadow:0 4px 14px #00000012;opacity:.94}
+  #importPill:hover{border-color:var(--accent);color:var(--accent)}
+
+  #use:empty::before{content:'还没有生成网格';display:block;color:var(--ink3);font-size:11.5px;padding:6px 0;text-align:center}
 </style>
 </head>
 <body>
@@ -541,7 +574,6 @@
   <!-- ================= 中间画布 ================= -->
   <main>
     <div id="bar">
-      <button id="importBtn" class="iconbtn" data-tip="导入图片" aria-label="导入图片" ><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10"/><path d="m8.5 10 3.5 3.5L15.5 10"/><path d="M4.5 16.5v2A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg></button>
       <span id="srcInfo" hidden></span>
       <span id="barInfo">拼豆图纸生成器</span>
       <span class="sp"></span>
@@ -570,7 +602,7 @@
         <button data-t="line" class="iconbtn" data-tip="直线" aria-label="直线"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 19 14-14"/></svg></button>
         <button data-t="rect" class="iconbtn" data-tip="矩形" aria-label="矩形"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="6.5" width="15" height="11" rx="1.5"/></svg></button>
         <button data-t="ellipse" class="iconbtn" data-tip="圆形" aria-label="圆形"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/></svg></button>
-        <button data-t="bucket" class="iconbtn" data-tip="油漆桶" aria-label="油漆桶"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 11.5 6l7 7-6.5 6.5z"/><path d="M20 16.4c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8c0-.9 1.2-2.1 1.8-2.9.6.8 1.8 2 1.8 2.9z"/></svg></button>
+        <button data-t="bucket" class="iconbtn" data-tip="连选填色" aria-label="连选填色"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 11.5 6l7 7-6.5 6.5z"/><path d="M20 16.4c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8c0-.9 1.2-2.1 1.8-2.9.6.8 1.8 2 1.8 2.9z"/></svg></button>
         <button id="flip" class="iconbtn" data-tip="左右翻转" aria-label="左右翻转" title="左右翻转整张图纸"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8.5 8.5 5 12l3.5 3.5"/><path d="M15.5 8.5 19 12l-3.5 3.5"/></svg></button>
       </div>
       <span id="modeHint" hidden></span>
@@ -578,10 +610,6 @@
     <div id="paintbar">
       <div class="pb-group" data-for="brush">
         <label>笔刷</label><input id="brush" type="range" min="1" max="16" value="1"><span class="val" id="brushV">1</span>
-      </div>
-      <div class="pb-group" data-for="bucket">
-        <label>连通</label>
-        <div class="seg mini" id="bucket"><button data-c="4" class="on">4</button><button data-c="8">8</button></div>
       </div>
       <div class="pb-group" data-for="shape">
         <span class="lb">实心</span><label class="switch"><input type="checkbox" id="shapeFill"><i></i></label>
@@ -594,34 +622,35 @@
     <div id="view">
       <canvas id="grid" hidden></canvas>
       <div id="empty">
-        <div class="wm">把图片拖到这里</div>
-        <div class="wm2">点击选择文件 · 也支持 Ctrl+V 粘贴</div>
+        <button id="importBtn" class="impPri">导入图片</button>
+        <div class="wm2">拖进来，或按 Ctrl+V 粘贴</div>
         <button id="blankNew" class="ghost">新建空白图纸</button>
       </div>
     </div>
+    <button id="importPill" class="impPill" hidden>导入图片</button>
   </main>
 
   <!-- ================= 右侧检查器 + 相近色 + 用量 ================= -->
   <aside id="right">
-    <div id="insp">
-      <div class="h" style="margin-bottom:8px">像素检查器</div>
-      <div id="inspBody"><div class="empty2" style="padding:6px 0">点一个格子查看它的色号</div></div>
+    <div class="grp" data-g="insp">
+      <div class="gt"><span>像素检查器</span><i class="chev"></i></div>
+      <div class="gb"><div id="inspBody"><div class="empty2">点一个格子查看它的色号</div></div></div>
     </div>
-    <div id="simWrap" hidden>
-      <div id="simHead"><span>相近色推荐</span><b id="simFor">—</b></div>
-      <div id="sim"></div>
+
+    <div class="grp" id="simWrap" data-g="sim" hidden>
+      <div class="gt"><span>相近色</span><span class="gmeta"><b id="simFor">—</b></span><i class="chev"></i></div>
+      <div class="gb"><div id="sim"></div></div>
     </div>
-    <!-- [hackone] 拼装进度：总进度 + 按 29 格板统计 -->
-    <div id="progWrap">
-      <div id="progHead"><span>拼装进度</span><b id="progTotal">—</b></div>
-      <div id="progBar"><i id="progFill"></i></div>
-      <div id="progBoards"></div>
+
+    <div class="grp" data-g="prog">
+      <div class="gt"><span>拼装进度</span><span class="gmeta"><b id="progTotal">—</b></span><i class="chev"></i></div>
+      <div class="gb"><div id="progBar"><i id="progFill"></i></div><div id="progBoards"></div></div>
     </div>
-    <div id="useHead">
-      <span>用量统计</span><b id="useTotal">—</b>
-      <button id="copyPurchase" class="pri" type="button" title="复制可直接粘给店家的采购清单">复制采购清单</button>
+
+    <div class="grp" data-g="use">
+      <div class="gt"><span>用量统计</span><span class="gmeta"><b id="useTotal">—</b><button id="copyPurchase" class="sm" type="button" title="复制采购清单">复制清单</button></span><i class="chev"></i></div>
+      <div class="gb" id="useWrap"><div id="use"></div></div>
     </div>
-    <div id="useWrap"><div id="use"></div></div>
   </aside>
 </div>
 
@@ -772,7 +801,7 @@ function buildPalette(opts){
   mc.max = S.palette.length;
   if (S.maxColors > S.palette.length){ S.maxColors = S.palette.length; mc.value = S.maxColors; }
   paintLabel(S.maxColors);
-  $('palInfo').textContent = `${b.label} · 共 ${S.palette.length} 色`;
+  const pi = $('palInfo'); if (pi) pi.textContent = `${b.label} · 共 ${S.palette.length} 色`;
   renderAlias();
   updatePaintUI();
   if (opts.remap !== false && S.base && oldPal) remapBase(oldPal);
@@ -802,6 +831,7 @@ function remapEntry(h, fn){
 }
 function renderAlias(){
   const box = $('palInfo');
+  if (!box) return;
   const rel = ALIASES.filter(a => a.system === S.codeSys);
   if (S.brandId === 'standard' && rel.length && rel[0].labels.length){
     box.innerHTML = `<span style="color:#c2410c">同款牌子：${rel[0].labels.join(' / ')}（色号通用）</span>`;
@@ -1299,9 +1329,10 @@ function visibleRange(){
   return (x1 > x0 && y1 > y0) ? { x0, y0, x1, y1 } : full;
 }
 function draw(){
-  if (!S.cells){ canvas.hidden = true; $('empty').style.display = ''; return; }
+  if (!S.cells){ canvas.hidden = true; $('empty').style.display = ''; if ($('importPill')) $('importPill').hidden = true; return; }
   canvas.hidden = false;
   $('empty').style.display = 'none';
+  if ($('importPill')) $('importPill').hidden = false;
 
   const cs = S.cell, W = S.gw*cs, H = S.gh*cs;
   const dpr = effDpr(W, H);
@@ -2958,7 +2989,7 @@ renderProgress();
   var GROUPS = {
     inspect: [], pencil: ['brush','paint'], eraser: ['brush'], picker: [],
     line: ['brush','paint'], rect: ['brush','paint','shape'],
-    ellipse: ['brush','paint','shape'], bucket: ['bucket','paint']
+    ellipse: ['brush','paint','shape'], bucket: ['paint']
   };
   function sync(){
     var on = document.querySelector('#tools button.on');
@@ -2967,11 +2998,7 @@ renderProgress();
     document.querySelectorAll('#paintbar .pb-group').forEach(function(g){
       g.hidden = want.indexOf(g.dataset.for) < 0;
     });
-    $('exactRow').hidden = $('square').checked;
   }
-  $('square').addEventListener('change', function(){
-    $('exactRow').hidden = $('square').checked;
-  });
   document.querySelectorAll('#tools button').forEach(function(b){
     b.addEventListener('click', function(){ setTimeout(sync, 0); });
   });
@@ -2987,23 +3014,34 @@ renderProgress();
 /* [hackone] v3：步进器 / 导入按钮 / 空白图纸 */
 (function(){
   var $ = function(id){ return document.getElementById(id); };
+  function stepOnce(b){
+    var inp = $(b.dataset.for); if (!inp) return;
+    var v = (parseInt(inp.value, 10) || 0) + (+b.dataset.d);
+    var lo = inp.min !== '' ? +inp.min : -9999, hi = inp.max !== '' ? +inp.max : 9999;
+    var nv = Math.max(lo, Math.min(hi, v));
+    if (nv === (parseInt(inp.value, 10) || 0)) return;
+    inp.value = nv;
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
+  }
   document.querySelectorAll('.stepper button').forEach(function(b){
-    b.addEventListener('click', function(){
-      var inp = $(b.dataset.for); if (!inp) return;
-      var v = (parseInt(inp.value, 10) || 0) + (+b.dataset.d);
-      var lo = inp.min !== '' ? +inp.min : -9999, hi = inp.max !== '' ? +inp.max : 9999;
-      inp.value = Math.max(lo, Math.min(hi, v));
-      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    var timer = 0, repeat = 0;
+    function stop(){ clearTimeout(timer); clearInterval(repeat); timer = 0; repeat = 0; }
+    b.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      stepOnce(b);
+      timer = setTimeout(function(){ repeat = setInterval(function(){ stepOnce(b); }, 45); }, 350);
     });
+    ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ b.addEventListener(ev, stop); });
+    window.addEventListener('blur', stop);
   });
-  var wm = $('blankNew');
-  if (wm) wm.addEventListener('click', function(e){ e.stopPropagation(); $('blankNew').click(); });
+  var pill = $('importPill');
+  if (pill) pill.addEventListener('click', function(){ $('file').click(); });
 })();
 </script>
 
 <script>
 (function(){
-  document.querySelectorAll('#side .grp[data-g]').forEach(function(g){
+  document.querySelectorAll('#side .grp[data-g], #right .grp[data-g]').forEach(function(g){
     var key = 'hc.g.' + g.dataset.g;
     if (localStorage.getItem(key) === '1') g.classList.add('collapsed');
     var t = g.querySelector('.gt');
