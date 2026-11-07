@@ -149,6 +149,7 @@ export default function App() {
   const [tool, setTool] = useState<"view" | "mark">("view");
   const [busy, setBusy] = useState<null | "print" | "png">(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastLeaving, setToastLeaving] = useState(false);
   const [, setExportedPattern] = useState<Pattern | null>(null);
   const [selectedColor, setSelectedColor] = useState<number | null>(() => draftSettings?.selectedColor ?? null);
   const [marked, setMarked] = useState<Uint8Array>(EMPTY_MASK);
@@ -170,8 +171,15 @@ export default function App() {
 
   const notify = useCallback((text: string) => {
     setToast(text);
+    setToastLeaving(false);
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+    toastTimer.current = window.setTimeout(() => {
+      setToastLeaving(true);
+      toastTimer.current = window.setTimeout(() => {
+        setToast(null);
+        setToastLeaving(false);
+      }, 120);
+    }, 2480);
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
@@ -1039,7 +1047,7 @@ export default function App() {
         </div>
       )}
       {toast && (
-        <div className="toast" role="status" aria-live="polite">{toast}</div>
+        <div className={`toast${toastLeaving ? " out" : ""}`} role="status" aria-live="polite">{toast}</div>
       )}
     </div>
   );

@@ -72,9 +72,14 @@ h1 { font-size: 15px; margin: 0; letter-spacing: .3px; }
 button {
   font: inherit; border: 1px solid transparent; border-radius: var(--radius-md);
   background: transparent; color: var(--text); cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 button:active { transform: scale(.985); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 
 .btn-primary {
@@ -170,6 +175,7 @@ canvas { box-shadow: var(--shadow); border-radius: var(--radius-sm); image-rende
   align-items: center; gap: var(--space-2);
   min-height: 36px; padding: 0 var(--space-1);
   border-bottom: 1px solid var(--line); border-radius: 0;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 .color:hover { background: var(--bg); }
 .color i { width: 16px; height: 16px; border-radius: var(--radius-sm); border: 1px solid var(--line); }
@@ -183,6 +189,8 @@ canvas { box-shadow: var(--shadow); border-radius: var(--radius-sm); image-rende
 }
 
 @media (min-width: 1000px) and (max-width: 1199px) {
+  /* 该档浏览器 dpr 亚像素会把 body 撑成 1025；收 0.5px，document 仍是 1024 */
+  body { width: calc(100vw - 0.5px); }
   main { grid-template-columns: 200px 1fr 220px; }
 }
 
@@ -234,10 +242,16 @@ button.wide { width: 100%; }
   min-height: 36px; padding: 0 var(--space-4);
   border: 1px solid transparent; border-radius: var(--radius-md);
   background: transparent; color: var(--muted); font-size: 12px; line-height: 1.2;
+  transition:
+    background-color var(--dur-base) var(--ease-io),
+    border-color var(--dur-base) var(--ease-io),
+    color var(--dur-base) var(--ease-io),
+    box-shadow var(--dur-base) var(--ease-io);
 }
 .mode-switch button.active {
-  background: var(--panel); color: var(--text); border-color: var(--line);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  background: var(--panel); color: var(--text);
+  border-color: color-mix(in srgb, var(--muted) 45%, var(--line));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
 }
 
 .actions button { white-space: nowrap; min-height: 44px; }
@@ -247,6 +261,7 @@ button.wide { width: 100%; }
   min-height: 52px; padding: var(--space-1) var(--space-5);
   background: var(--bg); border-bottom: 1px solid var(--line);
   font-size: 12px; color: var(--text);
+  animation: panel-in var(--dur-base) var(--ease-out);
 }
 .draft-banner span { flex: 1; min-width: 0; }
 .draft-banner button { min-height: 44px; padding: 0 var(--space-3); }
@@ -286,10 +301,16 @@ button.wide { width: 100%; }
   min-height: 44px; min-width: 72px; padding: 0 var(--space-4);
   border: 1px solid transparent; border-radius: var(--radius-md); background: transparent;
   color: var(--muted); font-size: 13px; line-height: 1.2;
+  transition:
+    background-color var(--dur-base) var(--ease-io),
+    border-color var(--dur-base) var(--ease-io),
+    color var(--dur-base) var(--ease-io),
+    box-shadow var(--dur-base) var(--ease-io);
 }
 .tool-switch button.active {
-  background: var(--panel); color: var(--text); border-color: var(--line);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  background: var(--panel); color: var(--text);
+  border-color: color-mix(in srgb, var(--muted) 45%, var(--line));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
 }
 
 .canvas-stack {
@@ -348,4 +369,28 @@ button.wide { width: 100%; }
   background: var(--text); color: var(--bg);
   font-size: 13px; text-align: center;
   pointer-events: none;
+  animation: toast-in var(--dur-base) var(--ease-out);
+}
+.toast.out { animation: toast-out var(--dur-fast) var(--ease-in) forwards; }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, -4px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, -4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
 }
