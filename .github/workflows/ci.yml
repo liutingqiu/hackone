@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,11 +23,22 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build
+
+      - name: Bundle size budget
+        run: |
+          js=$(find dist/assets -name '*.js' -exec cat {} + | gzip -c | wc -c)
+          echo "首屏 JS gzip: $((js/1024)) KB (预算 150 KB)"
+          if [ "$js" -gt 153600 ]; then echo "超预算"; exit 1; fi
