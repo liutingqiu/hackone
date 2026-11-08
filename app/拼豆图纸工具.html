@@ -565,15 +565,24 @@
 
   /* ================= [hackone] 平板适配 ================= */
   #drawerMask{display:none}
-  .drawer-btn{display:none}
   #grid,#view{touch-action:none}
+  #app{--lw:300px;--rw:302px;grid-template-columns:var(--lw) minmax(0,1fr) var(--rw)}
+  @media (min-width:901px){
+    #app > #side{grid-column:1}
+    #app > main{grid-column:2}
+    #app > #right{grid-column:3}
+  }
+  body.hide-left #app{--lw:0px}
+  body.hide-right #app{--rw:0px}
+  body.hide-left #side,body.hide-right #right{display:none}
+  #bar .iconbtn.off{opacity:.42}
 
   /* 横屏平板优先：宽度越窄，侧栏越瘦，把画布让出来 */
   @media (max-width:1279px){
-    #app{grid-template-columns:256px minmax(0,1fr) 260px}
+    #app{--lw:256px;--rw:260px}
   }
   @media (max-width:1099px){
-    #app{grid-template-columns:240px minmax(0,1fr) 244px}
+    #app{--lw:240px;--rw:244px}
     #bar .iconbtn{width:34px;height:34px}
     #modebar .tools button{width:36px;height:36px}
     #barPos{display:none}
@@ -598,6 +607,7 @@
   }
   @media (max-width:900px){
     #app{grid-template-columns:minmax(0,1fr)}
+    body.hide-left #side, body.hide-right #right{display:flex}
     #side,#right{position:fixed;top:0;bottom:0;z-index:70;width:min(86vw,340px);
       transition:transform .26s cubic-bezier(.2,.7,.2,1);will-change:transform}
     #side{left:0;transform:translateX(-103%);box-shadow:12px 0 34px rgba(16,20,28,.18)}
@@ -710,11 +720,11 @@
   <!-- ================= 中间画布 ================= -->
   <main>
     <div id="bar">
+      <button id="sideToggle" class="iconbtn" data-tip="收起/展开左侧工作区" aria-label="左侧工作区" aria-expanded="true" aria-controls="side"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="32" rx="4"/><path d="M20 8v32"/></svg></button>
+      <button id="rightToggle" class="iconbtn" data-tip="收起/展开右侧工作区" aria-label="右侧工作区" aria-expanded="true" aria-controls="right"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="32" rx="4"/><path d="M28 8v32"/></svg></button>
       <span id="srcInfo" hidden></span>
       <span id="barInfo">拼豆图纸生成器</span>
       <span class="sp"></span>
-      <button id="sideToggle" class="iconbtn drawer-btn" data-tip="左侧面板" aria-label="左侧面板" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="32" rx="4"/><path d="M20 8v32"/></svg></button>
-      <button id="rightToggle" class="iconbtn drawer-btn" data-tip="右侧面板" aria-label="右侧面板" aria-expanded="false" aria-controls="right"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="32" rx="4"/><path d="M28 8v32"/></svg></button>
       <span id="barPos">—</span>
       <button id="undo" class="iconbtn" data-tip="撤销" aria-label="撤销" title="撤销 Ctrl+Z"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M44 40.84c-4.9-5.98-9.24-9.37-13.04-10.17-3.8-.81-7.41-.93-10.85-.37V41L4 23.55 20.12 7v10.17c6.35.05 11.74 2.33 16.19 6.83 4.45 5.01 7.01 10.62 7.69 17.34Z"/></svg></button>
       <button id="redo" class="iconbtn" data-tip="重做" aria-label="重做" title="重做 Ctrl+Shift+Z"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 40.84c4.9-5.98 9.24-9.37 13.04-10.17 3.8-.81 7.41-.93 10.85-.37V41L44 23.55 27.88 7v10.17c-6.35.05-11.74 2.33-16.19 6.83C7.24 28.7 4.68 34.31 4 41.01Z"/></svg></button>
@@ -4378,27 +4388,89 @@ renderProgress();
 
 <div id="drawerMask" aria-hidden="true"></div>
 <script>
-/* [hackone] 平板：抽屉面板 + 双指缩放 */
+/* [hackone] 工作区收起（横屏）/ 抽屉（竖屏）+ 双指缩放 */
 (function(){
   var body = document.body;
   var mask = document.getElementById('drawerMask');
   var L = document.getElementById('sideToggle');
   var R = document.getElementById('rightToggle');
-  function sync(){
-    if (L) L.setAttribute('aria-expanded', body.classList.contains('drawer-left') ? 'true' : 'false');
-    if (R) R.setAttribute('aria-expanded', body.classList.contains('drawer-right') ? 'true' : 'false');
+  var mq = window.matchMedia('(max-width:900px)');
+
+  function isDrawer(){ return mq.matches; }
+  function store(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+  function load(k, d){ try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+
+  function isFitted(){
+    var v = document.getElementById('view'), cv = document.getElementById('grid');
+    if (!v || !cv || !cv.width) return false;
+    return cv.width <= v.clientWidth + 1 && cv.height <= v.clientHeight + 1;
   }
-  function close(){ body.classList.remove('drawer-left','drawer-right'); sync(); }
-  function toggle(side){
+  function refit(){
+    try { if (typeof window.fit === 'function') window.fit(); } catch (e) {}
+  }
+  function afterLayout(){
+    requestAnimationFrame(function(){
+      try { if (window.requestDraw) requestDraw(); } catch (e) {}
+      var v = document.getElementById('view'), cv = document.getElementById('grid');
+      if (!v || !cv || !cv.width) return;
+      if (cv.width <= v.clientWidth) v.scrollLeft = 0;
+      if (cv.height <= v.clientHeight) v.scrollTop = 0;
+    });
+  }
+
+  function sync(){
+    if (isDrawer()){
+      if (L) L.setAttribute('aria-expanded', body.classList.contains('drawer-left') ? 'true' : 'false');
+      if (R) R.setAttribute('aria-expanded', body.classList.contains('drawer-right') ? 'true' : 'false');
+      if (L) L.classList.remove('off');
+      if (R) R.classList.remove('off');
+      return;
+    }
+    var hl = body.classList.contains('hide-left'), hr = body.classList.contains('hide-right');
+    if (L){ L.setAttribute('aria-expanded', hl ? 'false' : 'true'); L.classList.toggle('off', hl); }
+    if (R){ R.setAttribute('aria-expanded', hr ? 'false' : 'true'); R.classList.toggle('off', hr); }
+  }
+
+  function applySaved(){
+    if (isDrawer()){
+      body.classList.remove('hide-left','hide-right');
+    } else {
+      body.classList.toggle('hide-left', load('hc.panel.left','1') === '0');
+      body.classList.toggle('hide-right', load('hc.panel.right','1') === '0');
+    }
+    sync();
+  }
+
+  function toggleCollapse(side){
+    var wasFitted = isFitted();
+    var hidden = body.classList.toggle('hide-' + side);
+    store('hc.panel.' + side, hidden ? '0' : '1');
+    sync();
+    if (wasFitted) setTimeout(refit, 80); else afterLayout();
+  }
+
+  function closeDrawers(){ body.classList.remove('drawer-left','drawer-right'); sync(); }
+  function toggleDrawer(side){
     var cls = 'drawer-' + side, on = body.classList.contains(cls);
-    close();
+    body.classList.remove('drawer-left','drawer-right');
     if (!on) body.classList.add(cls);
     sync();
   }
-  if (L) L.addEventListener('click', function(){ toggle('left'); });
-  if (R) R.addEventListener('click', function(){ toggle('right'); });
-  if (mask) mask.addEventListener('click', close);
-  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+
+  if (L) L.addEventListener('click', function(){ isDrawer() ? toggleDrawer('left') : toggleCollapse('left'); });
+  if (R) R.addEventListener('click', function(){ isDrawer() ? toggleDrawer('right') : toggleCollapse('right'); });
+  if (mask) mask.addEventListener('click', closeDrawers);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeDrawers(); });
+
+  var onChange = function(){
+    var wasFitted = isFitted();
+    closeDrawers(); applySaved();
+    if (wasFitted) setTimeout(refit, 80); else afterLayout();
+  };
+  if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+
+  applySaved();
+  afterLayout();
 
   var VIEW = document.getElementById('view');
   if (!VIEW) return;
@@ -4426,7 +4498,11 @@ renderProgress();
     var p = Array.from(pts.values()).slice(0, 2);
     var d = Math.max(1, dist(p[0], p[1]));
     var m = mid(p[0], p[1]);
-    try { window.animateZoom(pinch.cell * (d / pinch.d), m.x, m.y); } catch (err) {}
+    var target = pinch.cell * (d / pinch.d);
+    try {
+      if (typeof window.animateZoom === 'function') window.animateZoom(target, m.x, m.y);
+      else if (typeof setCellSize === 'function') setCellSize(target);
+    } catch (err) {}
     VIEW.scrollLeft = pinch.sl - (m.x - pinch.m.x);
     VIEW.scrollTop  = pinch.st - (m.y - pinch.m.y);
     e.preventDefault();
