@@ -5051,16 +5051,17 @@ renderProgress();
   function drawC(c){
     if (c.a < .02) return;
     var sc = c.sc || 1;
+    var K = 1.45;
     ctx.globalAlpha = c.a;
     var s = sprite(c.col, c.tool, c.down);
-    var size = s.width/DPR*sc;
+    var size = s.width/DPR*sc*K;
     if (c.rot){
       ctx.save();
       ctx.translate(c.x, c.y); ctx.rotate(c.rot);
-      ctx.drawImage(s, -10*sc, -8*sc, size, size);
+      ctx.drawImage(s, -10*sc*K, -8*sc*K, size, size);
       ctx.restore();
     } else {
-      ctx.drawImage(s, c.x - 10*sc, c.y - 8*sc, size, size);
+      ctx.drawImage(s, c.x - 10*sc*K, c.y - 8*sc*K, size, size);
     }
     ctx.globalAlpha = 1;
   }
