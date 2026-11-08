@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>拼豆图纸工具</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj4KICA8c3R5bGU+Lmlua3tmaWxsOiMxNDE3MWN9QG1lZGlhIChwcmVmZXJzLWNvbG9yLXNjaGVtZTogZGFyayl7Lmlua3tmaWxsOiNmZmZmZmZ9fTwvc3R5bGU+CiAgPHJlY3QgeD0iMyIgeT0iMSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjUiIHk9IjEiIHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGNsYXNzPSJpbmsiLz4KICA8cmVjdCB4PSI3IiB5PSIxIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iOSIgeT0iMSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSIxIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSIzIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iNSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSI1IiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iNyIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjUiIHk9IjciIHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGNsYXNzPSJpbmsiLz4KICA8cmVjdCB4PSI3IiB5PSI3IiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iOSIgeT0iNyIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSI3IiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iOSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjMiIHk9IjExIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iMTMiIHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGNsYXNzPSJpbmsiLz4KPC9zdmc+">
 <style>
   :root{
     --paper:#fbfaf8; --ink:#15181d; --ink2:#5c636f; --line:#e8e4dc; --accent:#2f6fed;
@@ -18,9 +19,14 @@
   }
   .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
   .top{padding:26px 0 0;display:flex;align-items:baseline;gap:14px}
-  .top b{font-weight:600;letter-spacing:.02em}
-  .top a{margin-left:auto;color:var(--ink2);text-decoration:none;font-size:15px}
-  .top a:hover{color:var(--accent)}
+  .top .mark{flex:0 0 34px;color:var(--ink)}
+  .top .gh{margin-left:auto;color:var(--ink2);display:grid;place-items:center;width:38px;height:38px;border-radius:10px}
+  .top .gh:hover{color:var(--ink);background:#efede7}
+  h1 .light{font-weight:300;color:var(--ink)}
+  h1 .ps{
+    font-weight:800;color:var(--accent);letter-spacing:.04em;margin-left:.18em;
+    text-shadow:4px 4px 0 rgba(47,111,237,.16);
+  }
 
   .hero{padding:56px 0 26px}
   .hero h1{
@@ -29,7 +35,7 @@
   }
   .hero p{margin:0 0 34px;color:var(--ink2);font-size:clamp(16px,1.5vw,19px)}
   .video{
-    width:100%;aspect-ratio:16/9;background:#0f1216 url("img/import.jpg") center/cover no-repeat;
+    width:100%;aspect-ratio:16/9;background:#0f1216 url("poster.jpg") center/cover no-repeat;
     border-radius:18px;overflow:hidden;position:relative;
     display:grid;place-items:center;box-shadow:0 18px 60px rgba(15,18,22,.14);
   }
@@ -50,10 +56,12 @@
   .path{padding:40px 0 90px;border-top:1px solid var(--line)}
   .path h2{margin:0 0 34px;font-size:clamp(24px,2.6vw,34px);font-weight:400;letter-spacing:.02em}
   .steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
-  .steps li{display:grid;grid-template-columns:150px 1fr;gap:24px;align-items:baseline;
-    padding:16px 0;border-bottom:1px solid var(--line)}
-  .steps .v{font:600 14px/1.6 "SF Mono",Consolas,monospace;color:var(--accent);letter-spacing:.04em}
-  .steps .d{color:var(--ink2);font-size:17px}
+  .steps li{display:grid;grid-template-columns:170px 1fr;gap:28px;
+    padding:26px 0;border-bottom:1px solid var(--line)}
+  .steps li:last-child{border-bottom:0}
+  .steps .v{font:600 14px/1.9 "SF Mono",Consolas,monospace;color:var(--accent);letter-spacing:.04em;padding-top:3px}
+  .steps h3{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:.01em}
+  .steps p{margin:0;color:var(--ink2);font-size:16px;line-height:1.85;max-width:34em}
 
   .foot{padding:34px 0 46px;border-top:1px solid var(--line);display:flex;gap:22px;flex-wrap:wrap;color:var(--ink2);font-size:15px}
   .foot a{color:inherit;text-decoration:none}
@@ -71,15 +79,21 @@
 
 <div class="wrap">
   <div class="top">
-    <b>拼豆图纸工具</b>
-    <a href="https://github.com/liutingqiu/hackone">GitHub ↗</a>
+    <svg class="mark" viewBox="0 0 32 32" width="34" height="34" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor">
+      <rect x="4" y="0" width="4" height="32"/>
+      <rect x="8" y="0" width="20" height="4"/>
+      <rect x="24" y="4" width="4" height="16"/>
+      <rect x="8" y="16" width="20" height="4"/>
+    </svg>
+    <a class="gh" href="https://github.com/liutingqiu/hackone" aria-label="GitHub">
+      <svg viewBox="0 0 16 16" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.6.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+    </a>
   </div>
 
   <section class="hero">
-    <h1>一张图，到能拼的图纸</h1>
-    <p>导入、分板、拼装、分享，四件事一个页面做完。</p>
+    <h1><span class="light">拼豆界的</span><span class="ps">PS</span></h1>
     <div class="video" id="videoBox">
-      <video id="demo" controls playsinline poster="img/import.jpg" preload="metadata">
+      <video id="demo" controls playsinline poster="poster.jpg" preload="metadata">
         <source src="demo.mp4" type="video/mp4">
       </video>
     </div>
@@ -87,54 +101,76 @@
 
   <section class="feature">
     <div class="txt">
-      <div class="num">01 导入</div>
       <h2>照片进来，色号出去</h2>
-      <p>自动匹配 291 色标准色板，色数可调，放大到每一格。</p>
     </div>
     <figure class="fig"><img src="img/import.jpg" alt="导入与配色"></figure>
   </section>
 
   <section class="feature flip">
     <div class="txt">
-      <div class="num">02 分板</div>
       <h2>每块板，一页 A4</h2>
-      <p>29×29 自动切块，板号、色号、比例尺都印在纸上。</p>
     </div>
     <figure class="fig tall"><img src="img/a4.jpg" alt="A4 拼装图"></figure>
   </section>
 
   <section class="feature">
     <div class="txt">
-      <div class="num">03 进度</div>
       <h2>拼到哪，标到哪</h2>
-      <p>点一格标一格，整块板拼完会自动提示。</p>
     </div>
     <figure class="fig"><img src="img/progress.jpg" alt="拼装进度"></figure>
   </section>
 
   <section class="feature flip">
     <div class="txt">
-      <div class="num">04 分享</div>
       <h2>38 字符，发出去就能拼</h2>
-      <p>微信里点开就是原图，换台设备接着拼。</p>
     </div>
     <figure class="fig"><img src="img/share.jpg" alt="短链分享"></figure>
   </section>
 
   <section class="path">
     <h2>历程</h2>
-    <ul class="steps">
-      <li><span class="v">2026.11 · v1.4</span><span class="d">平板适配，左右工作区可收起</span></li>
-      <li><span class="v">2026.11 · v1.3</span><span class="d">工具合并，撤销不再清空进度</span></li>
-      <li><span class="v">2026.11 · v1.2</span><span class="d">画布可拖拽，短链分享</span></li>
-      <li><span class="v">2026.11 · v1.0</span><span class="d">单文件、多画布、A4 分板</span></li>
-    </ul>
+    <ol class="steps">
+      <li>
+        <span class="v">v1.4 · 2026.11</span>
+        <div>
+          <h3>上平板</h3>
+          <p>三档布局，1024 与 1180 各有一套列宽；竖屏转抽屉，双指缩放，左右工作区能单独收起，画布跟着变大。</p>
+        </div>
+      </li>
+      <li>
+        <span class="v">v1.3.1 · 2026.11</span>
+        <div>
+          <h3>撤销不再清空进度</h3>
+          <p>进度按格子位置记录，撤销、整理、重新识别都不清零；只有画布尺寸真的变了才重置。</p>
+        </div>
+      </li>
+      <li>
+        <span class="v">v1.3 · 2026.11</span>
+        <div>
+          <h3>工具合并</h3>
+          <p>取消「浏览 / 标记」两态切换，标记降级为工具栏里的一个工具，状态机不再互相踢。</p>
+        </div>
+      </li>
+      <li>
+        <span class="v">v1.2 · 2026.11</span>
+        <div>
+          <h3>拖拽与分享</h3>
+          <p>画布能拖着看，分享链接压到 38 字符，微信里点开就是原图。</p>
+        </div>
+      </li>
+      <li>
+        <span class="v">v1.0 · 2026.11</span>
+        <div>
+          <h3>定稿</h3>
+          <p>单文件 HTML、多画布、A4 分板导出，离线也能跑。</p>
+        </div>
+      </li>
+    </ol>
   </section>
 
   <div class="foot">
     <a href="https://hack.liutingqiu.xyz">hack.liutingqiu.xyz</a>
     <a href="https://github.com/liutingqiu/hackone">github.com/liutingqiu/hackone</a>
-    <span>liutingqiu · sshanersshaner</span>
   </div>
 </div>
 
