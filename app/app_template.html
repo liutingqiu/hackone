@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>拼豆图纸工具 · 像素图转色号网格</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj4KICA8c3R5bGU+Lmlua3tmaWxsOiMxNDE3MWN9QG1lZGlhIChwcmVmZXJzLWNvbG9yLXNjaGVtZTogZGFyayl7Lmlua3tmaWxsOiNmZmZmZmZ9fTwvc3R5bGU+CiAgPHJlY3QgeD0iMyIgeT0iMSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjUiIHk9IjEiIHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGNsYXNzPSJpbmsiLz4KICA8cmVjdCB4PSI3IiB5PSIxIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iOSIgeT0iMSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSIxIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSIzIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iNSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSI1IiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iNyIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjUiIHk9IjciIHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGNsYXNzPSJpbmsiLz4KICA8cmVjdCB4PSI3IiB5PSI3IiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iOSIgeT0iNyIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjExIiB5PSI3IiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iOSIgd2lkdGg9IjIiIGhlaWdodD0iMiIgY2xhc3M9ImluayIvPgogIDxyZWN0IHg9IjMiIHk9IjExIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBjbGFzcz0iaW5rIi8+CiAgPHJlY3QgeD0iMyIgeT0iMTMiIHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGNsYXNzPSJpbmsiLz4KPC9zdmc+">
 <style>
   :root{
     --bg:#eef1f5; --panel:#fff; --line:#e2e6ec; --ink:#1c1f26; --ink2:#5a626e; --ink3:#8b93a1;
@@ -116,6 +117,12 @@
 
   /* ---------------- 右栏 ---------------- */
   #right{border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  #credit{margin-top:auto;flex:0 0 auto;padding:10px 14px 12px;text-align:right;
+          font-size:11px;color:var(--ink3);letter-spacing:.02em;line-height:1.4}
+  #credit span{margin:0 5px;color:#cfd6e0}
+  #credit a{color:inherit;text-decoration:none}
+  #credit a:hover{color:var(--ink2);text-decoration:underline;text-underline-offset:2px}
+  a.iconbtn{display:grid;place-items:center;text-decoration:none}
   #insp{padding:12px 13px;border-bottom:1px solid var(--line);flex:0 0 auto}
   #inspBody .sw{width:100%;height:34px;border-radius:6px;border:1px solid #0002;margin-bottom:8px}
   #inspBody .kv{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;
@@ -665,6 +672,8 @@
           <div class="row"><button id="fit" style="flex:1">适应窗口</button><button id="zoomOut">−</button><button id="zoomIn">+</button></div>
         </div>
       </div>
+      <a class="iconbtn" href="https://github.com/liutingqiu/hackone" target="_blank" rel="noopener"
+         data-tip="GitHub 仓库" aria-label="GitHub 仓库" title="GitHub 仓库"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
     </div>
     <div id="modebar">
       <div class="tools" id="tools">
@@ -720,6 +729,11 @@
     <div class="grp" data-g="use">
       <div class="gt"><span>用量统计</span><span class="gmeta"><b id="useTotal">—</b><button id="copyPurchase" class="sm" type="button" title="复制采购清单">复制清单</button></span><i class="chev"></i></div>
       <div class="gb" id="useWrap"><div id="use"></div></div>
+    </div>
+    <div id="credit">
+      <a href="https://github.com/liutingqiu" target="_blank" rel="noopener">liutingqiu</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://github.com/sshanersshaner" target="_blank" rel="noopener">sshanersshaner</a>
     </div>
   </aside>
 </div>
