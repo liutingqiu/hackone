@@ -5062,12 +5062,6 @@ renderProgress();
     } else {
       ctx.drawImage(s, c.x - 10*sc, c.y - 8*sc, size, size);
     }
-    if (c.name && c.nm > .03){
-      var t = nameTag(c.col, c.name);
-      ctx.globalAlpha = c.a*c.nm;
-      var ox = c.tool === 'arrow' ? 9 : 11, oy = c.tool === 'arrow' ? 16 : 11;
-      ctx.drawImage(t.cv, c.x + ox, c.y + oy, t.w, 19);
-    }
     ctx.globalAlpha = 1;
   }
 
