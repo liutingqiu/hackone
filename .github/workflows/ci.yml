@@ -9,39 +9,22 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: web/package-lock.json
 
-      - name: Install
-        run: npm ci
+      - name: 构建单文件应用
+        run: python3 app/build_html.py
 
-      - name: Lint
-        run: npm run lint
+      - name: 构建产物与 product/ 一致
+        run: diff -q "app/拼豆图纸工具.html" product/index.html
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
-
-      - name: Production HTML and share Worker regressions
-        run: node --test ../tests/runtime.test.cjs
-
-      - name: Build
-        run: npm run build
-
-      - name: Bundle size budget
-        run: |
-          js=$(find dist/assets -name '*.js' -exec cat {} + | gzip -c | wc -c)
-          echo "首屏 JS gzip: $((js/1024)) KB (预算 150 KB)"
-          if [ "$js" -gt 153600 ]; then echo "超预算"; exit 1; fi
+      - name: 运行时回归
+        run: node --test tests/runtime.test.cjs

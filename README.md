@@ -1,73 +1,55 @@
-# hackone
+# 拼豆图纸工具 · hackone
 
-黑客松项目仓库（团队协作）。
+把一张图变成能拼的图纸：**自动分板、每板一页 A4、拼装进度可标可核验、38 字符短链分享**。
+
+| | |
+| --- | --- |
+| 在线使用 | <https://hack.liutingqiu.xyz> |
+| 离线使用 | 双击 `product/index.html`，单文件，无需联网 |
+| 发布说明 | [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md) |
+| 作者 | [@liutingqiu](https://github.com/liutingqiu) · [@sshanersshaner](https://github.com/sshanersshaner) |
+
+## 目录
+
+```
+.
+├── app/            单文件应用源码（app_template.html + palettes.json）与构建脚本
+├── product/        构建产物，直接部署到 Cloudflare Pages
+├── share/          分享短链服务（Cloudflare Worker + KV）
+├── tests/          运行时回归（node --test）
+├── tools/          小工具（journal.sh 等）
+├── docs/           计划、决策、发布说明、调研、评审材料
+├── org/            部门流水线与交接约定
+├── journal/        每日工作留痕
+├── reference/      参考实现与色板来源
+├── archive/        历史快照（1.1 / 2.0 / 2.1）、废弃的 web 版、旧离线包
+├── .github/        CI：构建 + 产物一致性 + 运行时回归
+└── README.md
+```
 
 ## 快速开始
 
 ```bash
 git clone https://github.com/liutingqiu/hackone.git
 cd hackone
+
+open product/index.html            # 直接看效果，不用装任何依赖
+python3 app/build_html.py          # 改完源码重新构建
+node --test tests/runtime.test.cjs # 跑运行时回归
 ```
 
-## 协作约定
-
-| 事项 | 约定 |
-| --- | --- |
-| 主分支 | `main`，保持随时可运行 |
-| 开发 | 每人开特性分支：`feat/登录页`、`fix/接口超时` |
-| 提交 | 一次提交只做一件事，信息写清楚「改了什么、为什么」 |
-| 合并 | 通过 Pull Request 合并，至少 1 人看过 |
-| 冲突 | 每天开工前先 `git pull --rebase`，别攒着 |
-
-### 常用命令
-
-```bash
-git switch -c feat/你的功能     # 开新分支
-git add -A && git commit -m "feat: 说明"
-git push -u origin feat/你的功能  # 首次推送
-git switch main && git pull --rebase
-```
-
-
-## CI
-
-GitHub Actions：`.github/workflows/ci.yml`，push 到 `main` / `feat/**` 或开 PR 时自动跑（装依赖 → build → typecheck/lint → test）。
-
-```bash
-gh run list                       # 最近的运行
-gh run view <id> --log-failed     # 只看失败的步骤
-gh run watch <id>                 # 盯着它跑完
-```
-
-## 目录
-
-```
-.
-├── README.md
-├── docs/          # 方案、接口、分工
-└── .gitignore
-```
-## 发布说明
-
-各版本的新增、变更、修复与已知问题见 [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md)。
+应用没有构建链、没有框架依赖：源码是 `app/app_template.html` 一个文件，构建脚本把
+`palettes.json` 注入后产出 `app/拼豆图纸工具.html`，再复制到 `product/index.html`。
 
 ## 部署
-
-应用是单文件 HTML，构建后直接同步到 Pages：
 
 ```bash
 python3 app/build_html.py
 cp app/拼豆图纸工具.html product/index.html
 npx wrangler pages deploy ./product --project-name hackone --branch main
+
+cd share && npx wrangler deploy     # 短链 Worker（KV，180 天过期，单张上限 400 KB）
 ```
-
-分享短链由独立 Worker 承担（KV 存图纸，180 天过期，单张上限 400 KB）：
-
-```bash
-cd share && npx wrangler deploy     # https://pinda-share.tianqi689.workers.dev
-```
-
-线上：https://hack.liutingqiu.xyz
 
 ## 画布操作
 
@@ -89,3 +71,20 @@ cd share && npx wrangler deploy     # https://pinda-share.tianqi689.workers.dev
 | 翻转 | 动作按钮，左右镜像图案；已标记的进度会跟着镜像 |
 
 进度按格子位置记录：整理配色、重新识别、撤销都不会把它清零；画布尺寸变了才重置。
+
+## 协作约定
+
+| 事项 | 约定 |
+| --- | --- |
+| 主分支 | `main`，保持随时可运行 |
+| 开发 | 每人开特性分支：`feat/xxx`、`fix/xxx` |
+| 提交 | 一次提交只做一件事，信息写清「改了什么、为什么」 |
+| 合并 | 通过 Pull Request 合并，至少 1 人看过 |
+| 冲突 | 每天开工前先 `git pull --rebase` |
+
+## 文档
+
+- 发布说明：[docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md)
+- 方案与决策：[docs/PLAN.md](docs/PLAN.md)、[docs/decisions.md](docs/decisions.md)、[docs/adr.md](docs/adr.md)
+- 评审与测试：[docs/qa/](docs/qa/)、[docs/user-testing/](docs/user-testing/)
+- 工作留痕：[journal/](journal/)
