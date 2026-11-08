@@ -568,9 +568,10 @@
     #app > main{grid-column:2}
     #app > #right{grid-column:3}
   }
+  #app{transition:grid-template-columns .32s cubic-bezier(.16,1,.3,1);overflow:hidden}
   body.hide-left #app{--lw:0px}
   body.hide-right #app{--rw:0px}
-  body.hide-left #side,body.hide-right #right{display:none}
+  body.panel-anim #side, body.panel-anim #right{overflow:hidden}
   #bar .iconbtn.off{opacity:.42}
 
   /* 横屏平板优先：宽度越窄，侧栏越瘦，把画布让出来 */
@@ -662,6 +663,9 @@
     #modebar .tools button svg{width:20px;height:20px}
     #modebar #flip{width:44px;height:27px}
   }
+
+  /* 展开/收回动画期间：内容块强制可见，高度由 JS 过渡 */
+  #side .grp.animating>.gb, #right .grp.animating>.gb{display:block!important;overflow:hidden}
 </style>
 </head>
 <body>
@@ -3362,17 +3366,79 @@ renderProgress();
 </script>
 
 <script>
+/* [hackone] 卡片展开/收回：先快后慢（cubic-bezier(.16,1,.3,1)），高度由 JS 过渡 */
 (function(){
+  var DUR = 320, EASE = 'cubic-bezier(.16,1,.3,1)';
+
+  function gbOf(grp){
+    for (var i = 0; i < grp.children.length; i++) if (grp.children[i].classList.contains('gb')) return grp.children[i];
+    return null;
+  }
+  function finish(gb){
+    gb.style.transition = '';
+    gb.style.height = '';
+    gb.style.overflow = '';
+    if (gb.parentElement) gb.parentElement.classList.remove('animating');
+    gb.__anim = 0;
+  }
+  function animate(grp, collapse){
+    var gb = gbOf(grp);
+    if (!gb) return;
+    var start = 0;
+    if (gb.__anim){
+      start = gb.getBoundingClientRect().height;
+      clearTimeout(gb.__anim);
+      finish(gb);
+    }
+    grp.classList.add('animating');
+    if (collapse){
+      gb.style.transition = 'none';
+      gb.style.height = (start || gb.getBoundingClientRect().height) + 'px';
+      void gb.offsetHeight;
+      gb.style.transition = 'height ' + DUR + 'ms ' + EASE;
+      grp.classList.add('collapsed');
+      gb.style.height = '0px';
+    } else {
+      gb.style.transition = 'none';
+      gb.style.height = start + 'px';
+      grp.classList.remove('collapsed');
+      void gb.offsetHeight;
+      gb.style.transition = 'height ' + DUR + 'ms ' + EASE;
+      gb.style.height = gb.scrollHeight + 'px';
+    }
+    gb.__anim = setTimeout(function(){ finish(gb); }, DUR + 30);
+  }
+  function persist(grp, collapsed){
+    if (!grp.dataset || !grp.dataset.g) return;
+    try { localStorage.setItem('hc.g.' + grp.dataset.g, collapsed ? '1' : '0'); } catch(e){}
+  }
+
   document.querySelectorAll('#side .grp[data-g], #right .grp[data-g]').forEach(function(g){
-    if (g.dataset.g === 'prog') return;   // 拼装进度常展开，不做收拉
-    var key = 'hc.g.' + g.dataset.g;
-    if (localStorage.getItem(key) === '1') g.classList.add('collapsed');
-    var t = g.querySelector('.gt');
-    t.addEventListener('click', function(){
-      g.classList.toggle('collapsed');
-      try { localStorage.setItem(key, g.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
-    });
+    if (g.dataset.g === 'prog') return;
+    if (localStorage.getItem('hc.g.' + g.dataset.g) === '1') g.classList.add('collapsed');
   });
+
+  var prog = document.querySelector('#right .grp[data-g="prog"]');
+  if (prog){
+    prog.classList.remove('collapsed');
+    try { localStorage.removeItem('hc.g.prog'); } catch(e){}
+  }
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var gt = t.closest('.gt');
+    if (!gt) return;
+    var grp = gt.parentElement;
+    if (!grp || !grp.classList.contains('grp')) return;
+    if (grp.dataset.g === 'prog'){ e.preventDefault(); e.stopImmediatePropagation(); return; }
+    if (t.closest('button, a, input, select, label, textarea')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var collapse = !grp.classList.contains('collapsed');
+    animate(grp, collapse);
+    persist(grp, collapse);
+  }, true);
 })();
 </script>
 <script>
@@ -4488,14 +4554,45 @@ renderProgress();
     sync();
   }
 
+  var PANEL_DUR = 320, PANEL_EASE = 'cubic-bezier(.16,1,.3,1)';
+  function panelWidth(side){
+    var w = window.innerWidth;
+    if (side === 'left') return w <= 900 ? 0 : w <= 1099 ? 240 : w <= 1279 ? 256 : 300;
+    return w <= 900 ? 0 : w <= 1099 ? 244 : w <= 1279 ? 260 : 302;
+  }
   function toggleCollapse(side){
     var wasFitted = isFitted();
-    var hidden = body.classList.toggle('hide-' + side);
+    var el = side === 'left' ? document.getElementById('side') : document.getElementById('right');
+    var hidden = !body.classList.contains('hide-' + side);
+    var w = panelWidth(side);
+    if (el && w > 0){
+      var prop = side === 'left' ? 'marginLeft' : 'marginRight';
+      var mprop = side === 'left' ? 'margin-left' : 'margin-right';
+      var startMarg = hidden ? 0 : -w;
+      var endMarg = hidden ? -w : 0;
+      el.style.width = w + 'px';
+      el.style.transition = 'none';
+      el.style[prop] = startMarg + 'px';
+      void el.offsetWidth;
+      el.style.transition = mprop + ' ' + PANEL_DUR + 'ms ' + PANEL_EASE;
+      body.classList.add('panel-anim');
+      el.style[prop] = endMarg + 'px';
+    }
+    body.classList.toggle('hide-' + side, hidden);
     store('hc.panel.' + side, hidden ? '0' : '1');
     sync();
-    if (wasFitted) setTimeout(refit, 80); else afterLayout();
+    setTimeout(function(){
+      body.classList.remove('panel-anim');
+      if (el){
+        el.style.transition = '';
+        if (!hidden){
+          el.style.width = '';
+          el.style[side === 'left' ? 'marginLeft' : 'marginRight'] = '';
+        }
+      }
+      if (wasFitted) refit(); else afterLayout();
+    }, PANEL_DUR + 40);
   }
-
   function closeDrawers(){ body.classList.remove('drawer-left','drawer-right'); sync(); }
   function toggleDrawer(side){
     var cls = 'drawer-' + side, on = body.classList.contains(cls);
