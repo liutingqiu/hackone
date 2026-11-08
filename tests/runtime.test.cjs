@@ -151,6 +151,55 @@ test('share decoding rejects invalid sizes, palettes, indices, and encoding pref
   await assert.rejects(c.unpackDoc('x' + encode('1:1|1,1,standard,mard,0').slice(1)));
   assert.throws(() => c.applyPacked({ w: 1, h: 1, base: [0.5], brand: 'standard' }));
 });
+test('imported documents do not inherit undo or redo history', () => {
+  const c = shareContext();
+  Object.assign(c.S, { history: [{ t: 'old' }], future: [{ t: 'old' }], histBytes: 12 });
+  Object.assign(c, { $: () => null, colourSystemOptions() {}, buildPalette() {},
+    installDoc(w, h, base) { c.S.cells = base; }, resetProgress() {}, fit() {} });
+  c.applyPacked({ w: 1, h: 1, base: [2], brand: 'standard' });
+  assert.equal(c.S.history.length, 0);
+  assert.equal(c.S.future.length, 0);
+  assert.equal(c.S.histBytes, 0);
+  assert.equal(c.S.cells[0], 2);
+});
+
+test('both resize modes reset progress even when bitmask size is unchanged and undo restores it', () => {
+  const source = html.slice(html.indexOf('function resizeTo('), html.indexOf('function newBlank(')) +
+    html.slice(html.indexOf('function entryBytes('), html.indexOf('/* ------------------------------------------------ 绘画原语'));
+  for (const mode of ['resizeTo', 'expandCanvas']) {
+    const S = { gw: 2, gh: 3, base: new Int32Array(6).fill(1), cells: new Int32Array(6).fill(1),
+      progress: new Uint8Array([5]), history: [], future: [], histBytes: 0, maxColors: 0 };
+    const c = { S, HIST_BYTES: 1e6, clampN: n => n, limitColors: a => Int32Array.from(a),
+      resampleBase: (w, h) => new Int32Array(w * h).fill(1),
+      resetProgress() { S.progress = new Uint8Array(Math.ceil(S.cells.length / 8)); },
+      progressByteCount: () => Math.ceil(S.cells.length / 8), progressPatternHash: () => '',
+      installDoc(w, h, base) { S.gw = w; S.gh = h; S.base = base; S.cells = Int32Array.from(base); },
+      ensureBuffer() {}, syncDocInputs() {}, recount() {}, renderUsage() {}, renderSimilar() {},
+      requestDraw() {}, renderProgress() {}, fit() {}, toast() {} };
+    vm.createContext(c); vm.runInContext(source, c);
+    c[mode](3, 2, mode === 'resizeTo' ? {} : 0);
+    assert.equal(S.progress[0], 0, mode);
+    c.undo();
+    assert.deepEqual([S.gw, S.gh, S.progress[0]], [2, 3, 5], mode);
+    c.redo();
+    assert.deepEqual([S.gw, S.gh, S.progress[0]], [3, 2, 0], mode);
+  }
+});
+
+test('A4 overview keeps wide and tall supported grids within the page', () => {
+  const source = html.slice(html.indexOf('function renderA4Overview('), html.indexOf('function renderA4Board('));
+  for (const [w, h] of [[320, 29], [400, 1], [1, 400], [29, 29]]) {
+    let grid;
+    const c = { S: { gw: w, gh: h, used: [] }, A4_PAGE_W: 1240, A4_PAGE_H: 1754, A4_MARGIN: 64,
+      a4Canvas: () => ({ getContext: () => ({ fillRect() {} }) }), a4CropMarks() {}, a4Header() {},
+      boardCols: () => Math.ceil(w / 29), boardRows: () => Math.ceil(h / 29),
+      a4DrawCells(ctx, x, y, size, sx, sy, cols, rows) { grid = { x, y, width: size * cols, height: size * rows }; },
+      a4EdgeNumbers() {}, a4BoardOverlay() {}, a4Footer() {} };
+    vm.createContext(c); vm.runInContext(source, c); c.renderA4Overview(1, 2);
+    assert.ok(grid.x >= 64 && grid.x + grid.width <= 1240 - 64, `${w}x${h}`);
+    assert.ok(grid.y >= 138 && grid.y + grid.height <= 138 + 1754 - 300, `${w}x${h}`);
+  }
+});
 test('bounded stream cancels before concatenating an oversized decompressed payload', async () => {
   const c = shareContext(); let cancelled = false;
   const stream = new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(20)); },

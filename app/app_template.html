@@ -1788,6 +1788,7 @@ function resizeTo(nw, nh, opts){
   S.base = out;
   S.gw = nw; S.gh = nh;
   S.cells = limitColors(out, S.maxColors);
+  resetProgress();
   S.selCell = -1; S.highlight = -1; S.hlCells = null;
   S.preview = null; S.drag = null; S.stroke = null;
   S.buf = null; S.bufCtx = null;
@@ -1819,6 +1820,7 @@ function expandCanvas(nw, nh, a){
   S.base = out;
   S.gw = nw; S.gh = nh;
   S.cells = limitColors(out, S.maxColors);
+  resetProgress();
   S.selCell = -1; S.highlight = -1; S.hlCells = null;
   S.preview = null; S.drag = null;
   S.buf = null; S.bufCtx = null;
@@ -2993,7 +2995,7 @@ function renderA4Overview(page, totalPages){
   const bc = boardCols(), br = boardRows();
   a4Header(c, '拼豆拼装图 · 总览', `${S.gw}×${S.gh} 格 · ${S.used.length} 色 / ${totalBeads} 颗 · ${bc*br} 块 29×29 底板`);
   const areaW = A4_PAGE_W - A4_MARGIN*2, areaH = A4_PAGE_H - 300;
-  const cs = Math.max(4, Math.floor(Math.min(areaW / S.gw, areaH / S.gh)));
+  const cs = Math.max(1, Math.floor(Math.min(areaW / S.gw, areaH / S.gh)));
   const ox = A4_MARGIN + Math.floor((areaW - S.gw*cs)/2);
   const oy = 138 + Math.floor((areaH - S.gh*cs)/2);
   a4DrawCells(c, ox, oy, cs, 0, 0, S.gw, S.gh);
@@ -4228,6 +4230,7 @@ renderProgress();
       throw new Error('invalid-limit');
     }
     if (window.__docBeforeImport) window.__docBeforeImport();
+    S.history.length = 0; S.future.length = 0; S.histBytes = 0;
     S.gw = p.w; S.gh = p.h; S.base = p.base;
     if (p.brand) S.brandId = p.brand;
     if (p.code) S.codeSys = p.code;
