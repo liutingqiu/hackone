@@ -207,10 +207,6 @@
     opacity:0;pointer-events:none;transition:opacity .18s;z-index:99;max-width:70vw;
   }
   #toast.on{opacity:1}
-  @media(max-width:1000px){
-    #app{grid-template-columns:270px minmax(0,1fr)}
-    #right{display:none}
-  }
 
 
   /* ================= [hackone] v2 左栏重构：三段 + 折叠 + 吸底导出 ================= */
@@ -566,6 +562,42 @@
   #linkModal .lm-body{padding:12px 14px 16px}
   #linkModal textarea{width:100%;height:96px;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:none;color:var(--ink2)}
   #linkModal .cap{margin-top:8px;font-size:11px;color:var(--ink3)}
+
+  /* ================= [hackone] 平板适配 ================= */
+  #drawerMask{display:none}
+  .drawer-btn{display:none}
+  #grid,#view{touch-action:none}
+
+  @media (max-width:1199px){
+    #app{grid-template-columns:264px minmax(0,1fr) 268px}
+  }
+  @media (max-width:1023px){
+    #app{grid-template-columns:236px minmax(0,1fr) 240px}
+    #bar .iconbtn{width:34px;height:34px}
+    #modebar .tools button{width:36px;height:36px}
+  }
+  @media (max-width:900px){
+    #app{grid-template-columns:minmax(0,1fr)}
+    #side,#right{position:fixed;top:0;bottom:0;z-index:70;width:min(86vw,340px);
+      transition:transform .26s cubic-bezier(.2,.7,.2,1);will-change:transform}
+    #side{left:0;transform:translateX(-103%);box-shadow:12px 0 34px rgba(16,20,28,.18)}
+    #right{display:flex;right:0;left:auto;transform:translateX(103%);box-shadow:-12px 0 34px rgba(16,20,28,.18)}
+    body.drawer-left #side{transform:none}
+    body.drawer-right #right{transform:none}
+    #drawerMask{display:block;position:fixed;inset:0;z-index:65;background:rgba(16,20,28,.38);
+      opacity:0;pointer-events:none;transition:opacity .2s}
+    body.drawer-left #drawerMask,body.drawer-right #drawerMask{opacity:1;pointer-events:auto}
+    .drawer-btn{display:grid}
+  }
+  @media (pointer:coarse){
+    #modebar .tools button{width:44px;height:44px}
+    #modebar .tools button svg{width:22px;height:22px}
+    #bar .iconbtn{width:42px;height:42px}
+    #bar .iconbtn svg{width:20px;height:20px}
+    .stepper button{width:34px;height:34px}
+    #paintbar input[type=range]{height:30px}
+    #palGrid .chip{min-height:44px}
+  }
 </style>
 </head>
 <body>
@@ -661,6 +693,8 @@
       <span id="srcInfo" hidden></span>
       <span id="barInfo">拼豆图纸生成器</span>
       <span class="sp"></span>
+      <button id="sideToggle" class="iconbtn drawer-btn" data-tip="左侧面板" aria-label="左侧面板" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="32" rx="4"/><path d="M20 8v32"/></svg></button>
+      <button id="rightToggle" class="iconbtn drawer-btn" data-tip="右侧面板" aria-label="右侧面板" aria-expanded="false" aria-controls="right"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="32" rx="4"/><path d="M28 8v32"/></svg></button>
       <span id="barPos">—</span>
       <button id="undo" class="iconbtn" data-tip="撤销" aria-label="撤销" title="撤销 Ctrl+Z"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M44 40.84c-4.9-5.98-9.24-9.37-13.04-10.17-3.8-.81-7.41-.93-10.85-.37V41L4 23.55 20.12 7v10.17c6.35.05 11.74 2.33 16.19 6.83 4.45 5.01 7.01 10.62 7.69 17.34Z"/></svg></button>
       <button id="redo" class="iconbtn" data-tip="重做" aria-label="重做" title="重做 Ctrl+Shift+Z"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 40.84c4.9-5.98 9.24-9.37 13.04-10.17 3.8-.81 7.41-.93 10.85-.37V41L44 23.55 27.88 7v10.17c-6.35.05-11.74 2.33-16.19 6.83C7.24 28.7 4.68 34.31 4 41.01Z"/></svg></button>
@@ -1796,6 +1830,15 @@ function endStroke(){
   pushHist({ t:'c', pos, before, after });
   return changed;
 }
+function cancelStroke(){
+  var st = S.stroke;
+  S.stroke = null;
+  if (st && st.map && st.map.size){
+    st.map.forEach(function(v, i){ S.cells[i] = v; S.base[i] = v; paintBuffer(i); });
+  }
+  S.dragging = false; S.drag = null; S.preview = null;
+  requestDraw();
+}
 function afterPaint(){
   recount();
   if (!S.dragging) renderUsage();
@@ -2456,8 +2499,9 @@ document.addEventListener('keyup', e => {
 });
 window.addEventListener('blur', () => { spaceDown = false; viewEl.classList.remove('spacepan'); });
 
-canvas.addEventListener('mousedown', e => {
+canvas.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
+  if (e.pointerType === 'touch' && e.isPrimary === false) return;
   if (panState && panState.captured) return;   // 中键/空格平移中，不落笔
   if (S.palOpen) closePalette();
   const i = cellFromEvent(e);
@@ -2489,7 +2533,8 @@ canvas.addEventListener('mousedown', e => {
   S.preview = { v:S.paintIdx, cells:[i] };
   requestDraw();
 });
-canvas.addEventListener('mousemove', e => {
+canvas.addEventListener('pointermove', e => {
+  if (S.pinching) return;
   const i = cellFromEvent(e);
   if (i >= 0){
     if (i !== S.hoverCell){
@@ -2514,7 +2559,7 @@ canvas.addEventListener('mousemove', e => {
     requestDraw();
   }
 });
-window.addEventListener('mouseup', () => {
+window.addEventListener('pointerup', () => {
   if (endPan()){ S.pendingInspect = -1; S.hoverCell = -1; requestDraw(); return; }
   if (S.pendingInspect >= 0){
     const pi = S.pendingInspect; S.pendingInspect = -1;
@@ -2533,7 +2578,7 @@ window.addEventListener('mouseup', () => {
     renderUsage(); renderSimilar();
   }
 });
-canvas.addEventListener('mouseleave', () => { $('barPos').textContent = '—'; S.hoverCell = -1; requestDraw(); });
+canvas.addEventListener('pointerleave', () => { $('barPos').textContent = '—'; S.hoverCell = -1; requestDraw(); });
 
 /* ------------------------------------------------ 导入 / 识别 ---------- */
 /* 默认网格：整数倍放大，长边落在 32~80 格；超大图按比例缩到 400 以内，
@@ -4308,6 +4353,76 @@ renderProgress();
   /* ---------- 启动 ---------- */
   setTimeout(function(){ loadShareHash(); }, 400);
   setTimeout(function(){ refreshStats(); renderProgress(); }, 900);
+})();
+</script>
+
+<div id="drawerMask" aria-hidden="true"></div>
+<script>
+/* [hackone] 平板：抽屉面板 + 双指缩放 */
+(function(){
+  var body = document.body;
+  var mask = document.getElementById('drawerMask');
+  var L = document.getElementById('sideToggle');
+  var R = document.getElementById('rightToggle');
+  function sync(){
+    if (L) L.setAttribute('aria-expanded', body.classList.contains('drawer-left') ? 'true' : 'false');
+    if (R) R.setAttribute('aria-expanded', body.classList.contains('drawer-right') ? 'true' : 'false');
+  }
+  function close(){ body.classList.remove('drawer-left','drawer-right'); sync(); }
+  function toggle(side){
+    var cls = 'drawer-' + side, on = body.classList.contains(cls);
+    close();
+    if (!on) body.classList.add(cls);
+    sync();
+  }
+  if (L) L.addEventListener('click', function(){ toggle('left'); });
+  if (R) R.addEventListener('click', function(){ toggle('right'); });
+  if (mask) mask.addEventListener('click', close);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+
+  var VIEW = document.getElementById('view');
+  if (!VIEW) return;
+  var pts = new Map(), pinch = null;
+  function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+  function mid(a, b){ return { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 }; }
+
+  VIEW.addEventListener('pointerdown', function(e){
+    if (e.pointerType !== 'touch') return;
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (pts.size === 2 && typeof S !== 'undefined' && S.cells){
+      var p = Array.from(pts.values());
+      pinch = { d: Math.max(1, dist(p[0], p[1])), cell: S.cell, m: mid(p[0], p[1]),
+                sl: VIEW.scrollLeft, st: VIEW.scrollTop };
+      S.pinching = true;
+      if (typeof window.cancelStroke === 'function') window.cancelStroke();
+      e.preventDefault();
+    }
+  }, { capture:true, passive:false });
+
+  VIEW.addEventListener('pointermove', function(e){
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (!pinch || pts.size < 2) return;
+    var p = Array.from(pts.values()).slice(0, 2);
+    var d = Math.max(1, dist(p[0], p[1]));
+    var m = mid(p[0], p[1]);
+    try { window.animateZoom(pinch.cell * (d / pinch.d), m.x, m.y); } catch (err) {}
+    VIEW.scrollLeft = pinch.sl - (m.x - pinch.m.x);
+    VIEW.scrollTop  = pinch.st - (m.y - pinch.m.y);
+    e.preventDefault();
+  }, { capture:true, passive:false });
+
+  function end(e){
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size < 2){
+      if (pinch) window.__pinchGuard = Date.now();
+      pinch = null;
+      if (typeof S !== 'undefined') S.pinching = false;
+    }
+  }
+  window.addEventListener('pointerup', end, true);
+  window.addEventListener('pointercancel', end, true);
 })();
 </script>
 </body>
