@@ -72,16 +72,6 @@ cd share && npx wrangler deploy     # 短链 Worker（KV，180 天过期，单�
 
 进度按格子位置记录：整理配色、重新识别、撤销都不会把它清零；画布尺寸变了才重置。
 
-## 协作约定
-
-| 事项 | 约定 |
-| --- | --- |
-| 主分支 | `main`，保持随时可运行 |
-| 开发 | 每人开特性分支：`feat/xxx`、`fix/xxx` |
-| 提交 | 一次提交只做一件事，信息写清「改了什么、为什么」 |
-| 合并 | 通过 Pull Request 合并，至少 1 人看过 |
-| 冲突 | 每天开工前先 `git pull --rebase` |
-
 ## 文档
 
 - 发布说明：[docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md)

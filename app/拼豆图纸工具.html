@@ -568,13 +568,33 @@
   .drawer-btn{display:none}
   #grid,#view{touch-action:none}
 
-  @media (max-width:1199px){
-    #app{grid-template-columns:264px minmax(0,1fr) 268px}
+  /* 横屏平板优先：宽度越窄，侧栏越瘦，把画布让出来 */
+  @media (max-width:1279px){
+    #app{grid-template-columns:256px minmax(0,1fr) 260px}
   }
-  @media (max-width:1023px){
-    #app{grid-template-columns:236px minmax(0,1fr) 240px}
+  @media (max-width:1099px){
+    #app{grid-template-columns:240px minmax(0,1fr) 244px}
     #bar .iconbtn{width:34px;height:34px}
     #modebar .tools button{width:36px;height:36px}
+    #barPos{display:none}
+    #barInfo{font-size:11px}
+    #bar{gap:6px}
+  }
+
+  /* 横屏平板：高度紧张，压掉纵向装饰 */
+  @media (max-height:880px) and (min-width:901px){
+    #bar{padding-top:4px;padding-bottom:4px}
+    #modebar{padding-top:3px;padding-bottom:3px}
+    #paintbar{padding-top:3px;padding-bottom:3px;gap:10px}
+    #side .grp{padding:7px 9px 8px}
+    #dock{padding:7px 12px 8px}
+    #side .gt{padding-bottom:5px}
+  }
+  @media (max-height:800px) and (min-width:901px){
+    #modebar .tools button{width:38px;height:38px}
+    #modebar .tools button svg{width:19px;height:19px}
+    #modebar .tools{gap:0}
+    #modebar .tsep{margin:2px 3px}
   }
   @media (max-width:900px){
     #app{grid-template-columns:minmax(0,1fr)}
