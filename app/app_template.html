@@ -628,6 +628,18 @@
     #paintbar input[type=range]{height:30px}
     #palGrid .chip{min-height:44px}
   }
+
+  /* [hackone] 细节修订 */
+  #side .gt b{font-weight:700;color:var(--ink2);font-variant-numeric:tabular-nums}
+  #right .gt{justify-content:space-between}
+  #right .gt .chev{margin-left:auto}
+  #right .grp[data-g="prog"]>.gt{cursor:default}
+
+  /* banner 图标：36×22（黄金比，同参考版） */
+  #bar .iconbtn{width:36px;height:22px;border-radius:6px}
+  @media (pointer:coarse){
+    #bar .iconbtn{width:44px;height:27px}
+  }
 </style>
 </head>
 <body>
@@ -637,7 +649,7 @@
   <aside id="side">
 
     <div class="grp" data-g="docs">
-      <div class="gt"><span>画布</span><span class="gmeta"><b id="docCount">0</b></span><i class="chev"></i></div>
+      <div class="gt"><span>画布（<b id="docCount">0</b>）</span><i class="chev"></i></div>
       <div class="gb"><div id="docList"></div></div>
     </div>
 
@@ -786,7 +798,7 @@
     </div>
 
     <div class="grp" data-g="prog">
-      <div class="gt"><span>拼装进度</span><span class="gmeta"><b id="progTotal">—</b></span><i class="chev"></i></div>
+      <div class="gt"><span>拼装进度</span><span class="gmeta"><b id="progTotal">—</b></span></div>
       <div class="gb"><div id="progBar"><i id="progFill"></i></div></div>
     </div>
 
@@ -2309,7 +2321,7 @@ function openSimPop(from, left, top, w){
         + '<em>ΔE ' + c.d.toFixed(1) + '</em></div>';
     }).join('');
   sp.style.left = left + 'px';
-  sp.style.width = Math.min(w, 320) + 'px';
+  sp.style.width = w + 'px';
   sp.style.top = '10px';
   sp.hidden = false;
   const hh = sp.offsetHeight;
@@ -3318,6 +3330,7 @@ renderProgress();
 <script>
 (function(){
   document.querySelectorAll('#side .grp[data-g], #right .grp[data-g]').forEach(function(g){
+    if (g.dataset.g === 'prog') return;   // 拼装进度常展开，不做收拉
     var key = 'hc.g.' + g.dataset.g;
     if (localStorage.getItem(key) === '1') g.classList.add('collapsed');
     var t = g.querySelector('.gt');
