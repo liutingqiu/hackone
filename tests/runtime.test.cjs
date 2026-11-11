@@ -223,7 +223,128 @@ test('share Worker enforces streamed byte limits and rejects malformed UTF-8 bef
   assert.equal((await worker.fetch(request('x', { 'content-length': '400001' }), env)).status, 413);
   assert.equal((await worker.fetch(request(new Uint8Array([255])), env)).status, 400);
   assert.equal((await worker.fetch(request(''), env)).status, 400);
-  assert.equal(saved.size, 1);
+  const docs = [...saved.keys()].filter(k => !String(k).startsWith('~rl:'));
+  assert.deepEqual(docs.map(k => saved.get(k)), ['rpayload']);
+});
+
+test('fit check uses CSS pixels, and a mark stroke keeps one state', () => {
+  const source = html.slice(html.indexOf('function viewFits('), html.indexOf('/* ------------------------------------------------ 状态'));
+  const c = {};
+  vm.createContext(c);
+  vm.runInContext(source, c);
+  assert.equal(c.viewFits(800, 600, 900, 700), true);
+  assert.equal(c.viewFits(1600, 1200, 900, 700), false);
+  assert.equal(c.viewFits(902, 600, 900, 700), false);
+  assert.equal(c.markStrokePaints(false), true);
+  assert.equal(c.markStrokePaints(true), false);
+  assert.equal(c.shouldCommitVerify(10, 2, 20), true);
+  assert.equal(c.shouldCommitVerify(3, 10, 20), false);
+  assert.equal(c.shouldCommitVerify(2, 0, 20), false);
+  assert.equal(c.purchaseSearchQuery('Hama', 'H01'), 'Hama H01 拼豆');
+});
+
+test('mark stroke writes the same state onto mixed cells', () => {
+  const source = html.slice(html.indexOf('function applyProgress('), html.indexOf('function saveDoc('));
+  const S = { cells: Int32Array.from([1, 1, 1, 1]), progress: new Uint8Array([0b0101]), gw: 4 };
+  const c = { S, syncProgress() {}, saveProgress() {}, renderProgress() {}, requestDraw() {}, window: {} };
+  vm.createContext(c);
+  vm.runInContext(source, c);
+  const on = false;
+  c.applyProgress(0, on);
+  c.applyProgress(1, on);
+  c.applyProgress(2, on);
+  assert.equal(S.progress[0] & 0b111, 0);
+  c.applyProgress(0, true);
+  c.applyProgress(1, true);
+  assert.equal(S.progress[0] & 0b011, 0b011);
+});
+
+test('color merge keeps indexes that are not in the replacement map', () => {
+  const source = html.slice(html.indexOf('function applyColorMap('), html.indexOf('function tidyApply('));
+  const c = {};
+  vm.createContext(c);
+  vm.runInContext(source, c);
+  const rep = new Map([[0, 1]]);
+  const result = c.applyColorMap(Int32Array.from([0, 1, 5, -1]), rep);
+  assert.deepEqual(Array.from(result.out), [1, 1, 5, -1]);
+  assert.equal(result.changed, 1);
+});
+
+test('A4 board header counts only that board', () => {
+  const source = html.slice(html.indexOf('function countBoardCells('), html.indexOf('function renderA4Board('));
+  const c = {};
+  vm.createContext(c);
+  vm.runInContext(source, c);
+  const cells = new Int32Array(30 * 2).fill(-1);
+  cells[0] = 3;
+  cells[29] = 4;
+  cells[30] = 3;
+  const left = c.countBoardCells(cells, 30, 0, 0, 29);
+  const right = c.countBoardCells(cells, 30, 1, 0, 29);
+  assert.deepEqual([left.colors, left.beads, right.colors, right.beads], [1, 2, 1, 1]);
+});
+
+test('undo of a brand snapshot restores the previous indexes and leaves older strokes alone', () => {
+  const source = html.slice(html.indexOf('function entryBytes('), html.indexOf('/* ------------------------------------------------ 绘画原语'));
+  const S = { gw: 2, gh: 1, base: Int32Array.from([0, 1]), cells: Int32Array.from([0, 1]),
+    progress: new Uint8Array([1]), history: [], future: [], histBytes: 0,
+    brandId: 'hama', codeSys: 'hama', maxColors: 0 };
+  let built = 0;
+  const c = { S, HIST_BYTES: 1e6, $: () => null, colourSystemOptions() {}, buildPalette() { built++; },
+    installDoc(w, h, base) { S.gw = w; S.gh = h; S.base = base; S.cells = Int32Array.from(base); },
+    resetProgress() { S.progress = new Uint8Array(1); },
+    progressByteCount: () => 1, progressPatternHash: () => 'x',
+    renderProgress() {}, requestDraw() {}, toast() {}, recount() {}, renderUsage() {}, renderSimilar() {},
+    paintBuffer() {}, inspect() {} };
+  vm.createContext(c);
+  vm.runInContext(source, c);
+  c.pushHist({ t: 'c', pos: Int32Array.from([0]), before: Int32Array.from([0]), after: Int32Array.from([1]) });
+  c.pushSnap();
+  S.brandId = 'standard';
+  S.base = Int32Array.from([4, 5]);
+  S.cells = Int32Array.from([4, 5]);
+  assert.equal(S.history[0].before[0], 0);
+  assert.equal(S.history[0].brandId, 'hama');
+  assert.equal(c.undo(), true);
+  assert.equal(S.brandId, 'hama');
+  assert.deepEqual(Array.from(S.base), [0, 1]);
+  assert.equal(S.progress[0], 1);
+  assert.equal(S.history[0].before[0], 0);
+  assert.ok(built >= 1);
+  S.brandId = 'standard';
+  assert.equal(c.undo(), false);
+  assert.equal(S.history.length, 1);
+  assert.equal(S.base[0], 0);
+});
+
+test('share save confirms the stored body, expires with the object, and rate limits', async () => {
+  const src = fs.readFileSync(path.join(root, 'share/worker.js'), 'utf8');
+  const { default: worker } = await import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'));
+  const saved = new Map();
+  let clashes = 0;
+  const env = { PINDA: {
+    get: async k => saved.has(k) ? saved.get(k) : null,
+    put: async (k, v) => {
+      if (!String(k).startsWith('~rl:') && clashes < 1) { clashes++; saved.set(k, 'other-user'); return; }
+      saved.set(k, v);
+    }
+  } };
+  const request = body => new Request('https://example.test/api/save', { method: 'POST', body, duplex: 'half' });
+  const first = await worker.fetch(request('mine'), env);
+  assert.equal(first.status, 200);
+  const id = (await first.json()).id;
+  assert.equal(id.length, 7);
+  assert.equal(saved.get(id), 'mine');
+  assert.equal([...saved.values()].includes('other-user'), true);
+  const got = await worker.fetch(new Request('https://example.test/api/get/' + id), env);
+  assert.equal(got.headers.get('cache-control'), 'public, max-age=15552000');
+  const limited = { PINDA: {
+    get: async k => saved.get(k) ?? null,
+    put: async (k, v) => saved.set(k, v)
+  } };
+  saved.clear();
+  for (let i = 0; i < 30; i++) assert.equal((await worker.fetch(request('doc-' + i), limited)).status, 200);
+  assert.equal((await worker.fetch(request('one-more'), limited)).status, 429);
 });
 
 test('all production scripts parse and generated HTML matches both template and Pages artifact', () => {

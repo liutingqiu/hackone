@@ -1018,6 +1018,22 @@ function clampInt(n, lo, hi){
   if (!isFinite(n)) n = lo;
   return Math.max(lo, Math.min(hi, n));
 }
+// 适应窗口比较的是 CSS 像素。canvas.width 是设备像素，2x 屏上会比视口大一倍。
+function viewFits(cssW, cssH, viewW, viewH){
+  if (!(cssW > 0) || !(cssH > 0) || !(viewW > 0) || !(viewH > 0)) return false;
+  return cssW <= viewW + 1 && cssH <= viewH + 1;
+}
+// 标记拖动整段只用按下那一格的目标：未拼则一路标上，已拼则一路取消。
+function markStrokePaints(wasMarked){ return !wasMarked; }
+// 照片对不齐时匹配很少、错格很多。这种结果只提示，不写进度。
+function shouldCommitVerify(matched, wrong, pattern){
+  if (!pattern || matched < 1) return false;
+  if (wrong > matched) return false;
+  return matched / pattern >= 0.4;
+}
+function purchaseSearchQuery(brandLabel, code){
+  return String(brandLabel || '拼豆') + ' ' + String(code || '') + ' 拼豆';
+}
 
 /* ------------------------------------------------ 状态 ------------------ */
 /* 文档模型：S.base 是「未限色」的匹配结果（-1 = 空格），是图纸的真身；
@@ -1087,18 +1103,9 @@ function remapBase(oldPal){
     return nv;
   };
   for (let i = 0; i < S.base.length; i++) S.base[i] = remapOne(S.base[i]);
-  // 撤销记录里存的是旧色板索引，换品牌后必须一起映射，否则撤销会写入越界索引
-  for (const h of S.history) remapEntry(h, remapOne);
-  for (const h of S.future) remapEntry(h, remapOne);
+  // 旧笔画仍用换品牌前的色号。换品牌本身是一条文档快照，撤销先回到旧品牌，再撤销那些笔画。
+  // 就地改写历史会让「撤销换品牌」之后的笔画对不上色板。
   applyLimit(false);
-}
-function remapEntry(h, fn){
-  if (h.t === 'c'){
-    for (let k = 0; k < h.before.length; k++){ h.before[k] = fn(h.before[k]); h.after[k] = fn(h.after[k]); }
-  } else {
-    if (h.before && h.before.base) for (let k = 0; k < h.before.base.length; k++) h.before.base[k] = fn(h.before.base[k]);
-    if (h.after && h.after.base) for (let k = 0; k < h.after.base.length; k++) h.after.base[k] = fn(h.after.base[k]);
-  }
 }
 function renderAlias(){
   const box = $('palInfo');
@@ -1231,7 +1238,8 @@ function mapCells(){
   const W = S.gw, H = S.gh;
   const rgba = sampleImage();
   const n = W*H;
-  S.ext = S.dropBg ? maskBackground(rgba, W, H, 60) : null;
+  // 加权平方距离 900 ≈ 各通道差 10。60 连 JPEG 白底的噪声都泛洪不过去。
+  S.ext = S.dropBg ? maskBackground(rgba, W, H, 900) : null;
   const cache = new Map();
   const base = new Int32Array(n).fill(-1);
 
@@ -1461,16 +1469,25 @@ function renderProgress(){
   $('progFill').style.width = (totalBeads ? done / totalBeads * 100 : 0) + '%';
 
 }
-function toggleProgress(i){
-  if (!S.cells) return;
-  if (i < 0 || i >= S.cells.length) return;
-  if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
+function applyProgress(i, on){
+  if (!S.cells || i < 0 || i >= S.cells.length || S.cells[i] < 0) return false;
   syncProgress();
   const byte = i >> 3, bit = 1 << (i & 7);
-  S.progress[byte] ^= bit;
+  const was = !!(S.progress[byte] & bit);
+  if (was === !!on) return false;
+  if (on) S.progress[byte] |= bit;
+  else S.progress[byte] &= ~bit;
+  if (typeof window.noteProgress === 'function') window.noteProgress(i, was, !!on);
   saveProgress();
   renderProgress();
   requestDraw();
+  return true;
+}
+function toggleProgress(i){
+  if (!S.cells || i < 0 || i >= S.cells.length) return false;
+  if (S.cells[i] < 0){ toast('空格子不用标进度'); return false; }
+  syncProgress();
+  return applyProgress(i, markStrokePaints(hasProgress(i)));
 }
 function saveDoc(){
   if (!S.cells || !S.base) return;
@@ -1750,6 +1767,7 @@ function resampleBase(nw, nh, mode){
     return out;
   }
   const shrinking = nw <= ow && nh <= oh && (nw < ow || nh < oh);
+  const colorCache = new Map();
   if (shrinking && mode === 'area'){
     for (let y = 0; y < nh; y++){
       const sy0 = y*oh/nh, sy1 = (y+1)*oh/nh;
@@ -1774,7 +1792,7 @@ function resampleBase(nw, nh, mode){
         }
         if (!tot || !wsum || wsum/tot < 0.34) continue;
         out[y*nw + x] = nearestIdx(
-          [Math.round(r/wsum), Math.round(g/wsum), Math.round(b/wsum)], new Map(), S.algo);
+          [Math.round(r/wsum), Math.round(g/wsum), Math.round(b/wsum)], colorCache, S.algo);
       }
     }
     return out;
@@ -1889,6 +1907,7 @@ function entryBytes(e){
   return e.pos.byteLength + e.before.byteLength + e.after.byteLength;
 }
 function pushHist(e){
+  if (!e.brandId) e.brandId = S.brandId;
   S.future.length = 0;
   S.history.push(e);
   S.histBytes += entryBytes(e);
@@ -1897,9 +1916,25 @@ function pushHist(e){
   }
 }
 function snapDoc(){
-  // 进度一起拍快照：撤销「新建空白」「整理」「改尺寸」时已拼记录不该丢
+  // 进度和品牌一起拍：撤销换品牌时色号索引必须回到旧色板，不能只用当前品牌去解释
   return { gw:S.gw, gh:S.gh, base:Int32Array.from(S.base),
-           prog: (S.progress && S.progress.length) ? Uint8Array.from(S.progress) : null };
+           prog: (S.progress && S.progress.length) ? Uint8Array.from(S.progress) : null,
+           brandId:S.brandId, codeSys:S.codeSys, maxColors:S.maxColors };
+}
+function restoreSnapMeta(s){
+  if (!s) return;
+  const brandChanged = !!(s.brandId && s.brandId !== S.brandId);
+  const sysChanged = !!(s.codeSys && s.codeSys !== S.codeSys);
+  if (s.maxColors != null && s.maxColors !== S.maxColors){
+    S.maxColors = s.maxColors;
+    if ($('maxc')) $('maxc').value = S.maxColors;
+  }
+  if (!brandChanged && !sysChanged) return;
+  if (brandChanged) S.brandId = s.brandId;
+  if (sysChanged) S.codeSys = s.codeSys;
+  if ($('brand')) $('brand').value = S.brandId;
+  colourSystemOptions();
+  buildPalette({ remap:false });
 }
 function pushSnap(){
   if (!S.base) return;
@@ -1907,6 +1942,11 @@ function pushSnap(){
 }
 function undo(){
   if (!S.history.length){ toast('没有可撤销的操作'); return false; }
+  const top = S.history[S.history.length - 1];
+  if (top.t === 'c' && top.brandId && top.brandId !== S.brandId){
+    toast('这一步属于换品牌之前，请先撤销换品牌');
+    return false;
+  }
   const e = S.history.pop();
   S.histBytes -= entryBytes(e);
   if (e.t === 'd' && !e.after){
@@ -1931,6 +1971,7 @@ function applyEntry(e, dir){
   S.preview = null; S.drag = null; S.stroke = null; S.dragging = false;
   if (e.t === 'd'){
     const s = (dir === 'undo') ? e.before : (e.after || e.before);
+    restoreSnapMeta(s);
     installDoc(s.gw, s.gh, Int32Array.from(s.base));
     if (s.prog && s.prog.length === progressByteCount()){
       S.progress = Uint8Array.from(s.prog);
@@ -2197,8 +2238,13 @@ async function copyPurchase(){
   }
   toast(ok ? '已复制，可直接粘给店家' : '复制失败，请手动选择清单');
 }
+function purchaseBrandLabel(){
+  const b = paletteOf(S.brandId);
+  const sys = b && b.codeSystems.find(c => c.id === S.codeSys);
+  return (sys && sys.label) || (b && b.short) || '拼豆';
+}
 function taobaoUrl(code){
-  return 'https://s.taobao.com/search?q=' + encodeURIComponent('MARD ' + code + ' 拼豆');
+  return 'https://s.taobao.com/search?q=' + encodeURIComponent(purchaseSearchQuery(purchaseBrandLabel(), code));
 }
 function openPurchase(code){
   const win = window.open(taobaoUrl(code), '_blank');
@@ -2308,6 +2354,20 @@ function despeckle(out, maxSize){
   }
   return moved;
 }
+// 只改 rep 里出现的色号。限色藏起来的索引不在表里，必须留在 base 里。
+function applyColorMap(base, rep){
+  const out = Int32Array.from(base);
+  let changed = 0;
+  for (let i = 0; i < out.length; i++){
+    const v = out[i];
+    if (v < 0) continue;
+    const t = rep.get(v);
+    if (t === undefined || t === v) continue;
+    out[i] = t;
+    changed++;
+  }
+  return { out, changed };
+}
 function tidyApply(){
   if (!S.cells || !S.used || !S.used.length){ toast('先生成图纸'); return 0; }
   const th = clampInt($('tidyPreset').value, 0, 100);
@@ -2343,26 +2403,23 @@ function tidyApply(){
     for (const m of members) rep.set(m, members[0]);
   }
 
-  const out = new Int32Array(S.cells.length).fill(-1);
-  let changed = 0;
-  for (let i = 0; i < S.cells.length; i++){
-    const v = S.cells[i];
-    if (v < 0) continue;
-    const t = rep.get(v);
-    const nv = (t === undefined) ? v : t;
-    out[i] = nv;
-    if (nv !== v) changed++;
+  const mapped = applyColorMap(S.base, rep);
+  let changed = mapped.changed;
+  const view = limitColors(mapped.out, S.maxColors);
+  if (k > 0){
+    const beforeSpeckle = Int32Array.from(view);
+    changed += despeckle(view, k);
+    for (let i = 0; i < view.length; i++) if (view[i] !== beforeSpeckle[i]) mapped.out[i] = view[i];
   }
-  if (k > 0) changed += despeckle(out, k);
 
   let after = 0;
   const seen = new Set();
-  for (let i = 0; i < out.length; i++) if (out[i] >= 0 && !seen.has(out[i])){ seen.add(out[i]); after++; }
+  for (let i = 0; i < view.length; i++) if (view[i] >= 0 && !seen.has(view[i])){ seen.add(view[i]); after++; }
   if (!changed){ toast('没有找到可以合并的相近色'); return 0; }
 
   pushSnap();
-  S.base = out;
-  S.cells = limitColors(out, S.maxColors);
+  S.base = mapped.out;
+  S.cells = view;
   S.highlight = -1; S.hlCells = null; S.selCell = -1;
   S.buf = null; S.bufCtx = null;
   ensureBuffer();
@@ -2675,10 +2732,13 @@ canvas.addEventListener('pointerdown', e => {
   if (i < 0 || !S.cells) return;
   // [hackone] 标记工具：只切完成态，不动图案
   if (S.tool === 'mark'){
+    if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
+    syncProgress();
+    S.markOn = markStrokePaints(hasProgress(i));
     S.markSet = new Set([i]);
     S.markLast = i;
     S.dragging = 'mark';
-    toggleProgress(i);
+    applyProgress(i, S.markOn);
     S.selCell = i;
     inspect(i);
     requestDraw();
@@ -2710,12 +2770,13 @@ canvas.addEventListener('pointermove', e => {
       const v = S.cells ? S.cells[i] : -1;
       const lab = v < 0 ? '空' : S.palette[v].code;
       $('barPos').textContent = `${x},${y} → ${lab}`;
-      requestDraw();
+      const brushPreview = (S.tool === 'pencil' || S.tool === 'eraser') && S.brush > 1;
+      if (brushPreview || S.drag || S.dragging) requestDraw();
     }
     if (S.dragging === 'mark'){
       if (i !== S.markLast){
         S.markLast = i;
-        if (!S.markSet.has(i)){ S.markSet.add(i); toggleProgress(i); }
+        if (S.markSet && !S.markSet.has(i)){ S.markSet.add(i); applyProgress(i, S.markOn); }
       }
     }
     else if (S.drag) updatePreview(i);
@@ -3016,6 +3077,22 @@ function renderA4Overview(page, totalPages){
   a4Footer(c, `总览 · 共 ${bc*br} 块 29×29 底板 · 每块板单独一页`, page, totalPages);
   return cv;
 }
+function countBoardCells(cells, gw, bx, by, size){
+  size = size || 29;
+  const sx = bx * size, sy = by * size;
+  const gh = gw ? Math.floor(cells.length / gw) : 0;
+  const cols = Math.max(0, Math.min(size, gw - sx));
+  const rows = Math.max(0, Math.min(size, gh - sy));
+  let beads = 0;
+  const seen = new Set();
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++){
+    const v = cells[(sy + y) * gw + sx + x];
+    if (v < 0) continue;
+    beads++;
+    seen.add(v);
+  }
+  return { colors: seen.size, beads };
+}
 function renderA4Board(bx, by, page, totalPages){
   const cv = a4Canvas(), c = cv.getContext('2d');
   c.fillStyle = '#fff'; c.fillRect(0, 0, A4_PAGE_W, A4_PAGE_H);
@@ -3023,8 +3100,8 @@ function renderA4Board(bx, by, page, totalPages){
   const sx = bx*BOARD_SIZE, sy = by*BOARD_SIZE;
   const cols = Math.min(BOARD_SIZE, S.gw - sx), rows = Math.min(BOARD_SIZE, S.gh - sy);
   const no = boardNo(bx, by);
-  const totalBeads = S.used.reduce((a, u) => a + u.c, 0);
-  a4Header(c, `第 ${no} 块板 · 第 ${by+1} 行 第 ${bx+1} 列`, `全局第 ${sx+1}–${sx+cols} 列 / 第 ${sy+1}–${sy+rows} 行 · ${S.used.length} 色 / ${totalBeads} 颗`);
+  const usage = countBoardCells(S.cells, S.gw, bx, by, BOARD_SIZE);
+  a4Header(c, `第 ${no} 块板 · 第 ${by+1} 行 第 ${bx+1} 列`, `全局第 ${sx+1}–${sx+cols} 列 / 第 ${sy+1}–${sy+rows} 行 · 本板 ${usage.colors} 色 / ${usage.beads} 颗`);
   const areaW = A4_PAGE_W - A4_MARGIN*2 - 40, areaH = A4_PAGE_H - 310;
   const cs = Math.max(10, Math.floor(Math.min(areaW / cols, areaH / rows)));
   const ox = A4_MARGIN + 20 + Math.floor((areaW - cols*cs)/2);
@@ -3204,14 +3281,19 @@ document.querySelectorAll('#anchor button').forEach(btn => btn.addEventListener(
 
 /* 色板与识别 */
 $('brand').addEventListener('change', () => {
-  S.brandId = $('brand').value;
+  const next = $('brand').value;
+  if (!next || next === S.brandId) return;
+  const oldPal = S.palette ? S.palette.slice() : null;
+  if (S.base && oldPal && oldPal.length) pushSnap();
+  S.brandId = next;
   colourSystemOptions();
-  buildPalette();
+  buildPalette({ remap:false });
+  if (S.base && oldPal && oldPal.length) remapBase(oldPal);
   updateSizeInfo();
 });
 $('codeSys').addEventListener('change', () => {
   S.codeSys = $('codeSys').value;
-  buildPalette();
+  buildPalette({ remap:false });
   renderUsage();
   if (S.selCell >= 0) inspect(S.selCell);
 });
@@ -3568,6 +3650,9 @@ renderProgress();
     if (!DOCS.ready || !DOCS.activeId || DOCS.applying) return;
     DOCS.dirty = true;
     DOCS.revision++;
+    if (typeof setTimeout !== 'function') return;
+    if (DOCS._saveTimer && typeof clearTimeout === 'function') clearTimeout(DOCS._saveTimer);
+    DOCS._saveTimer = setTimeout(function(){ saveActive(); }, 250);
   }
 
   function autoName(){
@@ -3583,6 +3668,9 @@ renderProgress();
 
   function makeThumb(){
     if (!S.cells || !S.palette) return '';
+    var fresh = DOCS.forceThumb;
+    DOCS.forceThumb = false;
+    if (!fresh && DOCS._thumb && DOCS._thumbId === DOCS.activeId && Date.now() - DOCS._thumbAt < 5000) return DOCS._thumb;
     try {
       var gw = S.gw, gh = S.gh;
       var k = Math.max(1, Math.ceil(Math.max(gw, gh) / 72));
@@ -3602,7 +3690,9 @@ renderProgress();
         }
       }
       x.putImageData(img, 0, 0);
-      return c.toDataURL('image/png');
+      var url = c.toDataURL('image/png');
+      if (url){ DOCS._thumb = url; DOCS._thumbAt = Date.now(); DOCS._thumbId = DOCS.activeId; }
+      return url || '';
     } catch (e) { return ''; }
   }
   function snap(){
@@ -3915,7 +4005,7 @@ renderProgress();
       flushSaveQueue();
       setInterval(function(){ if (DOCS.dirty || Object.keys(DOCS.failedSaves).length) saveActive(); }, 1500);
       window.addEventListener('beforeunload', function(){ if (DOCS.dirty || Object.keys(DOCS.failedSaves).length) saveActive(); });
-      window.addEventListener('pagehide', saveActive);
+      window.addEventListener('pagehide', function(){ DOCS.forceThumb = true; saveActive(); });
       document.addEventListener('visibilitychange', function(){ if (document.hidden) saveActive(); });
     });
   }
@@ -4021,36 +4111,25 @@ renderProgress();
     };
   }
 
-  var origToggle = window.toggleProgress;
-  window.toggleProgress = function(i){
-    if (!S.cells || i < 0 || i >= S.cells.length) return;
-    if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
-    syncProgress();
-    var was = hasProgress(i);
-    var byte = i >> 3, bit = 1 << (i & 7);
-    S.progress[byte] ^= bit;
-    ensureStats();
-    var bc = boardCols();
-    var b = Math.floor((i / S.gw | 0) / 29) * bc + Math.floor((i % S.gw) / 29);
-    if (S.boardDone && S.boardDone.length > b){
-      S.boardDone[b] += was ? -1 : 1;
-      S.doneCount += was ? -1 : 1;
-      if (!was && S.boardTot[b] && S.boardDone[b] >= S.boardTot[b]){
-        if (!S.doneBoards) S.doneBoards = {};
-        if (!S.doneBoards[b]){ S.doneBoards[b] = 1; onBoardDone(b); }
-      }
-    }
-    saveProgress();
-    renderProgress();
-    requestDraw();
-  };
-
   function onBoardDone(b){
     var bc = boardCols();
     var no = (b % bc) + Math.floor(b / bc) * bc + 1;
     toast('第 ' + no + ' 块板拼完了 🎉 可以生成进度卡片');
     if (window.__flashBoardCard) window.__flashBoardCard();
   }
+  window.noteProgress = function(i, was, on){
+    ensureStats();
+    var bc = boardCols();
+    var b = Math.floor((i / S.gw | 0) / 29) * bc + Math.floor((i % S.gw) / 29);
+    if (!(S.boardDone && S.boardDone.length > b)) return;
+    S.boardDone[b] += was ? -1 : 1;
+    S.doneCount += was ? -1 : 1;
+    if (!on){ if (S.doneBoards) S.doneBoards[b] = 0; return; }
+    if (S.boardTot[b] && S.boardDone[b] >= S.boardTot[b]){
+      if (!S.doneBoards) S.doneBoards = {};
+      if (!S.doneBoards[b]){ S.doneBoards[b] = 1; onBoardDone(b); }
+    }
+  };
 
   /* ---------- F3 板完成提示 + 进度卡片 ---------- */
   window.shareCard = function(){
@@ -4286,8 +4365,10 @@ renderProgress();
         try {
           r = await fetch(SHARE_API + '/api/save', { method: 'POST', body: code });
           if (r.ok) break;
-          fail = r.status === 413 ? '图纸太大（超过 400 KB）' : '分享服务返回 ' + r.status;
-          if (r.status === 413) break;
+          fail = r.status === 413 ? '图纸太大（超过 400 KB）'
+            : r.status === 429 ? '分享太频繁，请稍后再试'
+            : '分享服务返回 ' + r.status;
+          if (r.status === 413 || r.status === 429) break;
         } catch(e){ r = null; fail = '网络不通'; }
         await new Promise(function(res){ setTimeout(res, 500); });
       }
@@ -4491,13 +4572,14 @@ renderProgress();
       try { data = c.getImageData(0, 0, gw*SS, gh*SS).data; }
       catch(e){ toast('照片读取失败'); return; }
       var used = S.used.map(function(u){ return { i: u.i, lab: S.palette[u.i].lab }; });
-      var mark = [], wrong = [], emptyN = 0, i = 0, total = gw*gh, skipWrong = false;
+      var mark = [], wrong = [], emptyN = 0, pattern = 0, i = 0, total = gw*gh, skipWrong = false;
       toast('正在核验，请稍候…');
       function step(){
         var budget = Date.now() + 24;
         while (i < total && Date.now() < budget){
           var dv = S.cells[i];
           if (dv < 0){ i++; continue; }
+          pattern++;
           var cx = i % gw, cy = (i / gw) | 0;
           var r = 0, g = 0, b = 0, cnt = 0;
           for (var sy = 0; sy < 2; sy++) for (var sx = 0; sx < 2; sx++){
@@ -4508,7 +4590,7 @@ renderProgress();
           }
           r = Math.round(r/cnt); g = Math.round(g/cnt); b = Math.round(b/cnt);
           var lab = srgbToLab([r, g, b]);
-          if (deltaE2000(lab, S.palette[dv].lab) < 12){ mark.push(i); i++; continue; }
+          if (deltaE2000(lab, S.palette[dv].lab) < 8){ mark.push(i); i++; continue; }
           if (r > 235 && g > 235 && b > 235){ emptyN++; i++; continue; }
           if (skipWrong){ emptyN++; i++; continue; }
           var hit = -1, best = 1e9;
@@ -4522,16 +4604,20 @@ renderProgress();
           i++;
         }
         if (i < total){ requestAnimationFrame(step); return; }
-        syncProgress();
-        mark.forEach(function(idx){ S.progress[idx >> 3] |= (1 << (idx & 7)); });
-        refreshStats(true); saveProgress(); renderProgress();
+        var commit = shouldCommitVerify(mark.length, wrong.length, pattern);
+        if (commit){
+          syncProgress();
+          mark.forEach(function(idx){ S.progress[idx >> 3] |= (1 << (idx & 7)); });
+          refreshStats(true); saveProgress(); renderProgress();
+        }
         S.verifyWrong = new Set(wrong);
         clearTimeout(window.__vwT);
         window.__vwT = setTimeout(function(){ S.verifyWrong = null; requestDraw(); }, 8000);
         requestDraw();
         $('vOut').innerHTML = '已拼 <b>' + mark.length + '</b> 格 · 疑似错位 <b>' + wrong.length +
-          '</b> 格（红框标出 8 秒）· 未拼 ' + emptyN + ' 格';
-        toast('核验完成：' + mark.length + ' 格已拼');
+          '</b> 格（红框标出 8 秒）· 未拼 ' + emptyN + ' 格' +
+          (commit ? '' : ' · 对不齐，没有改动进度');
+        toast(commit ? ('核验完成：' + mark.length + ' 格已标为已拼') : '照片和图纸对不齐，没有改动进度');
       }
       step();
     };
@@ -4601,10 +4687,19 @@ renderProgress();
   function store(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
   function load(k, d){ try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
 
+  function canvasCssBox(cv){
+    var w = parseFloat(cv.style.width), h = parseFloat(cv.style.height);
+    if (!(w > 0) || !(h > 0)){
+      var r = cv.getBoundingClientRect();
+      w = r.width; h = r.height;
+    }
+    return { w: w, h: h };
+  }
   function isFitted(){
     var v = document.getElementById('view'), cv = document.getElementById('grid');
     if (!v || !cv || !cv.width) return false;
-    return cv.width <= v.clientWidth + 1 && cv.height <= v.clientHeight + 1;
+    var box = canvasCssBox(cv);
+    return viewFits(box.w, box.h, v.clientWidth, v.clientHeight);
   }
   function refit(){
     try { if (typeof window.fit === 'function') window.fit(); } catch (e) {}
@@ -4614,8 +4709,9 @@ renderProgress();
       try { if (window.requestDraw) requestDraw(); } catch (e) {}
       var v = document.getElementById('view'), cv = document.getElementById('grid');
       if (!v || !cv || !cv.width) return;
-      if (cv.width <= v.clientWidth) v.scrollLeft = 0;
-      if (cv.height <= v.clientHeight) v.scrollTop = 0;
+      var box = canvasCssBox(cv);
+      if (box.w <= v.clientWidth + 1) v.scrollLeft = 0;
+      if (box.h <= v.clientHeight + 1) v.scrollTop = 0;
     });
   }
 
