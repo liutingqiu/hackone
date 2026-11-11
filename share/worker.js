@@ -5,6 +5,8 @@ const CORS = {
   'Access-Control-Allow-Headers': 'content-type'
 };
 const LIMIT = 400000;          // 单张图纸上限，约 400 KB 压缩文本
+const SHARE_TTL = 60 * 60 * 24 * 180;
+const SAVE_PER_HOUR = 30;
 
 function json(obj, status = 200){
   return new Response(JSON.stringify(obj), {
@@ -43,6 +45,24 @@ async function readBodyLimited(req){
   return new TextDecoder('utf-8', { fatal:true }).decode(bytes);
 }
 
+async function allowSave(env, req){
+  const ip = (req.headers.get('CF-Connecting-IP') || 'local').replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 80);
+  const key = '~rl:' + (ip || 'local');
+  const n = Number(await env.PINDA.get(key)) || 0;
+  if (n >= SAVE_PER_HOUR) return false;
+  await env.PINDA.put(key, String(n + 1), { expirationTtl: 3600 });
+  return true;
+}
+async function putFresh(env, body){
+  for (let i = 0; i < 6; i++){
+    const id = makeId(7);
+    if (await env.PINDA.get(id)) continue;
+    await env.PINDA.put(id, body, { expirationTtl: SHARE_TTL });
+    if ((await env.PINDA.get(id)) === body) return id;
+  }
+  return '';
+}
+
 export default {
   async fetch(req, env){
     const url = new URL(req.url);
@@ -54,13 +74,9 @@ export default {
       catch (e){ return json({ error: 'invalid_body' }, 400); }
       if (body === null) return json({ error: 'too_large', limit: LIMIT }, 413);
       if (!body) return json({ error: 'empty' }, 400);
-      let id = '';
-      for (let i = 0; i < 6 && !id; i++){
-        const cand = makeId(7);
-        if (!(await env.PINDA.get(cand))) id = cand;
-      }
+      if (!(await allowSave(env, req))) return json({ error: 'rate_limited' }, 429);
+      const id = await putFresh(env, body);
       if (!id) return json({ error: 'id_conflict' }, 500);
-      await env.PINDA.put(id, body, { expirationTtl: 60 * 60 * 24 * 180 });
       return json({ id: id, size: body.length });
     }
 
@@ -70,7 +86,7 @@ export default {
       if (!v) return new Response('not found', { status: 404, headers: CORS });
       return new Response(v, {
         headers: { ...CORS, 'content-type': 'text/plain; charset=utf-8',
-                   'cache-control': 'public, max-age=31536000, immutable' }
+                   'cache-control': 'public, max-age=' + SHARE_TTL }
       });
     }
 
