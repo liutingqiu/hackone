@@ -623,10 +623,19 @@
     #right{display:flex;right:0;left:auto;transform:translateX(103%);box-shadow:-12px 0 34px rgba(16,20,28,.18)}
     body.drawer-left #side{transform:none}
     body.drawer-right #right{transform:none}
-    #drawerMask{display:block;position:fixed;inset:0;z-index:65;background:rgba(16,20,28,.38);
-      opacity:0;pointer-events:none;transition:opacity .2s}
-    body.drawer-left #drawerMask,body.drawer-right #drawerMask{opacity:1;pointer-events:auto}
-    .drawer-btn{display:grid}
+    /* 竖向平板：左右各留一条窄边栏当抽屉把手，点它就拉出抽屉，不全靠 banner 那两个小按钮 */
+    .drawer-tab{display:none}
+  }
+  .drawer-tab{display:none;position:fixed;top:50%;z-index:66;width:16px;height:76px;margin-top:-38px;
+    padding:0;border:0;border-radius:8px;background:var(--panel);color:var(--ink3);
+    box-shadow:0 2px 10px #0000001f;place-items:center;cursor:pointer;transition:opacity .2s}
+  .drawer-tab svg{width:8px;height:20px}
+  .drawer-tab[hidden]{display:none}
+  #drawerL{left:0;border-radius:0 8px 8px 0}
+  #drawerR{right:0;border-radius:8px 0 0 8px}
+  @media (max-width:900px){
+    .drawer-tab{display:grid}
+    body.drawer-left #drawerL, body.drawer-right #drawerR{opacity:0;pointer-events:none}
   }
   @media (pointer:coarse){
     #modebar .tools button{width:44px;height:44px}
@@ -644,10 +653,12 @@
   #right .gt .chev{margin-left:auto}
   #right .grp[data-g="prog"]>.gt{cursor:default}
 
-  /* banner 图标：36×22（黄金比，同参考版） */
+  /* banner 图标：36×22（黄金比，同参考版）；触屏按 44×36 放大到可用热区 */
   #bar .iconbtn{width:36px;height:22px;border-radius:6px}
   @media (pointer:coarse){
-    #bar .iconbtn{width:44px;height:27px}
+    #bar .iconbtn{width:44px;height:36px}
+    #bar{gap:6px;padding:6px 10px;row-gap:6px}
+    #bar .iconbtn svg{width:19px;height:19px}
   }
 
   /* [hackone] 卡片标题：左侧蓝条 + 统一 SVG 箭头（取自参考版） */
@@ -661,6 +672,27 @@
     transform-origin:50% 50%;transition:transform .32s cubic-bezier(.16,1,.3,1);
   }
 
+  /* ---------- 拍照核验：四角框选层 ---------- */
+  #vQuad{position:fixed;inset:0;z-index:200;background:rgba(10,14,22,.72);
+    display:flex;align-items:center;justify-content:center;padding:16px}
+  #vQuad[hidden]{display:none}
+  .vq-box{position:relative;background:#0b0f16;border-radius:12px;overflow:hidden;
+    box-shadow:0 24px 60px #0006;max-width:100%;max-height:100%}
+  .vq-box img{display:block;user-select:none;-webkit-user-drag:none;pointer-events:none;opacity:.92}
+  .vq-svg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+  .vq-poly{fill:rgba(47,111,237,.16);stroke:#4d8dff;stroke-width:2;vector-effect:non-scaling-stroke}
+  .vq-h{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;
+    background:#fff;border:2px solid #2f6fed;box-shadow:0 2px 8px #0004;cursor:grab;touch-action:none}
+  .vq-h::after{content:"";position:absolute;inset:8px;border-radius:50%;background:#2f6fed}
+  .vq-h:active{cursor:grabbing;transform:scale(1.08)}
+  .vq-hint{position:absolute;left:0;right:0;top:0;padding:8px 12px;font-size:12px;color:#fff;
+    background:linear-gradient(#0009,#0000);pointer-events:none}
+  .vq-bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:flex-end;gap:8px;
+    padding:10px 12px;background:linear-gradient(#0000,#000a)}
+  .vq-bar button{min-height:36px;padding:0 16px;border-radius:8px;border:1px solid #ffffff33;
+    background:#ffffff1a;color:#fff;font:inherit;font-size:13px;cursor:pointer}
+  .vq-bar button.pri{background:#2f6fed;border-color:#2f6fed;font-weight:600}
+
   /* 相近色卡与色卡：谁被点，谁在上 */
   #palPop{z-index:122}
   #simPop{z-index:121}
@@ -670,10 +702,14 @@
   #modebar .tools button{width:36px;height:22px;padding:0;border-radius:6px}
   #modebar .tools svg{width:17px;height:17px}
   #modebar #flip{width:36px;height:22px;padding:0;margin-left:4px}
+  /* 窄屏一行放不下 11 个按钮：改成横向滑动，别再折成两行把画布顶下去 */
+  #modebar #tools{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #modebar #tools::-webkit-scrollbar{display:none}
+  #modebar #tools>*{flex:0 0 auto}
   @media (pointer:coarse){
-    #modebar .tools button{width:44px;height:27px}
+    #modebar .tools button{width:44px;height:36px}
     #modebar .tools button svg{width:20px;height:20px}
-    #modebar #flip{width:44px;height:27px}
+    #modebar #flip{width:44px;height:36px}
   }
 
   /* 展开/收回动画期间：内容块强制可见，高度由 JS 过渡 */
@@ -1194,6 +1230,7 @@ function paintBuffer(i){
   const v = S.cells[i];
   S.bufCtx.fillStyle = v < 0 ? '#f4f6f9' : S.palette[v].hex;
   S.bufCtx.fillRect(i % S.gw, (i / S.gw) | 0, 1, 1);
+  if (typeof dr !== 'undefined') dr.mark(i);
 }
 
 /* ------------------------------------------------ 识别（导入原图） ------ */
@@ -1373,6 +1410,12 @@ function flipGrid(){
   }
   if (S.selCell >= 0) S.selCell = mirrorIndex(S.selCell);
   if (S.highlight >= 0) S.hlCells = cellsWith(S.highlight);
+  // 核验红框和色卡浮层也是按下标存的，镜像后同样要跟着走
+  if (S.verifyWrong && S.verifyWrong.size){
+    const moved = new Set();
+    S.verifyWrong.forEach(function(i){ moved.add(mirrorIndex(i)); });
+    S.verifyWrong = moved;
+  }
   S.preview = null;
   S.flip = !S.flip;
   updateFlipBtn();
@@ -1480,7 +1523,8 @@ function applyProgress(i, on){
   if (typeof window.noteProgress === 'function') window.noteProgress(i, was, !!on);
   saveProgress();
   renderProgress();
-  requestDraw();
+  dr.mark(i);
+  requestPartialDraw();
   return true;
 }
 function toggleProgress(i){
@@ -1581,13 +1625,45 @@ const canvas = $('grid');
 const ctx = canvas.getContext('2d');
 let rafId = 0;
 
-function requestDraw(){
+/* [hackone] 大图纸别整张重画：记下每次改动碰过的格子，下一帧只重画这些格子所在的行带。
+   行带 = 脏格子覆盖的连续整行（含上下 1 行余量），竖着裁、横着铺满，
+   这样网格线、进度、色号、预览框都能按原来的画法原样重画，不用分两套代码。
+   dr.reset() 让下一次 draw() 退回全量重绘（换图、缩放、翻转、筛选状态变化都得走这条路）。
+   注意：它必须声明在 requestDraw / draw 之前——它们是函数声明，会在初始化阶段就被调用。 */
+const dr = {
+  full: true, x0:0, y0:0, x1:0, y1:0,
+  reset(){ this.full = true; },
+  mark(i){
+    const gw = S.gw;
+    const x = i % gw, y = (i / gw) | 0;
+    if (this.full) return;
+    if (this.x1 <= this.x0){ this.x0 = x; this.x1 = x + 1; this.y0 = y; this.y1 = y + 1; return; }
+    if (x < this.x0) this.x0 = x;
+    if (x + 1 > this.x1) this.x1 = x + 1;
+    if (y < this.y0) this.y0 = y;
+    if (y + 1 > this.y1) this.y1 = y + 1;
+  },
+  span(){
+    if (this.full || this.x1 <= this.x0) return null;
+    const y0 = Math.max(0, this.y0 - 1), y1 = Math.min(S.gh, this.y1 + 1);
+    this.full = true;
+    return { x0:0, y0, x1:S.gw, y1 };
+  }
+};
+function scheduleDraw(){
   if (rafId) return;
   rafId = 1;
   const raf = (typeof window !== 'undefined' && window.requestAnimationFrame)
     ? window.requestAnimationFrame.bind(window) : (fn => setTimeout(fn, 0));
   raf(() => { rafId = 0; draw(); });
 }
+// 全量重画：所有"画布整体状态变了"的地方都走这个
+function requestDraw(){
+  dr.reset();
+  scheduleDraw();
+}
+// 局部重画：只重画这次动过的行带，调用前必须已经把改动登记进 dr
+function requestPartialDraw(){ scheduleDraw(); }
 function effDpr(W, H){
   const base = Math.min(2, window.devicePixelRatio || 1);
   if (!W || !H) return base;
@@ -1615,6 +1691,8 @@ function visibleRange(){
   const y1 = Math.min(S.gh, Math.ceil(py1/S.cell) + 1);
   return (x1 > x0 && y1 > y0) ? { x0, y0, x1, y1 } : full;
 }
+const DIRTY_FULL_FROM = 12000;      // 一帧里脏格超过这么多，重画整张反而更快
+const progressFill = 'rgba(22,163,74,.32)';
 function draw(){
   if (!S.cells){ canvas.hidden = true; $('empty').style.display = ''; if ($('importPill')) $('importPill').hidden = true; return; }
   canvas.hidden = false;
@@ -1622,6 +1700,8 @@ function draw(){
   if ($('importPill')) $('importPill').hidden = false;
 
   const cs = S.cell, W = S.gw*cs, H = S.gh*cs;
+  // 尺寸变了、或者这次不是局部更新，就走整张重画
+  const band = dr.span();
   const dpr = effDpr(W, H);
   const pw = Math.round(W*dpr), ph = Math.round(H*dpr);
   if (canvas.width !== pw || canvas.height !== ph){   // 只在尺寸变了时重建画布缓冲
@@ -1631,22 +1711,40 @@ function draw(){
   canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, H);
-
   if (!S.buf) ensureBuffer();
+  if (!band){
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, H);
+  }
   ctx.imageSmoothingEnabled = false;
-  if (S.buf) ctx.drawImage(S.buf, 0, 0, S.gw, S.gh, 0, 0, W, H);
+  if (!band){
+    if (S.buf) ctx.drawImage(S.buf, 0, 0, S.gw, S.gh, 0, 0, W, H);
+  } else if (S.buf){
+    // 只把那几条行带贴回来。注意 setTransform(dpr) 之后坐标是 CSS 像素，
+    // 这里一律用 CSS 像素算，别混进设备像素（否则会整体贴偏 ×dpr）。
+    const by = band.y0*cs, bh = (band.y1 - band.y0)*cs;
+    ctx.clearRect(0, by, W, bh);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, by, W, bh);
+    ctx.drawImage(S.buf, 0, band.y0, S.gw, band.y1 - band.y0,
+                  0, by, W, bh);
+  }
 
-  const R = visibleRange();
+  const vis = visibleRange();
+  const R = band ? { x0:vis.x0, y0:Math.max(vis.y0, band.y0), x1:vis.x1, y1:Math.min(vis.y1, band.y1) } : vis;
+  if (R.x1 <= R.x0 || R.y1 <= R.y0) return;
   // [hackone] 已完成格：半透明绿，画在色号下面保证可读
   if (S.progress && S.progress.length === Math.ceil(S.cells.length / 8)){
-    ctx.fillStyle = 'rgba(22,163,74,.32)';
-    for (let y = R.y0; y < R.y1; y++) for (let x = R.x0; x < R.x1; x++){
-      const i = y*S.gw + x;
-      if (S.cells[i] >= 0 && (S.progress[i >> 3] & (1 << (i & 7)))){
-        ctx.fillRect(x*cs, y*cs, cs, cs);
+    if (progressFill !== 'rgba(22,163,74,.32)') progressFill = 'rgba(22,163,74,.32)';
+    ctx.fillStyle = progressFill;
+    for (let y = R.y0; y < R.y1; y++){
+      const row = y*S.gw;
+      for (let x = R.x0; x < R.x1; x++){
+        const i = row + x;
+        if (S.cells[i] >= 0 && (S.progress[i >> 3] & (1 << (i & 7)))){
+          ctx.fillRect(x*cs, y*cs, cs, cs);
+        }
       }
     }
   }
@@ -1808,17 +1906,50 @@ function resampleBase(nw, nh, mode){
   return out;
 }
 
+// [hackone] 进度位图跟着画布尺寸走：每个目标格取覆盖到的源格里"已拼"的比例，≥50% 即算已拼。
+// 放大时一格变四格全保留；缩小时只有过半的源格已拼才留（1/4 覆盖会掉）。按映射保留，不按坐标。
+function resampleProgress(nw, nh){
+  const ow = S.gw, oh = S.gh;
+  const bits = new Uint8Array(nw*nh);
+  if (!S.progress || S.progress.length !== Math.ceil(ow*oh/8)) return bits;
+  for (let y = 0; y < nh; y++){
+    const sy0 = y*oh/nh, sy1 = (y+1)*oh/nh;
+    for (let x = 0; x < nw; x++){
+      const sx0 = x*ow/nw, sx1 = (x+1)*ow/nw;
+      let tot = 0, on = 0;
+      for (let sy = Math.floor(sy0); sy < Math.ceil(sy1); sy++){
+        if (sy < 0 || sy >= oh) continue;
+        const wy = Math.min(sy+1, sy1) - Math.max(sy, sy0);
+        if (wy <= 0) continue;
+        for (let sx = Math.floor(sx0); sx < Math.ceil(sx1); sx++){
+          if (sx < 0 || sx >= ow) continue;
+          const w = Math.min(sx+1, sx1) - Math.max(sx, sx0);
+          if (w <= 0) continue;
+          tot += w;
+          const si = sy*ow + sx;
+          if (S.progress[si >> 3] & (1 << (si & 7))) on += w;
+        }
+      }
+      if (tot && on/tot >= 0.5) bits[y*nw + x] = 1;
+    }
+  }
+  return bits;
+}
 function resizeTo(nw, nh, opts){
   opts = opts || {};
   if (!S.cells) return false;
   nw = clampN(nw); nh = clampN(nh);
   if (nw === S.gw && nh === S.gh){ syncDocInputs(); return false; }
   const out = resampleBase(nw, nh, S.down);
+  const carried = resampleProgress(nw, nh);   // pushSnap 之前取，撤销记录里才带着旧尺寸的进度
   pushSnap();
   S.base = out;
   S.gw = nw; S.gh = nh;
   S.cells = limitColors(out, S.maxColors);
-  resetProgress();
+  S.progress = new Uint8Array(Math.ceil(nw*nh/8));
+  for (let i = 0; i < nw*nh; i++) if (carried[i] && S.cells[i] >= 0) S.progress[i >> 3] |= (1 << (i & 7));
+  S.progressHash = progressPatternHash();
+  S.statsDirty = true;
   S.selCell = -1; S.highlight = -1; S.hlCells = null;
   S.preview = null; S.drag = null; S.stroke = null;
   S.buf = null; S.bufCtx = null;
@@ -1846,11 +1977,29 @@ function expandCanvas(nw, nh, a){
       out[ty*nw + tx] = v;
     }
   }
+  // 进度按 (ox, oy) 平移进新位图，被裁掉的部分自然丢弃
+  const carried = new Uint8Array(Math.ceil(nw*nh/8));
+  if (S.progress && S.progress.length === Math.ceil(S.gw*S.gh/8)){
+    for (let y = 0; y < S.gh; y++){
+      const ty = y + oy;
+      if (ty < 0 || ty >= nh) continue;
+      for (let x = 0; x < S.gw; x++){
+        const tx = x + ox;
+        if (tx < 0 || tx >= nw) continue;
+        const si = y*S.gw + x;
+        if (!(S.progress[si >> 3] & (1 << (si & 7)))) continue;
+        const ti = ty*nw + tx;
+        carried[ti >> 3] |= (1 << (ti & 7));
+      }
+    }
+  }
   pushSnap();
   S.base = out;
   S.gw = nw; S.gh = nh;
   S.cells = limitColors(out, S.maxColors);
-  resetProgress();
+  S.progress = carried;
+  S.progressHash = progressPatternHash();
+  S.statsDirty = true;
   S.selCell = -1; S.highlight = -1; S.hlCells = null;
   S.preview = null; S.drag = null;
   S.buf = null; S.bufCtx = null;
@@ -2038,7 +2187,9 @@ function afterPaint(){
   if (!S.dragging) renderUsage();
   if (S.highlight >= 0) S.hlCells = cellsWith(S.highlight);
   renderSimilar();
-  requestDraw();
+  // 拖动中只按帧刷脏行带；松手（endStroke）会走一次全量，保证高亮/预览框都补上
+  if (S.dragging && S.gw*S.gh >= DIRTY_FULL_FROM) requestPartialDraw();
+  else requestDraw();
 }
 function validPaint(){
   if (S.paintIdx >= 0 && S.paintIdx < S.palette.length) return true;
@@ -2475,6 +2626,7 @@ function openPalette(anchor){
   $('palNear').hidden = true;
   renderPalGrid('');
   const on = $('palGrid').querySelector && $('palGrid').querySelector('.on');
+  if (typeof window.applyPalZ === 'function') window.applyPalZ();   // 恢复上次记住的色卡/相近色卡层级
   if (on && on.scrollIntoView) on.scrollIntoView({ block:'center' });
   if ($('palSearch').focus) $('palSearch').focus();
   if (S.repFrom != null) openSimPop(S.repFrom, Math.round(left), Math.round(top), w);
@@ -2505,9 +2657,19 @@ function openSimPop(from, left, top, w){
 (function(){
   var pal = $('palPop'), sim = $('simPop');
   if (!pal || !sim) return;
+  // [hackone] 谁被点谁在上，并且记住这个选择，下次打开还按上次的层级摆
+  var ZKEY = 'hc.palZ';
+  function readZ(){ try { return localStorage.getItem(ZKEY) === 'sim' ? 'sim' : 'pal'; } catch (e) { return 'pal'; } }
+  function writeZ(which){ try { localStorage.setItem(ZKEY, which); } catch (e) {} }
   function front(a, b){ a.style.zIndex = 124; b.style.zIndex = 123; }
-  pal.addEventListener('pointerdown', function(){ front(pal, sim); });
-  sim.addEventListener('pointerdown', function(){ front(sim, pal); });
+  function applySaved(){
+    if (readZ() === 'sim') front(sim, pal); else front(pal, sim);
+  }
+  // 打开时按记住的层级摆，而不是等用户点一下才生效
+  Object.defineProperty(window, 'applyPalZ', { value: applySaved, configurable: true });
+  pal.addEventListener('pointerdown', function(){ front(pal, sim); writeZ('pal'); });
+  sim.addEventListener('pointerdown', function(){ front(sim, pal); writeZ('sim'); });
+  applySaved();
 })();
 $('simPop').addEventListener('click', function(e){
   const row = e.target.closest ? e.target.closest('.sp-r') : null;
@@ -2695,6 +2857,13 @@ function endPan(){
   viewEl.classList.remove('panning');
   return moved;
 }
+// 捏合接管时用：不结算这次平移，直接丢弃
+function cancelPan(){
+  if (!panState) return;
+  panState = null;
+  viewEl.classList.remove('panning');
+}
+window.cancelPan = cancelPan;
 function panCursor(){
   if (canvas) canvas.classList.toggle('grab', S.tool === 'inspect');
 }
@@ -2703,6 +2872,8 @@ viewEl.addEventListener('pointerdown', e => {
   if (e.button === 1){ e.preventDefault(); beginPan(e, true); return; }   // 中键：顺手掐掉 Linux 的粘贴/自动滚动
   if (e.button !== 0) return;
   if (spaceDown){ e.preventDefault(); beginPan(e, true); return; }
+  // [hackone] 触屏：第二根手指落下时立刻转成捏合，别再当成平移；单指仍然是拖动画布
+  if (e.pointerType === 'touch' && touchCount() >= 2){ endPan(); return; }
   if (e.target === canvas && S.tool === 'inspect') beginPan(e, false);
   else if (e.target === viewEl) beginPan(e, true);                        // 灰色底也能拖
 });
@@ -2780,7 +2951,11 @@ canvas.addEventListener('pointermove', e => {
       }
     }
     else if (S.drag) updatePreview(i);
-    else if (S.dragging) paintBrush(i, S.tool === 'eraser' ? -1 : S.paintIdx);
+    else if (S.dragging){
+      // [hackone] 大图纸拖动时不要每格都全量重画：这一笔只登记脏格，按帧局部刷新
+      paintBrush(i, S.tool === 'eraser' ? -1 : S.paintIdx);
+      if (S.gw*S.gh >= DIRTY_FULL_FROM) requestPartialDraw();
+    }
   } else if (S.hoverCell >= 0){
     S.hoverCell = -1;
     $('barPos').textContent = '—';
@@ -4533,8 +4708,9 @@ renderProgress();
   /* ---------- F4 拍照核验 ---------- */
   var verifyHTML = '' +
     '<div class="row2"><span class="lb">拍照核验</span><button id="vPick" class="sm">选照片</button></div>' +
-    '<div class="cap" id="vOut">把拼好的板拍正、裁到图纸边缘，再选照片</div>' +
-    '<input type="file" id="vFile" accept="image/*" capture="environment" hidden>';
+    '<div class="cap" id="vOut">斜着拍也行：选完照片把四个角拖到图纸边缘</div>' +
+    '<input type="file" id="vFile" accept="image/*" capture="environment" hidden>' +
+    '<div id="vQuad" hidden></div>';
   var vCard = document.createElement('div');
   vCard.className = 'grp';
   vCard.dataset.g = 'verify';
@@ -4555,10 +4731,158 @@ renderProgress();
   $('vFile').addEventListener('change', function(e){
     var f = e.target.files[0];
     if (!f) return;
+    e.target.value = '';
     var r = new FileReader();
-    r.onload = function(){ verifyPhoto(r.result); };
+    r.onload = function(){ openQuad(r.result, f); };     // 先框四角，确认后才核验
     r.readAsDataURL(f);
   });
+  /* [hackone] 四角框选：照片按视口等比放进 overlay，四个角默认在照片四角，
+     用户可以拖到图纸真正的角上；不拖直接确认 = 整张拉伸（老行为）。 */
+  function openQuad(src){
+    var ov = $('vQuad');
+    if (!ov){ verifyPhoto(src); return; }
+    var img = new Image();
+    img.onload = function(){
+      var vw = Math.min(window.innerWidth - 40, 1080);
+      var vh = Math.min(window.innerHeight - 120, 760);
+      var k = Math.min(vw / img.naturalWidth, vh / img.naturalHeight);
+      var dw = Math.round(img.naturalWidth * k), dh = Math.round(img.naturalHeight * k);
+      vState = { src:src, img:img, w:dw, h:dh,
+        quad:[{x:0,y:0},{x:dw,y:0},{x:dw,y:dh},{x:0,y:dh}] };
+      ov.innerHTML = '';
+      ov.hidden = false;
+      var box = document.createElement('div');
+      box.className = 'vq-box';
+      box.innerHTML = '<img alt="待核验的照片">' +
+        '<svg class="vq-svg" viewBox="0 0 ' + dw + ' ' + dh + '" preserveAspectRatio="none">' +
+        '<polygon class="vq-poly" points=""></polygon></svg>' +
+        '<div class="vq-hint">把四个角拖到图纸的边缘；拍正了就直接确认</div>' +
+        '<div class="vq-bar"><button class="vq-cancel">取消</button><button class="vq-ok pri">确认核验</button></div>';
+      var im = box.querySelector('img');
+      box.style.width = dw + 'px'; box.style.height = dh + 'px';
+      im.src = src; im.style.width = dw + 'px'; im.style.height = dh + 'px';
+      for (var q = 0; q < 4; q++){
+        var h = document.createElement('i');
+        h.className = 'vq-h h' + q; h.dataset.q = q;
+        box.appendChild(h);
+      }
+      ov.appendChild(box);
+      var poly = box.querySelector('.vq-poly');
+      function syncPoly(){
+        poly.setAttribute('points', vState.quad.map(function(p){ return p.x + ',' + p.y; }).join(' '));
+        box.querySelectorAll('.vq-h').forEach(function(hn){
+          var p = vState.quad[+hn.dataset.q];
+          hn.style.left = p.x + 'px'; hn.style.top = p.y + 'px';
+        });
+      }
+      function drag(hn){
+        hn.addEventListener('pointerdown', function(ev){
+          ev.preventDefault();
+          var idx = +hn.dataset.q;
+          hn.setPointerCapture(ev.pointerId);
+          function move(e2){
+            var rect = im.getBoundingClientRect();
+            var x = Math.max(0, Math.min(dw, e2.clientX - rect.left));
+            var y = Math.max(0, Math.min(dh, e2.clientY - rect.top));
+            vState.quad[idx] = { x:x, y:y };
+            syncPoly();
+          }
+          function up(){
+            hn.removeEventListener('pointermove', move);
+            hn.removeEventListener('pointerup', up);
+            hn.removeEventListener('pointercancel', up);
+          }
+          hn.addEventListener('pointermove', move);
+          hn.addEventListener('pointerup', up);
+          hn.addEventListener('pointercancel', up);
+        });
+      }
+      box.querySelectorAll('.vq-h').forEach(drag);
+      function close(){ ov.hidden = true; ov.innerHTML = ''; }
+      function defaultQuad(){
+        // 没拖过就是贴边，等同于整张拉伸
+        var q = vState.quad, edge = 2;
+        return q.every(function(p, i){
+          return Math.abs(p.x - [0,dw,dw,0][i]) < 0.06*dw && Math.abs(p.y - [0,0,dh,dh][i]) < 0.06*dh;
+        });
+      }
+      box.querySelector('.vq-cancel').addEventListener('click', function(){ close(); vState = null; });
+      box.querySelector('.vq-ok').addEventListener('click', function(){
+        var untouched = defaultQuad();
+        // 贴边 = 用户没动框，走整张拉伸，和以前完全一致；动过框才做透视校正
+        vState = untouched ? null : { quad:vState.quad.slice() };
+        close();
+        verifyPhoto(src);
+      });
+      syncPoly();
+    };
+    img.onerror = function(){ toast('照片加载失败'); };
+    img.src = src;
+  }
+  window.openQuad = openQuad;
+  /* [hackone] 透视校正：手机随手拍的图纸是斜的，直接拉伸到整张画布对不上。
+     选完照片先让用户拖四个角框到图纸真正的四角，再把那个四边形按透视映射拉正。
+     不调框直接确认，就退回原来的整张拉伸，行为和老版本一致。 */
+  var vState = null;                      // { img, w, h, quad:[{x,y}×4], cw, ch }
+  function quadHomography(src, dst){
+    // 求 8 个参数，把 dst（目标矩形四角）映到 src（照片里的四边形），再用反向映射逐点取样
+    var A = [], B = [];
+    for (var k = 0; k < 4; k++){
+      var s = src[k], d = dst[k];
+      A.push([d.x, d.y, 1, 0, 0, 0, -s.x*d.x, -s.x*d.y]); B.push(s.x);
+      A.push([0, 0, 0, d.x, d.y, 1, -s.y*d.x, -s.y*d.y]); B.push(s.y);
+    }
+    // 8x8 高斯消元
+    for (var i = 0; i < 8; i++){
+      var piv = i;
+      for (var r = i + 1; r < 8; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
+      if (Math.abs(A[piv][i]) < 1e-12) return null;
+      var t = A[i]; A[i] = A[piv]; A[piv] = t;
+      var tb = B[i]; B[i] = B[piv]; B[piv] = tb;
+      for (var r2 = 0; r2 < 8; r2++){
+        if (r2 === i) continue;
+        var f = A[r2][i] / A[i][i];
+        if (!f) continue;
+        for (var c2 = i; c2 < 8; c2++) A[r2][c2] -= f * A[i][c2];
+        B[r2] -= f * B[i];
+      }
+    }
+    var h = [];
+    for (var q = 0; q < 8; q++) h.push(B[q] / A[q][q]);
+    return h;
+  }
+  function warpToGrid(img, quad, gw, gh, SS){
+    var W = gw*SS, H = gh*SS;
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var c = cv.getContext('2d', { willReadFrequently:true });
+    // 先把照片画进一张离屏画布，取样才有像素可读
+    var src = document.createElement('canvas'); src.width = img.naturalWidth; src.height = img.naturalHeight;
+    var sc = src.getContext('2d', { willReadFrequently:true });
+    sc.drawImage(img, 0, 0);
+    var sw = src.width, sh = src.height;
+    var srcData;
+    try { srcData = sc.getImageData(0, 0, sw, sh).data; } catch(e){ return null; }
+    var dst = [{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
+    var h = quadHomography(quad, dst);
+    if (!h) return null;
+    var out = c.createImageData(W, H), d = out.data;
+    for (var y = 0; y < H; y++){
+      for (var x = 0; x < W; x++){
+        var den = h[6]*(x+0.5) + h[7]*(y+0.5) + 1;
+        if (!den) continue;
+        var sx = (h[0]*(x+0.5) + h[1]*(y+0.5) + h[2]) / den;
+        var sy = (h[3]*(x+0.5) + h[4]*(y+0.5) + h[5]) / den;
+        var o = (y*W + x) * 4;
+        if (sx < 0 || sy < 0 || sx >= sw || sy >= sh){ d[o] = 255; d[o+1] = 255; d[o+2] = 255; d[o+3] = 255; continue; }
+        var si = ((sy | 0)*sw + (sx | 0)) * 4;
+        d[o] = srcData[si]; d[o+1] = srcData[si+1]; d[o+2] = srcData[si+2]; d[o+3] = 255;
+      }
+    }
+    c.putImageData(out, 0, 0);
+    return cv;
+  }
+  window.warpToGrid = warpToGrid;
+  window.__quadHomography = quadHomography;
   window.verifyPhoto = function(src){
     if (!S.cells){ toast('先生成图纸'); return; }
     var img = new Image();
@@ -4567,7 +4891,18 @@ renderProgress();
       var SS = 6;
       var cv = document.createElement('canvas'); cv.width = gw*SS; cv.height = gh*SS;
       var c = cv.getContext('2d');
-      c.drawImage(img, 0, 0, gw*SS, gh*SS);
+      var quad = (vState && vState.quad) ? vState.quad : null;
+      // 框选 overlay 显示的是缩放后的照片，坐标要先换算回照片原尺寸
+      if (quad && vState.img && vState.img !== img && vState.w && vState.w !== img.naturalWidth){
+        var sx = img.naturalWidth / vState.w, sy = img.naturalHeight / vState.h;
+        quad = quad.map(function(p){ return { x:p.x*sx, y:p.y*sy }; });
+      }
+      if (quad){
+        var warped = warpToGrid(img, quad, gw, gh, SS);
+        if (!warped){ toast('四角框无效，已按整张拉伸核验'); quad = null; }
+        else c.drawImage(warped, 0, 0);
+      }
+      if (!quad) c.drawImage(img, 0, 0, gw*SS, gh*SS);
       var data;
       try { data = c.getImageData(0, 0, gw*SS, gh*SS).data; }
       catch(e){ toast('照片读取失败'); return; }
@@ -4674,6 +5009,8 @@ renderProgress();
 </script>
 
 <div id="drawerMask" aria-hidden="true"></div>
+<button id="drawerL" class="drawer-tab" aria-label="打开左侧工作区" aria-controls="side"><svg viewBox="0 0 8 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 2 10l4 7"/></svg></button>
+<button id="drawerR" class="drawer-tab" aria-label="打开右侧工作区" aria-controls="right"><svg viewBox="0 0 8 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3l4 7-4 7"/></svg></button>
 <script>
 /* [hackone] 工作区收起（横屏）/ 抽屉（竖屏）+ 双指缩放 */
 (function(){
@@ -4715,14 +5052,23 @@ renderProgress();
     });
   }
 
+  var DL = document.getElementById('drawerL'), DR = document.getElementById('drawerR');
+  function tabVisible(){ return isDrawer() && !!(DL || DR); }
+  function syncTabs(){
+    var show = tabVisible();
+    if (DL) DL.hidden = !show;
+    if (DR) DR.hidden = !show;
+  }
   function sync(){
     if (isDrawer()){
       if (L) L.setAttribute('aria-expanded', body.classList.contains('drawer-left') ? 'true' : 'false');
       if (R) R.setAttribute('aria-expanded', body.classList.contains('drawer-right') ? 'true' : 'false');
       if (L) L.classList.remove('off');
       if (R) R.classList.remove('off');
+      if (typeof syncTabs === 'function') syncTabs();
       return;
     }
+    if (typeof syncTabs === 'function') syncTabs();
     var hl = body.classList.contains('hide-left'), hr = body.classList.contains('hide-right');
     if (L){ L.setAttribute('aria-expanded', hl ? 'false' : 'true'); L.classList.toggle('off', hl); }
     if (R){ R.setAttribute('aria-expanded', hr ? 'false' : 'true'); R.classList.toggle('off', hr); }
@@ -4787,6 +5133,9 @@ renderProgress();
 
   if (L) L.addEventListener('click', function(){ isDrawer() ? toggleDrawer('left') : toggleCollapse('left'); });
   if (R) R.addEventListener('click', function(){ isDrawer() ? toggleDrawer('right') : toggleCollapse('right'); });
+  // [hackone] 竖向平板：屏幕左右边缘各一条把手，点一下就拉出对应抽屉
+  if (DL) DL.addEventListener('click', function(){ if (isDrawer()) toggleDrawer('left'); });
+  if (DR) DR.addEventListener('click', function(){ if (isDrawer()) toggleDrawer('right'); });
   if (mask) mask.addEventListener('click', closeDrawers);
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeDrawers(); });
 
@@ -4803,6 +5152,7 @@ renderProgress();
   var VIEW = document.getElementById('view');
   if (!VIEW) return;
   var pts = new Map(), pinch = null;
+  window.touchCount = function(){ return pts.size; };
   function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
   function mid(a, b){ return { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 }; }
 
@@ -4814,6 +5164,8 @@ renderProgress();
       pinch = { d: Math.max(1, dist(p[0], p[1])), cell: S.cell, m: mid(p[0], p[1]),
                 sl: VIEW.scrollLeft, st: VIEW.scrollTop };
       S.pinching = true;
+      // 第二根手指落下的瞬间：先收掉第一根手指可能已经开始的那次平移，再按捏合接管
+      if (typeof window.cancelPan === 'function') window.cancelPan();
       if (typeof window.cancelStroke === 'function') window.cancelStroke();
       e.preventDefault();
     }

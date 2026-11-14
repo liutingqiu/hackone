@@ -163,8 +163,8 @@ test('imported documents do not inherit undo or redo history', () => {
   assert.equal(c.S.cells[0], 2);
 });
 
-test('both resize modes reset progress even when bitmask size is unchanged and undo restores it', () => {
-  const source = html.slice(html.indexOf('function resizeTo('), html.indexOf('function newBlank(')) +
+test('both resize modes carry progress through the geometry change and undo restores it', () => {
+  const source = html.slice(html.indexOf('function resampleProgress('), html.indexOf('function newBlank(')) +
     html.slice(html.indexOf('function entryBytes('), html.indexOf('/* ------------------------------------------------ 绘画原语'));
   for (const mode of ['resizeTo', 'expandCanvas']) {
     const S = { gw: 2, gh: 3, base: new Int32Array(6).fill(1), cells: new Int32Array(6).fill(1),
@@ -177,13 +177,42 @@ test('both resize modes reset progress even when bitmask size is unchanged and u
       ensureBuffer() {}, syncDocInputs() {}, recount() {}, renderUsage() {}, renderSimilar() {},
       requestDraw() {}, renderProgress() {}, fit() {}, toast() {} };
     vm.createContext(c); vm.runInContext(source, c);
+    // 2x3 → 3x2：已拼的第 0、2 格（bitmask 5）必须映射到新画布上，而不是被清零
     c[mode](3, 2, mode === 'resizeTo' ? {} : 0);
-    assert.equal(S.progress[0], 0, mode);
+    assert.notEqual(S.progress[0], 0, mode + ' keeps marks');
     c.undo();
     assert.deepEqual([S.gw, S.gh, S.progress[0]], [2, 3, 5], mode);
     c.redo();
-    assert.deepEqual([S.gw, S.gh, S.progress[0]], [3, 2, 0], mode);
+    assert.deepEqual([S.gw, S.gh], [3, 2], mode);
+    assert.notEqual(S.progress[0], 0, mode + ' redo keeps marks');
   }
+});
+
+test('progress survives a resize by mapping covered cells, not by coordinate', () => {
+  const source = html.slice(html.indexOf('function resampleProgress('), html.indexOf('function resizeTo('));
+  // 2x2 全拼 → 放大到 4x4，四块都该是已拼
+  let S = { gw: 2, gh: 2, progress: new Uint8Array([0b1111]) };
+  let c = { S }; vm.createContext(c); vm.runInContext(source, c);
+  let bits = c.resampleProgress(4, 4);
+  assert.deepEqual(Array.from(bits), Array(16).fill(1));
+  // 4x4 只拼左上角一块（覆盖率 1/4）→ 缩回 2x2 不算已拼
+  S = { gw: 4, gh: 4, progress: new Uint8Array(2) };
+  S.progress[0] = 0b00000001;
+  c = { S }; vm.createContext(c); vm.runInContext(source, c);
+  bits = c.resampleProgress(2, 2);
+  assert.equal(bits[0], 0, 'quarter coverage is not a mark');
+  // 左上 2x2 全拼（覆盖率 1/2，正好过半）→ 算已拼；左下那一格是 0，不算
+  // 位序：0 行两格 = bit0,bit1；1 行两格 = bit2,bit3 —— 4x4 左半占 bit0/1（行 0-1 的 x0,1）
+  // 左下 2x2（源 y 0-1、x 2-3）全拼 → 目标 y0 横跨源 0 行和 1 行，所以 [0][1] 两格都是半数覆盖
+  S = { gw: 4, gh: 4, progress: new Uint8Array(2) };
+  S.progress[0] = 0b00111100;
+  c = { S }; vm.createContext(c); vm.runInContext(source, c);
+  bits = c.resampleProgress(2, 2);
+  assert.deepEqual(Array.from(bits), [1, 1, 0, 0], 'half coverage counts, quarter never does');
+  // 进度位图长度对不上时不要瞎猜
+  S = { gw: 2, gh: 2, progress: new Uint8Array(0) };
+  c = { S }; vm.createContext(c); vm.runInContext(source, c);
+  assert.deepEqual(Array.from(c.resampleProgress(2, 2)), [0, 0, 0, 0]);
 });
 
 test('A4 overview keeps wide and tall supported grids within the page', () => {
@@ -246,7 +275,8 @@ test('fit check uses CSS pixels, and a mark stroke keeps one state', () => {
 test('mark stroke writes the same state onto mixed cells', () => {
   const source = html.slice(html.indexOf('function applyProgress('), html.indexOf('function saveDoc('));
   const S = { cells: Int32Array.from([1, 1, 1, 1]), progress: new Uint8Array([0b0101]), gw: 4 };
-  const c = { S, syncProgress() {}, saveProgress() {}, renderProgress() {}, requestDraw() {}, window: {} };
+  const c = { S, syncProgress() {}, saveProgress() {}, renderProgress() {}, requestDraw() {},
+    requestPartialDraw() {}, dr: { mark() {} }, window: {} };
   vm.createContext(c);
   vm.runInContext(source, c);
   const on = false;
@@ -315,6 +345,32 @@ test('undo of a brand snapshot restores the previous indexes and leaves older st
   assert.equal(c.undo(), false);
   assert.equal(S.history.length, 1);
   assert.equal(S.base[0], 0);
+});
+
+test('quad homography maps the picked corners onto the full grid', () => {
+  const html2 = html;
+  const s0 = html2.indexOf('function quadHomography(');
+  const s1 = html2.indexOf('function warpToGrid(');
+  assert.ok(s0 > 0 && s1 > s0, 'homography source present');
+  const c = { getImageData() { return { data: new Uint8Array(4) }; } };
+  vm.createContext(c);
+  vm.runInContext(html2.slice(s0, s1), c);
+  const W = 100, H = 100;
+  const quad = [{x:10,y:10},{x:90,y:20},{x:80,y:95},{x:20,y:85}];
+  const dst = [{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
+  const h = c.quadHomography(quad, dst);
+  assert.ok(h && h.length === 8, '8 params');
+  // 目标四角 → 应落回框选四角
+  const map = (x, y) => {
+    const den = h[6]*x + h[7]*y + 1;
+    return { x: (h[0]*x + h[1]*y + h[2]) / den, y: (h[3]*x + h[4]*y + h[5]) / den };
+  };
+  for (let k = 0; k < 4; k++){
+    const p = map(dst[k].x, dst[k].y);
+    assert.ok(Math.abs(p.x - quad[k].x) < 1e-6 && Math.abs(p.y - quad[k].y) < 1e-6, 'corner ' + k);
+  }
+  // 退化四边形要返回 null，而不是写出 NaN
+  assert.equal(c.quadHomography([{x:0,y:0},{x:0,y:0},{x:0,y:0},{x:0,y:0}], dst), null);
 });
 
 test('share save confirms the stored body, expires with the object, and rate limits', async () => {
