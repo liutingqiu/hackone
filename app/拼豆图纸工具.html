@@ -119,7 +119,10 @@
   #tools .tsep{width:1px;align-self:stretch;background:var(--line);margin:2px 6px}
   #tools button[data-t="mark"].on{background:#e9f7ef;border-color:#a7d8ba;color:#15803d}
   #view{flex:1;overflow:auto;display:grid;place-items:center;padding:20px;min-height:0}
-  #grid{image-rendering:pixelated;background:#fff;box-shadow:0 1px 10px #0006;cursor:crosshair}
+  /* [viewport] #stage 撑出完整滚动范围并画"纸张"阴影；#grid 只是盖在可视区上的一层，
+     尺寸等于视口而不是整张图纸 —— 这样 400×400 也能放大到 60px/格而不炸显存。 */
+  #stage{position:relative;flex:none;margin:auto;background:#fff;box-shadow:0 1px 10px #0006}
+  #grid{position:absolute;left:0;top:0;image-rendering:pixelated;background:#fff;cursor:crosshair;box-shadow:none}
   /* [hackone] 拖拽平移：查看工具显示抓手，拖动中显示抓握 */
   #grid.grab{cursor:grab}
   #view.panning, #view.panning #grid{cursor:grabbing}
@@ -401,7 +404,9 @@
     display: block; max-width: 100%; min-width: 0;
     overflow: auto; padding: 10px;
   }
-  #grid { display: block; margin: 0 auto; max-width: none; }
+  #stage { margin: 0 auto; }
+  #grid { display: block; max-width: none; }
+  #grid[hidden] { display: none; }
   #empty { padding: 30px 8px; }
   #side .row, #side .tools, #side .seg, #side .hint { max-width: 100%; }
   #side input[type=number], #side select { max-width: 100%; }
@@ -925,7 +930,7 @@ try{
       <span id="toolHint" hidden></span>
     </div>
     <div id="view">
-      <canvas id="grid" hidden></canvas>
+      <div id="stage"><canvas id="grid" hidden></canvas></div>
       <div id="empty">
         <button id="importBtn" class="impPri">导入图片</button>
         <div class="wm2">拖进来，或按 Ctrl+V 粘贴</div>
@@ -1077,6 +1082,7 @@ function purchaseSearchQuery(brandLabel, code){
    不再重新采样原图 —— 这就是「2×/4× 改的是用户看到的画面」的实现方式。 */
 const MAXDIM = 400;
 const MAX_CANVAS_PX = 24e6;      // 单张画布总像素上限，超了自动降 dpr / 限格子大小
+const CODE_MIN_CELL = 20;        // 格子小于这个像素就不画色号（放大到这么大才显示）
 const HIST_BYTES = 64e6;         // 撤销历史内存上限
 
 const S = {
@@ -1117,6 +1123,8 @@ function buildPalette(opts){
     codes: c.codes,
     name: c.name || ''
   }));
+  // [codeFont] 记下当前色卡最长色号位数，画布字号按它收（CE01 这种 4 位要更小）
+  S.codeMaxLen = S.palette.reduce((n, p) => Math.max(n, (p.code || '').length), 2);
   // 换品牌/体系后色板会变短，旧 paintIdx 可能越界。越界索引一旦写进 cells，
   // draw()/renderUsage() 取 palette[i].hex 就会抛错，整页卡死 —— 所以按颜色就近重找。
   if (!(S.paintIdx >= 0 && S.paintIdx < S.palette.length)){
@@ -1793,25 +1801,46 @@ function effDpr(W, H){
   if (W*H*base*base <= MAX_CANVAS_PX) return base;
   return Math.max(1, Math.min(base, Math.sqrt(MAX_CANVAS_PX/(W*H))));
 }
+/* [viewport] 算出当前可视区落在图纸坐标系里的矩形。
+   #stage 是图纸大小，#view 是滚动容器；窄屏时 #view 退化成 block、由页面滚动，
+   所以窗口边界也要参与相交。结果必须非空，否则兜底成一小块，绝不造巨图。 */
+function visibleBox(W, H){
+  const v = $('view');
+  const st = $('stage');
+  if (!v || !st || !v.getBoundingClientRect || !st.getBoundingClientRect) return { x:0, y:0, w:W, h:H };
+  const vr = v.getBoundingClientRect(), sr = st.getBoundingClientRect();
+  if (!vr.width || !vr.height || !sr.width || !sr.height) return { x:0, y:0, w:W, h:H };
+  const doc = document.documentElement;
+  const winW = doc.clientWidth || window.innerWidth || 0;
+  const winH = doc.clientHeight || window.innerHeight || 0;
+  const clipL = Math.max(vr.left + v.clientLeft, 0);
+  const clipT = Math.max(vr.top + v.clientTop, 0);
+  const clipR = Math.min(vr.left + v.clientLeft + v.clientWidth, winW || Infinity);
+  const clipB = Math.min(vr.top + v.clientTop + v.clientHeight, winH || Infinity);
+  const x = Math.max(0, Math.floor(clipL - sr.left));
+  const y = Math.max(0, Math.floor(clipT - sr.top));
+  const w = Math.min(W - x, Math.ceil(clipR - sr.left) - x);
+  const h = Math.min(H - y, Math.ceil(clipB - sr.top) - y);
+  if (!(w > 0) || !(h > 0)){
+    return { x:0, y:0, w:Math.max(1, Math.min(W, 640)), h:Math.max(1, Math.min(H, 640)) };
+  }
+  return { x, y, w, h };
+}
 function cellCap(){
-  if (!S.gw || !S.gh) return 60;
-  return Math.max(2, Math.min(60, Math.floor(Math.sqrt(MAX_CANVAS_PX/(S.gw*S.gh)))));
+  // [viewport] 画布只跟视口一样大，格子尺寸不再受图纸总面积限制。
+  // 之前 400×400 会被卡在 12px/格，放大看色号根本不够；现在统一上限 60。
+  return 60;
 }
 function visibleRange(){
+  // [viewport] 可见范围直接由 visibleBox 给出，多留 1 格余量避免边缘半格露白
   const full = { x0:0, y0:0, x1:S.gw, y1:S.gh };
-  const v = $('view');
-  if (!v || !v.getBoundingClientRect || !canvas.getBoundingClientRect || !S.cell) return full;
-  const vr = v.getBoundingClientRect(), cr = canvas.getBoundingClientRect();
-  if (!cr.width || !cr.height) return full;
-  const px0 = Math.max(0, vr.left - cr.left);
-  const py0 = Math.max(0, vr.top - cr.top);
-  const px1 = Math.min(cr.width, vr.right - cr.left);
-  const py1 = Math.min(cr.height, vr.bottom - cr.top);
-  if (px1 <= px0 || py1 <= py0) return full;
-  const x0 = Math.max(0, Math.floor(px0/S.cell) - 1);
-  const y0 = Math.max(0, Math.floor(py0/S.cell) - 1);
-  const x1 = Math.min(S.gw, Math.ceil(px1/S.cell) + 1);
-  const y1 = Math.min(S.gh, Math.ceil(py1/S.cell) + 1);
+  if (!S.cell || !S.gw || !S.gh) return full;
+  const box = { x:S.viewX || 0, y:S.viewY || 0, w:S.viewW || 0, h:S.viewH || 0 };
+  if (!(box.w > 0) || !(box.h > 0)) return full;
+  const x0 = Math.max(0, Math.floor(box.x/S.cell) - 1);
+  const y0 = Math.max(0, Math.floor(box.y/S.cell) - 1);
+  const x1 = Math.min(S.gw, Math.ceil((box.x + box.w)/S.cell) + 1);
+  const y1 = Math.min(S.gh, Math.ceil((box.y + box.h)/S.cell) + 1);
   return (x1 > x0 && y1 > y0) ? { x0, y0, x1, y1 } : full;
 }
 const DIRTY_FULL_FROM = 12000;      // 一帧里脏格超过这么多，重画整张反而更快
@@ -1822,40 +1851,41 @@ function draw(){
   if ($('importPill')) $('importPill').hidden = false;
 
   const cs = S.cell, W = S.gw*cs, H = S.gh*cs;
-  // 尺寸变了、或者这次不是局部更新，就走整张重画
-  const band = dr.span();
-  const dpr = effDpr(W, H);
-  const pw = Math.round(W*dpr), ph = Math.round(H*dpr);
-  if (canvas.width !== pw || canvas.height !== ph){   // 只在尺寸变了时重建画布缓冲
+  /* [viewport] 画布只覆盖可视区：stage 撑滚动范围，canvas 贴在视口位置，
+     内容用 -box 的偏移画，所以下面所有绘制代码仍然用图纸坐标，一行都不用改。 */
+  var box = visibleBox(W, H);
+  S.viewX = box.x; S.viewY = box.y; S.viewW = box.w; S.viewH = box.h;
+  const dpr = effDpr(box.w, box.h);
+  const pw = Math.max(1, Math.round(box.w*dpr)), ph = Math.max(1, Math.round(box.h*dpr));
+  if (canvas.width !== pw || canvas.height !== ph){
     canvas.width = pw;
     canvas.height = ph;
   }
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const st = $('stage');
+  if (st){ st.style.width = W + 'px'; st.style.height = H + 'px'; }
+  canvas.style.left = box.x + 'px';
+  canvas.style.top  = box.y + 'px';
+  canvas.style.width = box.w + 'px';
+  canvas.style.height = box.h + 'px';
+  // 先按设备像素整块铺白（避免小数 dpr 留边），再切到图纸坐标
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(dpr, 0, 0, dpr, -box.x*dpr, -box.y*dpr);
+  const band = null;   // 视口画布每帧本来就只画一屏，不再需要脏行带
   if (!S.buf) ensureBuffer();
   if (!band){
-    ctx.clearRect(0, 0, W, H);
+    ctx.clearRect(box.x, box.y, box.w, box.h);
     ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(box.x, box.y, box.w, box.h);
   }
   ctx.imageSmoothingEnabled = false;
-  if (!band){
-    if (S.buf) ctx.drawImage(S.buf, 0, 0, S.gw, S.gh, 0, 0, W, H);
-  } else if (S.buf){
-    // 只把那几条行带贴回来。注意 setTransform(dpr) 之后坐标是 CSS 像素，
-    // 这里一律用 CSS 像素算，别混进设备像素（否则会整体贴偏 ×dpr）。
-    const by = band.y0*cs, bh = (band.y1 - band.y0)*cs;
-    ctx.clearRect(0, by, W, bh);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, by, W, bh);
-    ctx.drawImage(S.buf, 0, band.y0, S.gw, band.y1 - band.y0,
-                  0, by, W, bh);
-  }
-
-  const vis = visibleRange();
-  const R = band ? { x0:vis.x0, y0:Math.max(vis.y0, band.y0), x1:vis.x1, y1:Math.min(vis.y1, band.y1) } : vis;
+  const R = visibleRange();
   if (R.x1 <= R.x0 || R.y1 <= R.y0) return;
+  /* [viewport] 底色也只贴可见区：整张 buf 按 gw→gw*cs 放大会是一次几千像素的大 blit，
+     在 400×400 上实测比逐格画还慢。裁到 R 之后每次只处理一屏。 */
+  const rx = R.x0*cs, ry = R.y0*cs, rw = (R.x1 - R.x0)*cs, rh = (R.y1 - R.y0)*cs;
+  if (S.buf) ctx.drawImage(S.buf, R.x0, R.y0, R.x1 - R.x0, R.y1 - R.y0, rx, ry, rw, rh);
   /* [markLayer] 已完成格：整块标记层贴上来，不再逐格 fillRect。
      只贴可见区 R —— 大图纸上整张缓冲按 gw→gw*cs 放大是一次几千像素的大 blit，
      实测反而比逐格画慢（400×400 / 12px 时 1.4ms vs 0.23ms），裁到可见区就只有 0.02ms。 */
@@ -1866,9 +1896,12 @@ function draw(){
       ctx.drawImage(S.markBuf, mx, my, mw, mh, mx*cs, my*cs, mw*cs, mh*cs);
     }
   }
-  const showCodes = S.showCode && cs >= 9;
+  // [codeFont] 色号显示阈值与字号（移植自队友 11-14 版本）：
+  // 原来阈值固定 9px、字号固定 cs*0.38（6..11px），长色号（如 CE01）在小格上会挤出格子。
+  // 改成：低于 CODE_MIN_CELL 不画；字号按"最长色号位数"收，位数越多字越小。
+  const showCodes = S.showCode && cs >= CODE_MIN_CELL;
   if (showCodes){
-    ctx.font = `600 ${Math.max(6, Math.min(11, Math.round(cs*0.38)))}px "SF Mono",Consolas,monospace`;
+    ctx.font = `600 ${Math.max(7, Math.min(20, Math.round(cs * (1.5 / Math.max(2, S.codeMaxLen || 4)))))}px "SF Mono",Consolas,monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let y = R.y0; y < R.y1; y++) for (let x = R.x0; x < R.x1; x++){
@@ -2856,9 +2889,10 @@ $('paintSw').addEventListener('click', e => {
 
 /* ------------------------------------------------ 交互 ------------------ */
 function cellFromEvent(e){
+  // [viewport] canvas 只覆盖可视区，屏幕坐标要先加回它在图纸里的偏移
   const r = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - r.left) / S.cell);
-  const y = Math.floor((e.clientY - r.top) / S.cell);
+  const x = Math.floor((e.clientX - r.left + (S.viewX || 0)) / S.cell);
+  const y = Math.floor((e.clientY - r.top + (S.viewY || 0)) / S.cell);
   if (x < 0 || y < 0 || x >= S.gw || y >= S.gh) return -1;
   return y*S.gw + x;
 }
@@ -2907,16 +2941,19 @@ function syncCellUi(){
 }
 function applyZoomAnchor(){
   if (!zoomAnchor) return;
+  // [viewport] canvas 左上角对应图纸像素 (viewX, viewY)，换回屏幕坐标要减掉
   const v = $('view'), r = canvas.getBoundingClientRect();
-  v.scrollLeft += r.left + zoomAnchor.gx * S.cell - zoomAnchor.ax;
-  v.scrollTop  += r.top  + zoomAnchor.gy * S.cell - zoomAnchor.ay;
+  const ox = r.left - (S.viewX || 0), oy = r.top - (S.viewY || 0);
+  v.scrollLeft += ox + zoomAnchor.gx * S.cell - zoomAnchor.ax;
+  v.scrollTop  += oy + zoomAnchor.gy * S.cell - zoomAnchor.ay;
 }
 function animateZoom(target, ax, ay){
   if (!S.cells) return;
   target = Math.max(2, Math.min(cellCap(), target));
   const r = canvas.getBoundingClientRect();
   if (r.width && ax != null){
-    zoomAnchor = { gx:(ax - r.left) / S.cell, gy:(ay - r.top) / S.cell, ax, ay };
+    const ox = r.left - (S.viewX || 0), oy = r.top - (S.viewY || 0);
+    zoomAnchor = { gx:(ax - ox) / S.cell, gy:(ay - oy) / S.cell, ax, ay };
   }
   zoomTarget = target;
   if (zoomRaf) return;
@@ -2994,9 +3031,13 @@ viewEl.addEventListener('pointerdown', e => {
   // [hackone] 触屏：第二根手指落下时立刻转成捏合，别再当成平移；单指仍然是拖动画布
   if (e.pointerType === 'touch' && touchCount() >= 2){ endPan(); return; }
   if (e.target === canvas && S.tool === 'inspect') beginPan(e, false);
-  else if (e.target === viewEl) beginPan(e, true);                        // 灰色底也能拖
+  // 灰色底、以及画布之外的"纸张"区域都能拖（视口画布不覆盖整张纸）
+  else if (e.target === viewEl || e.target === $('stage')) beginPan(e, true);
 });
 viewEl.addEventListener('pointermove', e => { if (panState) movePan(e); });
+// [viewport] 画布只画可视区，滚动后必须重画
+viewEl.addEventListener('scroll', () => requestDraw(), { passive:true });
+window.addEventListener('scroll', () => { if (S.cells) requestDraw(); }, { passive:true });
 window.addEventListener('pointerup', () => { endPan(); });
 window.addEventListener('pointercancel', () => { endPan(); });
 document.addEventListener('keydown', e => {
@@ -5619,9 +5660,12 @@ renderProgress();
   function load(k, d){ try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
 
   function canvasCssBox(cv){
-    var w = parseFloat(cv.style.width), h = parseFloat(cv.style.height);
+    // [viewport] canvas 现在只有视口大；判断是否适应窗口必须用 stage（图纸实际尺寸）
+    var st = document.getElementById('stage');
+    var el = (st && parseFloat(st.style.width) > 0) ? st : cv;
+    var w = parseFloat(el.style.width), h = parseFloat(el.style.height);
     if (!(w > 0) || !(h > 0)){
-      var r = cv.getBoundingClientRect();
+      var r = el.getBoundingClientRect();
       w = r.width; h = r.height;
     }
     return { w: w, h: h };
