@@ -175,7 +175,7 @@ test('both resize modes carry progress through the geometry change and undo rest
       progressByteCount: () => Math.ceil(S.cells.length / 8), progressPatternHash: () => '',
       installDoc(w, h, base) { S.gw = w; S.gh = h; S.base = base; S.cells = Int32Array.from(base); },
       ensureBuffer() {}, syncDocInputs() {}, recount() {}, renderUsage() {}, renderSimilar() {},
-      requestDraw() {}, renderProgress() {}, fit() {}, toast() {} };
+      requestDraw() {}, renderProgress() {}, fit() {}, toast() {}, syncMarkLayer() {} };
     vm.createContext(c); vm.runInContext(source, c);
     // 2x3 → 3x2：已拼的第 0、2 格（bitmask 5）必须映射到新画布上，而不是被清零
     c[mode](3, 2, mode === 'resizeTo' ? {} : 0);
@@ -276,7 +276,7 @@ test('mark stroke writes the same state onto mixed cells', () => {
   const source = html.slice(html.indexOf('function applyProgress('), html.indexOf('function saveDoc('));
   const S = { cells: Int32Array.from([1, 1, 1, 1]), progress: new Uint8Array([0b0101]), gw: 4 };
   const c = { S, syncProgress() {}, saveProgress() {}, renderProgress() {}, requestDraw() {},
-    requestPartialDraw() {}, dr: { mark() {} }, window: {} };
+    requestPartialDraw() {}, dr: { mark() {} }, paintMarkBuffer() {}, window: {} };
   vm.createContext(c);
   vm.runInContext(source, c);
   const on = false;
@@ -325,7 +325,7 @@ test('undo of a brand snapshot restores the previous indexes and leaves older st
     resetProgress() { S.progress = new Uint8Array(1); },
     progressByteCount: () => 1, progressPatternHash: () => 'x',
     renderProgress() {}, requestDraw() {}, toast() {}, recount() {}, renderUsage() {}, renderSimilar() {},
-    paintBuffer() {}, inspect() {} };
+    paintBuffer() {}, inspect() {}, syncMarkLayer() {} };
   vm.createContext(c);
   vm.runInContext(source, c);
   c.pushHist({ t: 'c', pos: Int32Array.from([0]), before: Int32Array.from([0]), after: Int32Array.from([1]) });
