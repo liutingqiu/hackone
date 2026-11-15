@@ -1,0 +1,110 @@
+# =============================================================================
+# 部署工作流草稿 —— 已设计，**尚未启用**
+#
+# GitHub Actions 只识别 .yml / .yaml 结尾的文件，本文件后缀是 .disabled，
+# 因此不会触发、不会消耗额度、不会因为缺 secret 而报红。
+#
+# 启用方式（确认 secret 已配置、且 preview 演练通过后）：
+#   git mv .github/workflows/deploy.yml.disabled .github/workflows/deploy.yml
+#   git commit -m "ci(ops): 启用生产部署工作流"
+#
+# 依赖的仓库 secret（Settings → Secrets and variables → Actions）：
+#   CLOUDFLARE_API_TOKEN   Account:Cloudflare Pages:Edit（可选 Zone:DNS:Edit）
+#   CLOUDFLARE_ACCOUNT_ID  32 位 hex
+# 依赖的仓库变量/环境：production（可在 Environments 里加 required reviewers）
+# =============================================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 最小权限：读代码 + 写 deployment 记录（wrangler-action 用来标记部署）
+permissions:
+  contents: read
+  deployments: write
+
+# 生产部署串行：不取消进行中的部署（避免把半截版本推上去）
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # 部署前在同一个 job 里重复跑校验：
+      # CI 工作流与本工作流是并行的，不能假设 CI 已经绿了才允许部署。
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Bundle size budget
+        run: |
+          js=$(find dist/assets -name '*.js' -exec cat {} + | gzip -c | wc -c)
+          echo "首屏 JS gzip: $((js/1024)) KB (预算 150 KB)"
+          if [ "$js" -gt 153600 ]; then echo "超预算"; exit 1; fi
+
+      - name: Deploy
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          # 显式 --branch=main：GitHub checkout 是 detached HEAD，
+          # 不给 branch 会被当成 preview 部署，生产域不会更新。
+          command: pages deploy web/dist --project-name=hackone --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Smoke test
+        working-directory: .
+        run: |
+          set -euo pipefail
+          url="https://hackone.pages.dev/"
+          code=""
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || true)
+            [ "$code" = "200" ] && break
+            echo "等待生效... ($i/12) HTTP $code"
+            sleep 10
+          done
+          [ "$code" = "200" ] || { echo "::error::部署后健康检查失败：HTTP $code"; exit 1; }
+          curl -s "$url" | grep -q 'assets/index-' || { echo "::error::index.html 未引用构建产物"; exit 1; }
+          echo "冒烟通过：$url"
+
+      - name: Annotate deployment
+        if: always()
+        run: |
+          echo "### 部署结果" >> $GITHUB_STEP_SUMMARY
+          echo "- commit: `${{ github.sha }}`" >> $GITHUB_STEP_SUMMARY
+          echo "- deployment: ${{ steps.deploy.outputs.deployment-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 生产域: https://hack.liutingqiu.xyz" >> $GITHUB_STEP_SUMMARY
