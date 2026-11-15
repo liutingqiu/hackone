@@ -903,13 +903,13 @@ try{
          data-tip="GitHub 仓库" aria-label="GitHub 仓库" title="GitHub 仓库"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
     </div>
     <div id="modebar">
-      <div class="seg mini layermode" id="layerMode" role="group" aria-label="作用层" title="切换「图案 / 标记」：工具不变，作用对象换一层">
-        <button data-l="color" class="on">图案</button>
-        <button data-l="mark">标记</button>
+      <div class="seg mini layermode" id="layerMode" role="group" aria-label="标记/涂改模式">
+        <button type="button" data-l="color" class="on" title="涂改：编辑底色层">涂改</button>
+        <button type="button" data-l="mark" title="标记：编辑标记层">标记</button>
       </div>
       <div class="tools" id="tools">
         <button data-t="inspect" class="iconbtn on" data-tip="查看" aria-label="查看"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><path d="M24 37v7"/><path d="M36 24h8"/><path d="M4 24h7"/><path d="M24 11V4"/></svg></button>
-        <button data-t="mark" class="iconbtn" data-tip="标记完成（Shift+点：连通区域）" aria-label="标记完成"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="34" height="34" rx="6"/><path d="M15 24.5l6.5 6.5L33 17"/></svg></button>
+        <button data-t="mark" class="iconbtn" data-tip="标记完成" aria-label="标记完成"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="34" height="34" rx="6"/><path d="M15 24.5l6.5 6.5L33 17"/></svg></button>
         <span class="tsep" aria-hidden="true"></span>
         <button data-t="pencil" class="iconbtn" data-tip="铅笔" aria-label="铅笔"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M31 9l8 8"/><path d="M8 32 36 4l8 8-28 28-10 2 2-10Z"/><path d="M9 32l7 7"/></svg></button>
         <button data-t="eraser" class="iconbtn" data-tip="橡皮" aria-label="橡皮"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M44.78 24.17 31.92 7.1 14.13 20.5 27.5 37l3.36-2.34 13.92-10.49Z"/><path d="M27.5 37l-3.84 3.07-10.56.01-2.6-3.45-6.43-8.54L14.5 20.22"/><path d="M13.2 40.07h31.36"/></svg></button>
@@ -1675,7 +1675,7 @@ function markBrush(cellIdx, on){
    连选填色在标记层是连通区域标记。切层不动当前工具。 */
 function setLayer(l, quiet){
   S.layer = (l === 'mark') ? 'mark' : 'color';
-  if (!quiet) toast(S.layer === 'mark' ? '已在「标记」层：工具现在只改进度，不改图案' : '已在「图案」层：工具改颜色');
+  if (!quiet) toast(S.layer === 'mark' ? '已切到标记模式：工具只改进度，不改图案' : '已切到涂改模式：工具改底色');
   syncLayerUi();
   requestDraw();
 }
@@ -1721,7 +1721,7 @@ function paintMarkCells(cells, on){
 }
 function pickerAllowed(){
   if (S.layer !== 'mark') return true;
-  toast('吸色只在「图案」层有效');
+  toast('吸色属于涂改模式；点它会自动切回涂改');
   return false;
 }
 function toggleProgress(i){
@@ -2570,7 +2570,8 @@ function inspect(cellIdx){
     const x = cellIdx % S.gw, y = (cellIdx / S.gw) | 0;
     box.innerHTML = `<div class="sw" style="background:repeating-conic-gradient(#e9ecf1 0 25%,#fff 0 50%) 0/10px 10px"></div>
       <div class="kv"><span>坐标</span><b>第 ${x+1} 列, 第 ${y+1} 行</b></div>
-      <div class="kv"><span>状态</span><b>空（不拼）</b></div>`;
+      <div class="kv"><span>状态</span><b>空（不拼）</b></div>
+      <div class="kv"><span>标记</span><b>空底色不参与</b></div>`;
     return;
   }
   const p = S.palette[cell];
@@ -3207,7 +3208,7 @@ canvas.addEventListener('pointerdown', e => {
   // [hackone] 标记工具：只切完成态，不动图案
   if (S.tool === 'mark'){
     // Shift+点 走连通区域填充，不进入拖动标记
-    if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
+    if (S.cells[i] < 0){ toast('空格子会自动跳过'); return; }
     syncProgress();
     // [markFill] 按住 Shift 点：把整块连通区域一次性标成同一种状态（移植自队友版本）
     if (e.shiftKey){
@@ -3863,19 +3864,19 @@ const TOOL_HINT = {
   rect:'按住拖一个矩形，可选实心；Esc 取消。',
   ellipse:'按住拖一个圆/椭圆，可选实心；Esc 取消。',
   bucket:'点一格，填充与它相连的同色区域；4/8 连通可切换。',
-  mark:'点格子标记完成 / 再点取消，拖动可连续标记；Shift+点可整块连通区域一次标记。只记进度，不改图案。'
+  mark:'点格子标记完成 / 再点取消，拖动可连续标记；只记进度，不改图案。'
 };
 // [layers] 工具提示要跟着层变：标记层下同一工具的语义完全不同
 const TOOL_HINT_MARK = {
-  inspect:'看色号、坐标、用量，不改任何东西（也是平移用的工具）。',
-  mark:'点格子标记完成 / 再点取消，拖动可连续标记；Shift+点可整块连通区域一次标记。',
-  pencil:'在「标记」层：按笔刷把格子标成已拼。',
-  eraser:'在「标记」层：把格子改回未拼。',
-  picker:'吸色只在「图案」层有效，先切回图案。',
-  line:'在「标记」层：拖一条直线，把经过的格子标成已拼。',
-  rect:'在「标记」层：拖一个矩形，框住的格子标成已拼。',
-  ellipse:'在「标记」层：拖一个椭圆，框住的格子标成已拼。',
-  bucket:'在「标记」层：点一格，把相连的同色区域整块标记或取消。'
+  inspect:'标记模式：点击格子查看色号，以及这一格是否已标记。',
+  mark:'标记笔：点一下切换，拖动连续切换；空格子会自动跳过。',
+  pencil:'标记模式：点/拖把非空格标为已完成；空格子不参与。',
+  eraser:'标记模式：点/拖取消非空格的标记；空格子不参与。',
+  picker:'吸色属于涂改模式；点它会自动切回涂改。',
+  line:'标记模式：拖一条直线，松手把线上的非空格标为已完成。',
+  rect:'标记模式：拖一个矩形，把框内非空格标为已完成；实心/边框可切换。',
+  ellipse:'标记模式：拖一个圆/椭圆，把范围内非空格标为已完成。',
+  bucket:'标记模式：点一格，把相连的同状态非空格整片切换标记。'
 };
 /* [paintbar] 按工具 + 层收起无关控件（移植自队友 11-14 版本）。
    原来笔刷/实心/铅笔色三组永远显示，查看或标记层下那些控件其实用不上。 */
@@ -3898,6 +3899,7 @@ function syncPaintbar(){
     g.hidden = want.indexOf(g.dataset.for) < 0;
   });
 }
+window.syncPaintbar = syncPaintbar;   // v3 那个 IIFE 要委托过来，别再各写一套
 function updateModeHint(){
   const h = $('modeHint');
   if (!h) return;
@@ -4039,18 +4041,10 @@ renderProgress();
   });
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePop(); });
 
-  var GROUPS = {
-    inspect: [], mark: [], pencil: ['brush','paint'], eraser: ['brush'], picker: [],
-    line: ['brush','paint'], rect: ['brush','paint','shape'],
-    ellipse: ['brush','paint','shape'], bucket: ['paint']
-  };
+  /* 这里原来自己算一套「工具 → 显示哪些控件」，但不知道当前在哪一层，
+     会把标记层下本该收起的选色又放回来。统一委托给主脚本的 syncPaintbar。 */
   function sync(){
-    var on = document.querySelector('#tools button.on');
-    var t = on ? on.dataset.t : 'inspect';
-    var want = GROUPS[t] || [];
-    document.querySelectorAll('#paintbar .pb-group').forEach(function(g){
-      g.hidden = want.indexOf(g.dataset.for) < 0;
-    });
+    if (typeof window.syncPaintbar === 'function') window.syncPaintbar();
   }
   document.querySelectorAll('#tools button').forEach(function(b){
     b.addEventListener('click', function(){ setTimeout(sync, 0); });
@@ -5808,12 +5802,12 @@ renderProgress();
     var row2 = document.createElement('div');
     row2.className = 'row2';
     row2.innerHTML = '<button id="btnShareLink" class="sm" title="生成短链接，微信/QQ 直接发">分享链接</button>' +
-      '<button id="btnOpenDoc" class="sm tip-up" data-tip=".json / .txt / .zip 图纸文件">打开图纸</button>';
+      '<button id="btnOpenDoc" class="sm tip-up" data-tip="支持 JSON / TXT / ZIP 图纸">导入图纸</button>';
     // [PatternIO] 纯文本 / ZIP 工程文件：跨工具交换、能直接看色号，也不会像 JSON 那样被聊天软件吞掉
     var row3 = document.createElement('div');
     row3.className = 'row2';
-    row3.innerHTML = '<button id="btnExpZip" class="sm" title="导出 ZIP（内含 pattern.txt）">ZIP</button>' +
-      '<button id="btnExpTxt" class="sm" title="导出纯文本图纸，任何编辑器都能看">TXT</button>';
+    row3.innerHTML = '<button id="btnExpZip" class="sm" title="导出 ZIP（内含 pattern.txt，可再导入）">导出 ZIP</button>' +
+      '<button id="btnExpTxt" class="sm" title="导出纯文本图纸">导出 TXT</button>';
     var docInp = document.createElement('input');
     docInp.type = 'file'; docInp.id = 'docFile';
     docInp.accept = '.json,.txt,.zip,application/json,text/plain,application/zip'; docInp.hidden = true;
