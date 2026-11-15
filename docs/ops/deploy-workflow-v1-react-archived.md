@@ -1,5 +1,10 @@
 # 部署工作流设计评估（是否要加 `.github/workflows/deploy.yml`）
 
+> **历史文档（已归档）**：本文写于 2026-11-07，针对当时已归档的 React 版 `web/`（Vite + `web/dist`）。
+> 项目后来改为零构建的单文件 HTML（`app/build_html.py` → `product/index.html`），
+> 文中的 `npm run build`、`vite`、`web/dist` 等命令**已全部失效**，仅作留痕与复盘参考。
+> 当前可用的部署流程见 [runbook.md](runbook.md)。
+
 > 作者：运维部「航」｜分支 `feat/ops`｜2026-11-07
 > 状态：**只出设计，不启用**（缺 `CLOUDFLARE_API_TOKEN` secret，且部署链路尚未做过首次手工验证）
 

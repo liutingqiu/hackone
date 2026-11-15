@@ -1,5 +1,10 @@
 # V1 验收测试计划（测试部 · 证）
 
+> **历史文档**：本计划写于 2026-11-07，针对的是当时已归档的 React 版 `web/`（Vite + `web/src`）。
+> 项目后来改成了零构建的单文件 HTML（`app/app_template.html` → `product/index.html`），
+> 因此文中的 `web/src` 路径与 `vite` 命令都不再适用。用例本身（功能/边界/性能）仍有参考价值。
+> 当前的自动化回归在 `tests/runtime.test.cjs`，CI 见 `.github/workflows/ci.yml`。
+
 > 项目：深度思烤 / 拼豆图纸工具
 > 版本：v1.1（对齐 11:26 主控裁定）
 > 日期：2026-11-07 11:28
