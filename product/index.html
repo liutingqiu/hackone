@@ -1629,6 +1629,27 @@ function floodFillMark(start, conn){
   if (filled){ S.progressHash = progressPatternHash(); syncMarkLayer(); saveProgress(); renderProgress(); }
   return filled;
 }
+/* [markBrush] 笔刷大小的标记（移植自队友 11-14 版本）。
+   原来标记只能一格一格点/拖，刷子尺寸只对铅笔和橡皮生效。
+   这里让标记也吃 S.brush：和 paintBrush 用同一套方形刷范围，但只写进度、不动图案。 */
+function markBrush(cellIdx, on){
+  if (!S.cells || cellIdx < 0) return 0;
+  const n = S.brush, r = (n - 1) / 2;
+  const cx = cellIdx % S.gw, cy = (cellIdx / S.gw) | 0;
+  const x0 = Math.round(cx - r), y0 = Math.round(cy - r);
+  let hit = 0;
+  for (let y = y0; y < y0 + n; y++){
+    if (y < 0 || y >= S.gh) continue;
+    for (let x = x0; x < x0 + n; x++){
+      if (x < 0 || x >= S.gw) continue;
+      const i = y*S.gw + x;
+      if (S.markSet && S.markSet.has(i)) continue;
+      if (S.markSet) S.markSet.add(i);
+      if (applyProgress(i, on, { silent: true })) hit++;
+    }
+  }
+  return hit;
+}
 function toggleProgress(i){
   if (!S.cells || i < 0 || i >= S.cells.length) return false;
   if (S.cells[i] < 0){ toast('空格子不用标进度'); return false; }
@@ -3012,10 +3033,10 @@ canvas.addEventListener('pointerdown', e => {
       return;
     }
     S.markOn = markStrokePaints(hasProgress(i));
-    S.markSet = new Set([i]);
+    S.markSet = new Set();                          // 交给 markBrush 自己登记，别预塞起始格
     S.markLast = i;
     S.dragging = 'mark';
-    applyProgress(i, S.markOn, { silent: true });   // 拖动期间不逐格落盘
+    markBrush(i, S.markOn);                         // 按当前刷子尺寸落第一笔，拖动期间不逐格落盘
     S.selCell = i;
     inspect(i);
     requestDraw();
@@ -3053,7 +3074,7 @@ canvas.addEventListener('pointermove', e => {
     if (S.dragging === 'mark'){
       if (i !== S.markLast){
         S.markLast = i;
-        if (S.markSet && !S.markSet.has(i)){ S.markSet.add(i); applyProgress(i, S.markOn, { silent: true }); }
+        markBrush(i, S.markOn);
       }
     }
     else if (S.drag) updatePreview(i);
