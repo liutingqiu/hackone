@@ -34,11 +34,13 @@
 2. **它的源码不在仓库任何分支上**。逐个分支查过 `app_template.html`，没有一个含 `buildZip` / `floodFillMark`。
 3. **`product/index.html`（实际部署的东西）始终是主线版本**，从未包含这个分支的功能。
 
-## 想把这些功能并回主线，需要
+## 源码已恢复（2026-11-15）
 
-- 拿到产生这份产物的 `app_template.html`（本机或队友本地），提交上来；
-- 或者以本文件为参考，把 ZIP 导出、标记图层等逐块移植进 `app/app_template.html`；
-- 移植后必须 `python3 app/build_html.py` 重建，并让 `node --test tests/runtime.test.cjs` 全绿，
-  不能直接提交产物。
+队友的模板文件丢了，但**从产物完整反推了出来**，见 [source/](source/)。
+
+零构建单文件架构下产物 ≈ 源码（没有打包 / 压缩 / 混淆），只差一个色板占位符。
+重建后与原产物 **sha256 完全一致**：`66ba2806...`。
+
+所以「源码丢失」不构成障碍：剩下的功能可以直接对着 `source/app_template.html` 读和移植。
 
 sha256：`66ba28066762576318446bdb27cfd4f6aab7610cfea6401a2bd8977bb2108615`
