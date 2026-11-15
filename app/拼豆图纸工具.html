@@ -902,6 +902,10 @@ try{
          data-tip="GitHub 仓库" aria-label="GitHub 仓库" title="GitHub 仓库"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
     </div>
     <div id="modebar">
+      <div class="seg mini layermode" id="layerMode" role="group" aria-label="作用层" title="切换「图案 / 标记」：工具不变，作用对象换一层">
+        <button data-l="color" class="on">图案</button>
+        <button data-l="mark">标记</button>
+      </div>
       <div class="tools" id="tools">
         <button data-t="inspect" class="iconbtn on" data-tip="查看" aria-label="查看"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><path d="M24 37v7"/><path d="M36 24h8"/><path d="M4 24h7"/><path d="M24 11V4"/></svg></button>
         <button data-t="mark" class="iconbtn" data-tip="标记完成（Shift+点：连通区域）" aria-label="标记完成"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="34" height="34" rx="6"/><path d="M15 24.5l6.5 6.5L33 17"/></svg></button>
@@ -1103,6 +1107,9 @@ const S = {
   buf:null, bufCtx:null, anchor:4, palOpen:false,
   // [markLayer] 标记层独立缓冲：底色在 S.buf，标记在 S.markBuf，绘制时合成，互不写入
   markBuf:null, markCtx:null, markDirty:true, markSrc:null,
+  // [layers] 作用层：color=图案层（改颜色），mark=标记层（只改进度）。
+  // 同一套工具在两层的含义不同，切层不改工具。
+  layer:'color',
   dirtyImg:false
 };
 
@@ -1658,6 +1665,35 @@ function markBrush(cellIdx, on){
   }
   return hit;
 }
+/* [layers] 作用层：图案层改颜色，标记层只改「拼好了没有」。
+   同一套工具在两层的含义不同 —— 铅笔在标记层是刷子标记，矩形在标记层是框选标记，
+   连选填色在标记层是连通区域标记。切层不动当前工具。 */
+function setLayer(l, quiet){
+  S.layer = (l === 'mark') ? 'mark' : 'color';
+  if (!quiet) toast(S.layer === 'mark' ? '已在「标记」层：工具现在只改进度，不改图案' : '已在「图案」层：工具改颜色');
+  syncLayerUi();
+  requestDraw();
+}
+function syncLayerUi(){
+  const box = $('layerMode');
+  if (box) box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.l === S.layer));
+  updateModeHint();
+}
+// 标记层下把一格标成 on/off（不落盘，交给 flushMarkStroke 收尾）
+function setMarkCellQuiet(i, on){
+  return applyProgress(i, !!on, { silent: true });
+}
+// 标记层下的形状：把一组格子整体置为 on
+function paintMarkCells(cells, on){
+  let n = 0;
+  for (const i of cells) if (setMarkCellQuiet(i, on)) n++;
+  return n;
+}
+function pickerAllowed(){
+  if (S.layer !== 'mark') return true;
+  toast('吸色只在「图案」层有效');
+  return false;
+}
 function toggleProgress(i){
   if (!S.cells || i < 0 || i >= S.cells.length) return false;
   if (S.cells[i] < 0){ toast('空格子不用标进度'); return false; }
@@ -1940,10 +1976,11 @@ function draw(){
     }
     ctx.stroke();
   }
-  if (S.preview && S.preview.cells && S.preview.v >= 0){
-    const p = S.palette[S.preview.v];
+  // [layers] 标记层的形状预览用绿色；图案层仍用当前铅笔色
+  if (S.preview && S.preview.cells && (S.preview.mark || S.preview.v >= 0)){
+    const p = S.preview.mark ? null : S.palette[S.preview.v];
     ctx.globalAlpha = .62;
-    ctx.fillStyle = p.hex;
+    ctx.fillStyle = S.preview.mark ? 'rgba(22,163,74,.55)' : p.hex;
     for (const i of S.preview.cells){
       const x = i % S.gw, y = (i / S.gw) | 0;
       if (x < R.x0 || x >= R.x1 || y < R.y0 || y >= R.y1) continue;
@@ -2451,7 +2488,9 @@ function shapeIndices(tool, a, b){
 function updatePreview(b){
   if (!S.drag) return;
   S.drag.last = b;
-  S.preview = { v:S.paintIdx, cells:shapeIndices(S.drag.tool, S.drag.start, b) };
+  const cells = shapeIndices(S.drag.tool, S.drag.start, b);
+  // [layers] 标记层的形状预览用绿色叠加，不能借用铅笔色
+  S.preview = S.drag.mark ? { mark:true, cells } : { v:S.paintIdx, cells };
   requestDraw();
 }
 function commitShape(endIdx){
@@ -2460,6 +2499,15 @@ function commitShape(endIdx){
   S.drag = null;
   S.preview = null;
   const list = shapeIndices(d.tool, d.start, endIdx);
+  // [layers] 标记层：形状用来框选一批格子做标记，不落颜色
+  if (d.mark){
+    if (!list.length){ requestDraw(); return; }
+    const n = paintMarkCells(list, true);
+    flushMarkStroke();
+    toast(n ? `已标记 ${n} 格` : '这些格子已经是标记状态');
+    requestDraw();
+    return;
+  }
   if (!list.length || !validPaint()){ requestDraw(); return; }
   beginStroke();
   for (const i of list) paintCell(i, S.paintIdx);
@@ -2902,6 +2950,29 @@ function act(cellIdx){
   if (cellIdx < 0 || !S.cells) return;
   const t = S.tool;
   if (t === 'inspect'){ S.selCell = cellIdx; inspect(cellIdx); requestDraw(); return; }
+  // [layers] 标记层：同一套工具只改进度，不动图案
+  if (S.layer === 'mark' && t !== 'picker'){
+    if (S.cells[cellIdx] < 0){ toast('空格子不用标进度'); return; }
+    if (t === 'bucket'){
+      const n = floodFillMark(cellIdx, S.conn);
+      toast(n ? `已标记连通区域 ${n} 格` : '这一片已经是目标状态');
+      return;
+    }
+    if (t === 'line' || t === 'rect' || t === 'ellipse'){
+      const n = paintMarkCells(shapeIndices(t, cellIdx, cellIdx), true);
+      flushMarkStroke();
+      toast(n ? `已标记 ${n} 格` : '这些格子已经是标记状态');
+      return;
+    }
+    if (t === 'mark' || t === 'pencil' || t === 'eraser'){
+      S.markOn = markStrokePaints(hasProgress(cellIdx));
+      S.markSet = new Set(); S.markLast = cellIdx;
+      markBrush(cellIdx, S.markOn);
+      flushMarkStroke();
+      return;
+    }
+  }
+  if (t === 'picker' && !pickerAllowed()) return;
   // 吸色：只读，不改图纸。取完色仍留在吸色工具里，避免以为还在吸色、一拖就涂了格子
   if (t === 'picker'){
     S.selCell = cellIdx; inspect(cellIdx); requestDraw();
@@ -3063,6 +3134,24 @@ canvas.addEventListener('pointerdown', e => {
   if (S.palOpen) closePalette();
   const i = cellFromEvent(e);
   if (i < 0 || !S.cells) return;
+  // [layers] 标记层：铅笔/橡皮/标记 都变成刷子标记；形状工具按下开始拖框
+  if (S.layer === 'mark' && (S.tool === 'pencil' || S.tool === 'eraser')){
+    if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
+    S.markOn = (S.tool === 'eraser') ? false : markStrokePaints(hasProgress(i));
+    S.markSet = new Set(); S.markLast = i;
+    S.dragging = 'mark';
+    markBrush(i, S.markOn);
+    S.selCell = i; inspect(i); requestDraw();
+    return;
+  }
+  if (S.layer === 'mark' && (S.tool === 'line' || S.tool === 'rect' || S.tool === 'ellipse')){
+    if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
+    S.drag = { tool:S.tool, start:i, last:i, mark:true };
+    S.preview = { mark:true, cells: shapeIndices(S.tool, i, i) };
+    requestDraw();
+    return;
+  }
+  if (S.tool === 'picker' && !pickerAllowed()) return;
   // [hackone] 标记工具：只切完成态，不动图案
   if (S.tool === 'mark'){
     // Shift+点 走连通区域填充，不进入拖动标记
@@ -3721,15 +3810,40 @@ const TOOL_HINT = {
   bucket:'点一格，填充与它相连的同色区域；4/8 连通可切换。',
   mark:'点格子标记完成 / 再点取消，拖动可连续标记；Shift+点可整块连通区域一次标记。只记进度，不改图案。'
 };
+// [layers] 工具提示要跟着层变：标记层下同一工具的语义完全不同
+const TOOL_HINT_MARK = {
+  inspect:'看色号、坐标、用量，不改任何东西（也是平移用的工具）。',
+  mark:'点格子标记完成 / 再点取消，拖动可连续标记；Shift+点可整块连通区域一次标记。',
+  pencil:'在「标记」层：按笔刷把格子标成已拼。',
+  eraser:'在「标记」层：把格子改回未拼。',
+  picker:'吸色只在「图案」层有效，先切回图案。',
+  line:'在「标记」层：拖一条直线，把经过的格子标成已拼。',
+  rect:'在「标记」层：拖一个矩形，框住的格子标成已拼。',
+  ellipse:'在「标记」层：拖一个椭圆，框住的格子标成已拼。',
+  bucket:'在「标记」层：点一格，把相连的同色区域整块标记或取消。'
+};
+function updateModeHint(){
+  const h = $('modeHint');
+  if (!h) return;
+  h.textContent = ((S.layer === 'mark' ? TOOL_HINT_MARK : TOOL_HINT)[S.tool]) || '';
+}
 document.querySelectorAll('#tools button').forEach(btn => btn.addEventListener('click', () => {
   const t = btn.dataset.t;
   if (!t) return;                 // 翻转是动作按钮，不是工具，别把当前工具清掉
+  // [layers] 选「标记」工具等于切到标记层；选「吸色」回到图案层。其它工具不动层。
+  if (t === 'mark') S.layer = 'mark';
+  else if (t === 'picker') S.layer = 'color';
   S.tool = t;
   document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b === btn));
-  $('modeHint').textContent = TOOL_HINT[S.tool] || '';
   S.preview = null; S.drag = null;
+  syncLayerUi();
   panCursor();
   requestDraw();
+}));
+// [layers] 层切换：只改作用对象，不动当前工具
+document.querySelectorAll('#layerMode button').forEach(btn => btn.addEventListener('click', () => {
+  setLayer(btn.dataset.l);
+  S.preview = null; S.drag = null;
 }));
 $('brush').addEventListener('input', () => {
   S.brush = clampInt($('brush').value, 1, 16);
