@@ -373,6 +373,62 @@ test('quad homography maps the picked corners onto the full grid', () => {
   assert.equal(c.quadHomography([{x:0,y:0},{x:0,y:0},{x:0,y:0},{x:0,y:0}], dst), null);
 });
 
+test('a real exported ZIP round-trips through parseText with its own brand detected', () => {
+  // 真实输入：200×200 全图只有 H02/H16 两种色号 + 57 个空格，来自导出的 .zip
+  const zlib = require('node:zlib');
+  const zip = fs.readFileSync(path.join(root, 'tests/fixtures/pattern-200x200-mard.zip'));
+  const sig = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+  const at = zip.indexOf(sig);
+  assert.ok(at >= 0, 'local file header');
+  const method = zip.readUInt16LE(at + 8);
+  const compSize = zip.readUInt32LE(at + 18);
+  const uncompSize = zip.readUInt32LE(at + 22);
+  const start = at + 30 + zip.readUInt16LE(at + 26) + zip.readUInt16LE(at + 28);
+  const body = zip.subarray(start, start + compSize);
+  const raw = method === 8 ? zlib.inflateRawSync(body) : body;
+  assert.equal(raw.length, uncompSize, 'declared size matches');
+  const text = raw.toString('utf8');
+
+  const src = html.slice(html.indexOf('function codeIsConcat('), html.indexOf('function applyParsed('));
+  const palettes = JSON.parse(fs.readFileSync(path.join(root, 'app/palettes.json'), 'utf8'));
+  const S = { brandId: 'standard', codeSys: 'mard' };
+  const c = { S, BRANDS: palettes.brands, paletteOf: id => palettes.brands[id],
+    MAX_FILE: 16 * 1024 * 1024, MAX_SIDE: 400, MAX_CELLS: 160000 };
+  vm.createContext(c);
+  vm.runInContext(src, c);
+
+  const p = c.parseText(text);
+  assert.equal(p.w, 200);
+  assert.equal(p.h, 200);
+  assert.equal(p.base.length, 40000);
+  assert.equal(p.brand, 'standard');
+  assert.equal(p.codeSys, 'mard');
+  assert.equal(p.nonEmpty, 39943, '57 empty cells');
+  assert.equal(p.bits, '', 'no progress bits in this export');
+
+  // 只有两种颜色，且都落在 MARD 体系里
+  const used = new Set();
+  for (let i = 0; i < p.base.length; i++) if (p.base[i] >= 0) used.add(p.base[i]);
+  assert.equal(used.size, 2);
+  const mardCodes = new Set(palettes.brands.standard.colors.map(col => col.codes.mard));
+  for (const idx of used){
+    assert.ok(mardCodes.has(palettes.brands.standard.colors[idx].codes.mard), 'code exists in MARD');
+  }
+
+  // 再导出一次，编解码闭环：解析出的图必须能被 buildText 原样写回
+  const colors = palettes.brands.standard.colors;
+  c.S.cells = p.base;
+  c.S.palette = colors.map(col => ({ code: col.codes.mard, codes: col.codes }));
+  c.S.gw = p.w; c.S.gh = p.h;
+  c.hasProgress = () => false;
+  const again = c.buildText();
+  const p2 = c.parseText(again);
+  assert.equal(p2.w, p.w);
+  assert.equal(p2.h, p.h);
+  assert.equal(p2.nonEmpty, p.nonEmpty);
+  assert.deepEqual(Array.from(p2.base), Array.from(p.base), 'round trip keeps every cell');
+});
+
 test('share save confirms the stored body, expires with the object, and rate limits', async () => {
   const src = fs.readFileSync(path.join(root, 'share/worker.js'), 'utf8');
   const { default: worker } = await import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'));
