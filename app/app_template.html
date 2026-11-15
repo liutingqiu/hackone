@@ -1853,6 +1853,10 @@ function draw(){
   const cs = S.cell, W = S.gw*cs, H = S.gh*cs;
   /* [viewport] 画布只覆盖可视区：stage 撑滚动范围，canvas 贴在视口位置，
      内容用 -box 的偏移画，所以下面所有绘制代码仍然用图纸坐标，一行都不用改。 */
+  // 先把 stage 撑到图纸大小，再算可视区 —— 顺序反了的话第一次绘制会读到旧的/零尺寸，
+  // visibleBox 兜底返回整张图，画布就变成全尺寸（大图纸上等于退回改造前）。
+  var st = $('stage');
+  if (st){ st.style.width = W + 'px'; st.style.height = H + 'px'; }
   var box = visibleBox(W, H);
   S.viewX = box.x; S.viewY = box.y; S.viewW = box.w; S.viewH = box.h;
   const dpr = effDpr(box.w, box.h);
@@ -1861,8 +1865,6 @@ function draw(){
     canvas.width = pw;
     canvas.height = ph;
   }
-  const st = $('stage');
-  if (st){ st.style.width = W + 'px'; st.style.height = H + 'px'; }
   canvas.style.left = box.x + 'px';
   canvas.style.top  = box.y + 'px';
   canvas.style.width = box.w + 'px';
