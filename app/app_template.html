@@ -899,7 +899,7 @@ try{
     <div id="modebar">
       <div class="tools" id="tools">
         <button data-t="inspect" class="iconbtn on" data-tip="查看" aria-label="查看"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><path d="M24 37v7"/><path d="M36 24h8"/><path d="M4 24h7"/><path d="M24 11V4"/></svg></button>
-        <button data-t="mark" class="iconbtn" data-tip="标记完成" aria-label="标记完成"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="34" height="34" rx="6"/><path d="M15 24.5l6.5 6.5L33 17"/></svg></button>
+        <button data-t="mark" class="iconbtn" data-tip="标记完成（Shift+点：连通区域）" aria-label="标记完成"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="34" height="34" rx="6"/><path d="M15 24.5l6.5 6.5L33 17"/></svg></button>
         <span class="tsep" aria-hidden="true"></span>
         <button data-t="pencil" class="iconbtn" data-tip="铅笔" aria-label="铅笔"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M31 9l8 8"/><path d="M8 32 36 4l8 8-28 28-10 2 2-10Z"/><path d="M9 32l7 7"/></svg></button>
         <button data-t="eraser" class="iconbtn" data-tip="橡皮" aria-label="橡皮"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M44.78 24.17 31.92 7.1 14.13 20.5 27.5 37l3.36-2.34 13.92-10.49Z"/><path d="M27.5 37l-3.84 3.07-10.56.01-2.6-3.45-6.43-8.54L14.5 20.22"/><path d="M13.2 40.07h31.36"/></svg></button>
@@ -1526,6 +1526,45 @@ function applyProgress(i, on){
   dr.mark(i);
   requestPartialDraw();
   return true;
+}
+/* [markFill] 连通区域标记（移植自队友 11-14 版本的 floodFillMark，并收紧成「同色连通块」）。
+   队友那版只按「已拼/未拼」连通、不区分颜色：整张图纸没有空格时会一次把画布全标满，
+   实际退化成全选。这里改成同时要求同色，语义是「这一片同色区域拼完了」，对多色图纸才有意义。
+   起点已拼则整块取消，否则整块标上；conn 沿用油漆桶的 4/8 连通设置。 */
+function floodFillMark(start, conn){
+  if (!S.cells || start < 0 || start >= S.cells.length || S.cells[start] < 0) return 0;
+  syncProgress();
+  const color = S.cells[start];
+  const next = hasProgress(start) ? 0 : 1;
+  const W = S.gw, H = S.gh;
+  const seen = new Uint8Array(W*H);
+  const stack = [start];
+  seen[start] = 1;
+  let filled = 0;
+  const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
+  const D8 = [[1,1],[1,-1],[-1,1],[-1,-1]];
+  const visit = (x, y) => {
+    if (x < 0 || y < 0 || x >= W || y >= H) return;
+    const j = y*W + x;
+    if (seen[j] || S.cells[j] !== color) return;
+    seen[j] = 1;
+    stack.push(j);
+  };
+  while (stack.length){
+    const i = stack.pop();
+    if (S.cells[i] !== color) continue;
+    const byte = i >> 3, bit = 1 << (i & 7);
+    const was = !!(S.progress[byte] & bit);
+    if (was !== !!next){
+      if (next) S.progress[byte] |= bit; else S.progress[byte] &= ~bit;
+      filled++;
+    }
+    const x = i % W, y = (i / W) | 0;
+    for (let d = 0; d < 4; d++) visit(x + D4[d][0], y + D4[d][1]);
+    if (conn === 8) for (let d = 0; d < 4; d++) visit(x + D8[d][0], y + D8[d][1]);
+  }
+  if (filled){ S.progressHash = progressPatternHash(); saveProgress(); renderProgress(); }
+  return filled;
 }
 function toggleProgress(i){
   if (!S.cells || i < 0 || i >= S.cells.length) return false;
@@ -2903,8 +2942,16 @@ canvas.addEventListener('pointerdown', e => {
   if (i < 0 || !S.cells) return;
   // [hackone] 标记工具：只切完成态，不动图案
   if (S.tool === 'mark'){
+    // Shift+点 走连通区域填充，不进入拖动标记
     if (S.cells[i] < 0){ toast('空格子不用标进度'); return; }
     syncProgress();
+    // [markFill] 按住 Shift 点：把整块连通区域一次性标成同一种状态（移植自队友版本）
+    if (e.shiftKey){
+      const n = floodFillMark(i, S.conn);
+      toast(n ? `连通区域已更新 ${n} 格` : '没有可更新的连通区域');
+      requestDraw();
+      return;
+    }
     S.markOn = markStrokePaints(hasProgress(i));
     S.markSet = new Set([i]);
     S.markLast = i;
@@ -3045,12 +3092,43 @@ function exportPNG(){
   const maxExportPixels = matchMedia('(max-width: 700px)').matches ? 12e6 : 32e6;
   let cs = exportCellSize();
   const padL = 54, padT = 96, padR = 26, padB = 24;
+  const LEGEND_FONT = '12px "PingFang SC","Microsoft YaHei",sans-serif';
   const legendRow = 20;
-  const legendH = 56 + S.used.length * legendRow;
-  while (cs > 8 && (padL + S.gw*cs + padR) * (padT + S.gh*cs + padB + legendH) > maxExportPixels) cs -= 2;
-  const W = padL + S.gw*cs + padR;
-  const H = padT + S.gh*cs + padB + legendH;
-  if (W * H > maxExportPixels){
+  /* [pngLegend] 图例改成横向流式排版（移植自队友 11-14 版本）：
+     原来一种颜色占一行，48 色就把画布顶高近千像素，只能靠缩小格子来换空间。
+     横排会在内容宽度内自动换行，色多时高度增长慢得多，格子能留得更大。 */
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = LEGEND_FONT;
+  const totalBeads0 = S.used.reduce((a, u) => a + u.c, 0);
+  const items = S.used.map(u => {
+    const p = S.palette[u.i];
+    return { u, p, code:p.code, count:`${u.c} 颗`, pct:`${(100*u.c/totalBeads0).toFixed(1)}%`, w:0 };
+  });
+  const itemWidth = it => 14 + 6 + measure.measureText(it.code).width + 8 +
+                        measure.measureText(it.count).width + 8 + measure.measureText(it.pct).width + 18;
+  let minLegendW = 0;
+  for (const it of items) minLegendW = Math.max(minLegendW, itemWidth(it));
+  function legendRowsFor(maxW){
+    const rows = []; let row = [], x = 0;
+    for (const it of items){
+      if (!it.w) it.w = itemWidth(it);
+      if (row.length && x + it.w > maxW){ rows.push(row); row = []; x = 0; }
+      row.push(it); x += it.w;
+    }
+    if (row.length) rows.push(row);
+    return rows;
+  }
+  let legendRows = null, legendH = 0, W = 0, H = 0;
+  for (let guard = 0; guard < 200; guard++){
+    W = Math.max(padL + S.gw*cs + padR, padL + minLegendW + padR);
+    const rows = legendRowsFor(W - padL - padR);
+    const h = 56 + rows.length * legendRow;
+    H = padT + S.gh*cs + padB + h;
+    if (W * H <= maxExportPixels){ legendRows = rows; legendH = h; break; }
+    if (cs <= 8) break;
+    cs -= 2;
+  }
+  if (!legendRows){
     toast('导出图片尺寸过大，请降低图纸格数后再导出');
     return;
   }
@@ -3113,23 +3191,30 @@ function exportPNG(){
   for (let y = 29; y < S.gh; y += 29){ const py = oy + y*cs + .5; c.moveTo(ox, py); c.lineTo(ox + S.gw*cs, py); }
   c.stroke();
 
-  // 用量清单
+  // 用量清单（横向流式：一行排到边就换行）
   let ly = oy + S.gh*cs + 42;
   c.textAlign = 'left'; c.textBaseline = 'middle';
   c.fillStyle = '#111417';
   c.font = '700 15px "PingFang SC","Microsoft YaHei",sans-serif';
   c.fillText('用量清单', padL, ly - 20);
-  c.font = '12px "PingFang SC","Microsoft YaHei",sans-serif';
-  for (const u of S.used){
-    const p = S.palette[u.i];
-    c.fillStyle = p.hex;
-    c.fillRect(padL, ly - 7, 14, 14);
-    c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = 1;
-    c.strokeRect(padL + .5, ly - 6.5, 14, 14);
-    c.fillStyle = '#111417';
-    c.fillText(`${p.code}`, padL + 22, ly);
-    c.fillStyle = '#5a626e';
-    c.fillText(`${u.c} 颗  ${(100*u.c/totalBeads).toFixed(1)}%`, padL + 100, ly);
+  c.font = LEGEND_FONT;
+  for (const row of legendRows){
+    let lx = padL;
+    for (const it of row){
+      c.fillStyle = it.p.hex;
+      c.fillRect(lx, ly - 7, 14, 14);
+      c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = 1;
+      c.strokeRect(lx + .5, ly - 6.5, 14, 14);
+      let tx = lx + 20;
+      c.fillStyle = '#111417';
+      c.fillText(it.code, tx, ly);
+      tx += measure.measureText(it.code).width + 8;
+      c.fillStyle = '#5a626e';
+      c.fillText(it.count, tx, ly);
+      tx += measure.measureText(it.count).width + 8;
+      c.fillText(it.pct, tx, ly);
+      lx += it.w;
+    }
     ly += legendRow;
   }
 
@@ -3511,7 +3596,7 @@ const TOOL_HINT = {
   rect:'按住拖一个矩形，可选实心；Esc 取消。',
   ellipse:'按住拖一个圆/椭圆，可选实心；Esc 取消。',
   bucket:'点一格，填充与它相连的同色区域；4/8 连通可切换。',
-  mark:'点格子标记完成 / 再点取消，拖动可连续标记；只记进度，不改图案。'
+  mark:'点格子标记完成 / 再点取消，拖动可连续标记；Shift+点可整块连通区域一次标记。只记进度，不改图案。'
 };
 document.querySelectorAll('#tools button').forEach(btn => btn.addEventListener('click', () => {
   const t = btn.dataset.t;
@@ -4607,7 +4692,13 @@ renderProgress();
     if (!inp) return;
     inp.addEventListener('change', function(e){
       var f = e.target.files[0]; if (!f) return;
-      if (f.size > MAX_PACKED_RAW){ toast('图纸文件过大，无法安全读取'); e.target.value = ''; return; }
+      e.target.value = '';
+      if (f.size > MAX_PACKED_RAW){ toast('图纸文件过大，无法安全读取'); return; }
+      // [PatternIO] .txt / .zip 走文本工程格式，其余按老的 .json 解析
+      if (/\.(txt|zip)$/i.test(f.name || '')){
+        window.PatternIO.importFile(f);
+        return;
+      }
       var r = new FileReader();
       r.onload = function(){
         try {
@@ -4618,7 +4709,6 @@ renderProgress();
         } catch(err){ toast('文件读取失败'); }
       };
       r.readAsText(f);
-      e.target.value = '';
     });
   }
 
@@ -4979,6 +5069,419 @@ renderProgress();
     });
     c.restore();
   };
+
+/* =====================================================================
+   [PatternIO] 图纸工程文件的文本 / ZIP 交换格式（移植自队友 11-14 版本）
+   ---------------------------------------------------------------------
+   格式（纯文本，第一行 W H，随后 H 行色号，最后可选一行 0/1 进度位）：
+     32 24
+     B04 C09 - B04 ...
+     ...
+     1010...        ← 只数非空底色格；全 0 时省略
+   ZIP 只是把同一个文本压进 pattern.txt，方便微信/邮箱传。
+   解析时会自动在「当前品牌 → 标准 291 → 其它品牌」里找一套能完整覆盖的色号体系，
+   避免跨体系同号串色。
+   要求：本模块依赖 S / BRANDS / paletteOf / installDoc / buildPalette /
+   colourSystemOptions / progressPatternHash / saveProgress / renderProgress /
+   requestDraw / fit / toast，均在主脚本里已定义。
+   ===================================================================== */
+(function(){
+  var MAX_FILE = 16 * 1024 * 1024;
+  var MAX_SIDE = 400, MAX_CELLS = 160000;
+
+  function codeIsConcat(c){ return /^[A-Z]+\d+$/.test(c || ''); }
+
+  /* 导出用色号体系：优先当前体系；若在用色号里有空色号 '-'（会和空底色冲突），
+     自动换成本品牌里另一套不含 '-' 的体系。 */
+  function pickExportCodes(){
+    var used = [], seen = new Set();
+    for (var i = 0; i < S.cells.length; i++){
+      var v = S.cells[i];
+      if (v >= 0 && !seen.has(v)){ seen.add(v); used.push(v); }
+    }
+    if (!used.length) return { sid:S.codeSys, concat:false };
+    var b = paletteOf(S.brandId);
+    var systems = [];
+    if (S.codeSys) systems.push(S.codeSys);
+    b.codeSystems.forEach(function(cs){ if (systems.indexOf(cs.id) < 0) systems.push(cs.id); });
+    for (var si = 0; si < systems.length; si++){
+      var sid = systems[si], ok = true, concat = true;
+      for (var k = 0; k < used.length; k++){
+        var code = S.palette[used[k]].codes[sid];
+        if (!code || code === '-' || code === '.'){ ok = false; break; }
+        if (!codeIsConcat(code)) concat = false;
+      }
+      if (ok) return { sid:sid, concat:concat };
+    }
+    throw new Error('当前色号体系里有空色号「-」，请先在「色号」里换一套再导出');
+  }
+
+  function buildText(){
+    if (!S.cells || !S.cells.length) throw new Error('还没有图纸');
+    var lines = [S.gw + ' ' + S.gh];
+    var pick = pickExportCodes();
+    for (var y = 0; y < S.gh; y++){
+      var row = [];
+      for (var x = 0; x < S.gw; x++){
+        var v = S.cells[y*S.gw + x];
+        row.push(v < 0 ? '-' : (S.palette[v].codes[pick.sid] || S.palette[v].code));
+      }
+      lines.push(pick.concat ? row.join('') : row.join(' '));
+    }
+    var bits = '', any = false;
+    for (var i = 0; i < S.cells.length; i++){
+      if (S.cells[i] < 0) continue;
+      var b = hasProgress(i) ? '1' : '0';
+      if (b === '1') any = true;
+      bits += b;
+    }
+    if (any) lines.push(bits);
+    return lines.join('\n');
+  }
+
+  function normalize(text){
+    return String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  }
+  function tokenizeConcat(line){
+    var tokens = line.match(/[-.]|[A-Z]+\d+/g) || [];
+    var rest = line.replace(/[-.]|[A-Z]+\d+/g, '');
+    if (rest) throw new Error('无法切分的色号片段：' + rest.slice(0, 12));
+    return tokens;
+  }
+
+  function parseText(text){
+    var raw = normalize(text).split('\n').filter(function(s){
+      return s.trim() && !/^\s*(#|\/\/)/.test(s);
+    });
+    if (!raw.length) throw new Error('文件是空的');
+    var head = /^\s*(\d+)\s*(?:[xX×*,，]|\s)\s*(\d+)\s*$/.exec(raw[0]);
+    if (!head) throw new Error('第一行应写成「宽 高」，例如 32 48');
+    var w = +head[1], h = +head[2];
+    if (!Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1 ||
+        w > MAX_SIDE || h > MAX_SIDE || w*h > MAX_CELLS){
+      throw new Error('图纸尺寸不合法（最大 400×400）');
+    }
+    if (raw.length < 1 + h) throw new Error('色号行数不足：需要 ' + h + ' 行');
+
+    var colorLines = raw.slice(1, 1 + h);
+    var tokensByRow = [], all = [];
+    for (var y = 0; y < h; y++){
+      var line = colorLines[y].trim();
+      var toks;
+      if (/[\s,，]/.test(line)) toks = line.split(/[\s,，]+/).filter(Boolean);
+      else toks = tokenizeConcat(line);
+      if (toks.length !== w){
+        throw new Error('第 ' + (y+1) + ' 行有 ' + toks.length + ' 个色号，应为 ' + w);
+      }
+      tokensByRow.push(toks);
+      all = all.concat(toks);
+    }
+
+    /* 色号 → 品牌/色板：先当前品牌，再标准 291，最后其它品牌。
+       整份文件必须能被同一个色号体系完整覆盖，否则跨体系同号会串色。 */
+    var brandIds = [S.brandId, 'standard'].concat(Object.keys(BRANDS));
+    var chosen = null, chosenSystem = null;
+    var covers = function(m){
+      return function(t){ return t === '-' || t === '.' || m.has(t); };
+    };
+    for (var bi = 0; bi < brandIds.length; bi++){
+      var bid = brandIds[bi];
+      if (!BRANDS[bid] || (bi > 1 && bid === S.brandId)) continue;
+      var bySystem = {};
+      BRANDS[bid].codeSystems.forEach(function(sys){
+        var m = new Map();
+        BRANDS[bid].colors.forEach(function(c, idx){
+          var code = c.codes[sys.id];
+          if (code && !m.has(code)) m.set(code, idx);
+        });
+        bySystem[sys.id] = m;
+      });
+      var prefer = (bid === S.brandId) ? S.codeSys : null;
+      var sysOk = null;
+      if (prefer && bySystem[prefer] && all.every(covers(bySystem[prefer]))) sysOk = prefer;
+      if (!sysOk){
+        for (var s2 in bySystem){
+          if (all.every(covers(bySystem[s2]))){ sysOk = s2; break; }
+        }
+      }
+      if (!sysOk) continue;
+      chosen = bid; chosenSystem = sysOk;
+      break;
+    }
+    if (!chosen){
+      var sample = all.filter(function(t){ return t !== '-' && t !== '.'; })[0] || '';
+      throw new Error('找不到色号「' + sample + '」，请先选对品牌/色号体系');
+    }
+
+    var paletteMap = new Map();
+    BRANDS[chosen].colors.forEach(function(c, idx){
+      var code = c.codes[chosenSystem];
+      if (code && !paletteMap.has(code)) paletteMap.set(code, idx);
+    });
+    var base = new Int32Array(w*h).fill(-1);
+    for (var yy = 0; yy < h; yy++){
+      for (var xx = 0; xx < w; xx++){
+        var tk = tokensByRow[yy][xx];
+        if (tk === '-' || tk === '.') continue;
+        var idx2 = paletteMap.get(tk);
+        if (idx2 === undefined){
+          throw new Error('第 ' + (yy+1) + ' 行第 ' + (xx+1) + ' 列色号「' + tk + '」不存在');
+        }
+        base[yy*w + xx] = idx2;
+      }
+    }
+
+    /* 标记：剩余内容拼成连续 0/1，只数非空底色格 */
+    var bitText = raw.slice(1 + h).join('').replace(/[\s,，]/g, '');
+    if (bitText && !/^[01]+$/.test(bitText)) throw new Error('标记段只能包含 0/1');
+    var nonEmpty = 0;
+    for (var k = 0; k < base.length; k++) if (base[k] >= 0) nonEmpty++;
+    if (bitText && bitText.length !== nonEmpty){
+      throw new Error('标记位数 ' + bitText.length + ' 与非空格数 ' + nonEmpty + ' 不一致');
+    }
+    return { w:w, h:h, base:base, bits:bitText, brand:chosen, codeSys:chosenSystem, nonEmpty:nonEmpty };
+  }
+
+  function applyParsed(p, name){
+    if (window.__docBeforeImport) window.__docBeforeImport();
+    S.img = null; S.srcW = 0; S.srcH = 0;
+    S.flip = false;
+    if (window.updateFlipBtn) updateFlipBtn();
+    S.maxColors = 0;
+    if ($('maxc')) $('maxc').value = 0;
+    if (window.paintLabel) paintLabel(0);
+    S.history.length = 0; S.future.length = 0; S.histBytes = 0;
+    S.brandId = p.brand;
+    if ($('brand')) $('brand').value = p.brand;
+    colourSystemOptions();
+    S.codeSys = p.codeSys;
+    if ($('codeSys')) $('codeSys').value = p.codeSys;
+    buildPalette({ remap:false });
+    installDoc(p.w, p.h, p.base);
+    S.progress = new Uint8Array(Math.ceil(p.w*p.h/8));
+    var bit = 0;
+    for (var i = 0; i < p.base.length; i++){
+      if (p.base[i] < 0) continue;
+      if (p.bits.charAt(bit) === '1') S.progress[i >> 3] |= (1 << (i & 7));
+      bit++;
+    }
+    S.progressHash = progressPatternHash();
+    saveProgress(); renderProgress(); requestDraw(); fit();
+    if ($('srcInfo')) $('srcInfo').textContent = '已导入图纸：' + (name || '') + ' ' + p.w + '×' + p.h;
+    if (window.__docAfterImport) window.__docAfterImport(name || '导入的图纸');
+    toast('已导入 ' + p.w + '×' + p.h + ' 图纸（' + p.nonEmpty + ' 颗' + (p.bits ? '，含标记' : '') + '）');
+  }
+
+  /* ---------------- ZIP（store / deflate） ---------------- */
+  var CRC_TABLE = null;
+  function crcTable(){
+    if (CRC_TABLE) return CRC_TABLE;
+    CRC_TABLE = new Uint32Array(256);
+    for (var n = 0; n < 256; n++){
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      CRC_TABLE[n] = c >>> 0;
+    }
+    return CRC_TABLE;
+  }
+  function crc32(bytes){
+    var t = crcTable(), c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function isZip(bytes){
+    return bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4B &&
+           (bytes[2] === 3 || bytes[2] === 5 || bytes[2] === 7);
+  }
+  function u16(dv, off){ return dv.getUint16(off, true); }
+  function u32(dv, off){ return dv.getUint32(off, true); }
+  function dosTime(d){
+    var time = ((d.getHours() & 31) << 11) | ((d.getMinutes() & 63) << 5) | ((d.getSeconds() / 2) & 31);
+    var date = (((d.getFullYear() - 1980) & 127) << 9) | (((d.getMonth() + 1) & 15) << 5) | (d.getDate() & 31);
+    return { time: time, date: date };
+  }
+  async function deflateRaw(bytes){
+    if (typeof CompressionStream === 'undefined') return null;
+    try {
+      var stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    } catch (e) { return null; }
+  }
+  async function inflateRaw(bytes){
+    if (typeof DecompressionStream === 'undefined') throw new Error('浏览器不支持 ZIP 解压');
+    var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  async function buildZip(name, data){
+    var nameBytes = new TextEncoder().encode(name);
+    var compressed = await deflateRaw(data);
+    var method = compressed ? 8 : 0;
+    var body = compressed || data;
+    var crc = crc32(data);
+    var dt = dosTime(new Date());
+
+    var local = new Uint8Array(30 + nameBytes.length + body.length);
+    var lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0x0800, true);
+    lv.setUint16(8, method, true);
+    lv.setUint16(10, dt.time, true);
+    lv.setUint16(12, dt.date, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, body.length, true);
+    lv.setUint32(22, data.length, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lv.setUint16(28, 0, true);
+    local.set(nameBytes, 30);
+    local.set(body, 30 + nameBytes.length);
+
+    var central = new Uint8Array(46 + nameBytes.length);
+    var cv = new DataView(central.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, method, true);
+    cv.setUint16(12, dt.time, true);
+    cv.setUint16(14, dt.date, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, body.length, true);
+    cv.setUint32(24, data.length, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, 0, true);
+    central.set(nameBytes, 46);
+
+    var eocd = new Uint8Array(22);
+    var ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(4, 0, true);
+    ev.setUint16(6, 0, true);
+    ev.setUint16(8, 1, true);
+    ev.setUint16(10, 1, true);
+    ev.setUint32(12, central.length, true);
+    ev.setUint32(16, local.length, true);
+    ev.setUint16(20, 0, true);
+
+    var out = new Uint8Array(local.length + central.length + eocd.length);
+    out.set(local, 0); out.set(central, local.length); out.set(eocd, local.length + central.length);
+    return out;
+  }
+  async function unzipFirstText(bytes){
+    var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    var eocd = -1;
+    var start = Math.max(0, bytes.length - 0xFFFF - 22);
+    for (var i = bytes.length - 22; i >= start; i--){
+      if (bytes[i] === 0x50 && bytes[i+1] === 0x4B && bytes[i+2] === 5 && bytes[i+3] === 6){
+        eocd = i; break;
+      }
+    }
+    if (eocd < 0) throw new Error('不是完整的 ZIP 文件');
+    var count = u16(dv, eocd + 10), csize = u32(dv, eocd + 12), coff = u32(dv, eocd + 16);
+    if (coff + csize > bytes.length || count < 1 || count > 100) throw new Error('ZIP 目录不合法');
+    var p = coff, picked = null;
+    for (var n = 0; n < count; n++){
+      if (p + 46 > bytes.length || u32(dv, p) !== 0x02014b50) throw new Error('ZIP 目录损坏');
+      var flags = u16(dv, p + 8), method = u16(dv, p + 10);
+      var comp = u32(dv, p + 20), uncomp = u32(dv, p + 24);
+      var nl = u16(dv, p + 28), el = u16(dv, p + 30), cl = u16(dv, p + 32);
+      var off = u32(dv, p + 42);
+      var nameBytes = bytes.subarray(p + 46, p + 46 + nl);
+      var name = new TextDecoder('utf-8').decode(nameBytes);
+      var isDir = /\/$/.test(name);
+      var entry = { flags:flags, method:method, comp:comp, uncomp:uncomp, off:off, name:name };
+      if (!isDir && /\.txt$/i.test(name)){
+        if (!picked || /^pattern\.txt$/i.test(name)) picked = entry;
+        if (/^pattern\.txt$/i.test(name)) break;
+      } else if (!isDir && !picked) picked = entry;
+      p += 46 + nl + el + cl;
+    }
+    if (!picked) throw new Error('ZIP 里没有文件');
+    if (picked.flags & 1) throw new Error('不支持加密 ZIP');
+    if (picked.uncomp > MAX_FILE) throw new Error('ZIP 内文件过大');
+    var lp = picked.off;
+    if (lp + 30 > bytes.length || u32(dv, lp) !== 0x04034b50) throw new Error('ZIP 文件头损坏');
+    var lnl = u16(dv, lp + 26), lel = u16(dv, lp + 28);
+    var dataStart = lp + 30 + lnl + lel;
+    if (dataStart + picked.comp > bytes.length) throw new Error('ZIP 数据越界');
+    var compBytes = bytes.subarray(dataStart, dataStart + picked.comp);
+    var raw;
+    if (picked.method === 0) raw = compBytes;
+    else if (picked.method === 8) raw = await inflateRaw(compBytes);
+    else throw new Error('不支持的 ZIP 压缩方式');
+    if (raw.length !== picked.uncomp) throw new Error('ZIP 解压大小不符');
+    return raw;
+  }
+
+  /* ---------------- 文件读写 ---------------- */
+  function decodeBytes(bytes){
+    try { return new TextDecoder('utf-8', { fatal:true }).decode(bytes); }
+    catch (e){
+      try { return new TextDecoder('gbk').decode(bytes); }
+      catch (e2){ return new TextDecoder('utf-8').decode(bytes); }
+    }
+  }
+  async function readFile(file){
+    if (file.size > MAX_FILE) throw new Error('文件超过 16 MB');
+    var buf = await file.arrayBuffer();
+    var bytes = new Uint8Array(buf);
+    var text;
+    if (isZip(bytes)) text = decodeBytes(await unzipFirstText(bytes));
+    else text = decodeBytes(bytes);
+    return parseText(text);
+  }
+  function download(blob, filename){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+  }
+  function baseName(){
+    var b = paletteOf(S.brandId);
+    return '拼豆图纸_' + S.gw + 'x' + S.gh + '_' + (S.codeSys || (b && b.short) || 'palette');
+  }
+
+  async function exportZip(){
+    try {
+      if (!S.cells || !S.cells.length){ toast('先生成图纸'); return; }
+      var text = buildText();
+      var data = new TextEncoder().encode(text);
+      var zip = await buildZip('pattern.txt', data);
+      download(new Blob([zip], { type:'application/zip' }), baseName() + '.zip');
+      toast('已导出 ZIP（' + Math.max(1, Math.round(zip.length/1024)) + ' KB）');
+    } catch (e){ console.error(e); toast('导出失败：' + e.message); }
+  }
+  function exportTxt(){
+    try {
+      if (!S.cells || !S.cells.length){ toast('先生成图纸'); return; }
+      var text = buildText();
+      download(new Blob([text], { type:'text/plain;charset=utf-8' }), baseName() + '.txt');
+      toast('已导出 TXT');
+    } catch (e){ console.error(e); toast('导出失败：' + e.message); }
+  }
+  async function importFile(file){
+    try {
+      toast('正在读取图纸…');
+      var p = await readFile(file);
+      applyParsed(p, (file.name || '图纸文件').replace(/\.(txt|zip)$/i, ''));
+    } catch (e){
+      console.error(e);
+      toast('导入失败：' + (e && e.message ? e.message : '未知错误'));
+    }
+  }
+
+  window.PatternIO = {
+    importFile: importFile, exportZip: exportZip, exportTxt: exportTxt,
+    buildText: buildText, parseText: parseText, applyParsed: applyParsed,
+    _zip: { buildZip: buildZip, unzipFirstText: unzipFirstText, isZip: isZip, crc32: crc32 }
+  };
+})();
   /* ---------- 导出区按钮 ---------- */
   var dock = $('dock');
   if (dock){
@@ -4989,16 +5492,25 @@ renderProgress();
     var row2 = document.createElement('div');
     row2.className = 'row2';
     row2.innerHTML = '<button id="btnShareLink" class="sm" title="生成短链接，微信/QQ 直接发">分享链接</button>' +
-      '<button id="btnOpenDoc" class="sm tip-up" data-tip="需要 .json 图纸文件">打开图纸</button>';
+      '<button id="btnOpenDoc" class="sm tip-up" data-tip=".json / .txt / .zip 图纸文件">打开图纸</button>';
+    // [PatternIO] 纯文本 / ZIP 工程文件：跨工具交换、能直接看色号，也不会像 JSON 那样被聊天软件吞掉
+    var row3 = document.createElement('div');
+    row3.className = 'row2';
+    row3.innerHTML = '<button id="btnExpZip" class="sm" title="导出 ZIP（内含 pattern.txt）">ZIP</button>' +
+      '<button id="btnExpTxt" class="sm" title="导出纯文本图纸，任何编辑器都能看">TXT</button>';
     var docInp = document.createElement('input');
-    docInp.type = 'file'; docInp.id = 'docFile'; docInp.accept = '.json,application/json'; docInp.hidden = true;
+    docInp.type = 'file'; docInp.id = 'docFile';
+    docInp.accept = '.json,.txt,.zip,application/json,text/plain,application/zip'; docInp.hidden = true;
     dock.appendChild(docInp);
     dock.appendChild(row);
     dock.appendChild(row2);
+    dock.appendChild(row3);
     $('btnShareCard').addEventListener('click', window.shareCard);
     $('btnGuide').addEventListener('click', window.openGuide);
     $('btnShareLink').addEventListener('click', window.copyShareLink);
     $('btnOpenDoc').addEventListener('click', function(){ $('docFile').click(); });
+    $('btnExpZip').addEventListener('click', function(){ window.PatternIO.exportZip(); });
+    $('btnExpTxt').addEventListener('click', function(){ window.PatternIO.exportTxt(); });
     bindDocFile();
   }
 
