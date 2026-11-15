@@ -898,6 +898,7 @@ try{
           <div class="row"><button id="fit" style="flex:1">适应窗口</button><button id="zoomOut">−</button><button id="zoomIn">+</button></div>
         </div>
       </div>
+      <button id="replayIntro" class="iconbtn" data-tip="重放开屏动画" aria-label="重放开屏动画" title="重放开屏动画"><svg viewBox="0 0 48 48" width="18" height="18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M41 24a17 17 0 1 1-5-12"/><path d="M41 6v11H30"/></svg></button>
       <a class="iconbtn" href="https://github.com/liutingqiu/hackone" target="_blank" rel="noopener"
          data-tip="GitHub 仓库" aria-label="GitHub 仓库" title="GitHub 仓库"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
     </div>
@@ -1110,6 +1111,8 @@ const S = {
   // [layers] 作用层：color=图案层（改颜色），mark=标记层（只改进度）。
   // 同一套工具在两层的含义不同，切层不改工具。
   layer:'color',
+  // [markUndo] 标记笔画：记录被改过格子的原状态，松手时压一条 t:'m' 历史
+  markStroke:null,
   dirtyImg:false
 };
 
@@ -1634,6 +1637,7 @@ function floodFillMark(start, conn){
     const byte = i >> 3, bit = 1 << (i & 7);
     const was = !!(S.progress[byte] & bit);
     if (was !== !!next){
+      recordMark(i);                        // [markUndo] 记下原状态，整块填充可撤销
       if (next) S.progress[byte] |= bit; else S.progress[byte] &= ~bit;
       filled++;
     }
@@ -1660,6 +1664,7 @@ function markBrush(cellIdx, on){
       const i = y*S.gw + x;
       if (S.markSet && S.markSet.has(i)) continue;
       if (S.markSet) S.markSet.add(i);
+      recordMark(i);                                  // [markUndo] 记下原状态
       if (applyProgress(i, on, { silent: true })) hit++;
     }
   }
@@ -1678,10 +1683,35 @@ function syncLayerUi(){
   const box = $('layerMode');
   if (box) box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.l === S.layer));
   updateModeHint();
+  if (typeof syncPaintbar === 'function') syncPaintbar();
 }
 // 标记层下把一格标成 on/off（不落盘，交给 flushMarkStroke 收尾）
 function setMarkCellQuiet(i, on){
+  // [markUndo] 第一次碰到这一格时记下它原来的状态
+  if (S.markStroke && i >= 0 && !S.markStroke.map.has(i)) S.markStroke.map.set(i, hasProgress(i) ? 1 : 0);
   return applyProgress(i, !!on, { silent: true });
+}
+function beginMarkStroke(){ S.markStroke = { map:new Map() }; }
+function recordMark(i){
+  if (!S.markStroke) S.markStroke = { map:new Map() };
+  if (!S.markStroke.map.has(i)) S.markStroke.map.set(i, hasProgress(i) ? 1 : 0);
+}
+function endMarkStroke(){
+  const st = S.markStroke;
+  S.markStroke = null;
+  if (!st || !st.map.size) return 0;
+  const pos = Int32Array.from(st.map.keys());
+  const before = Int32Array.from(st.map.values());
+  const after = new Int32Array(pos.length);
+  let changed = 0;
+  for (let k = 0; k < pos.length; k++){
+    after[k] = hasProgress(pos[k]) ? 1 : 0;
+    if (after[k] !== before[k]) changed++;
+  }
+  if (!changed){ flushMarkStroke(); return 0; }
+  pushHist({ t:'m', pos, before, after });
+  flushMarkStroke();
+  return changed;
 }
 // 标记层下的形状：把一组格子整体置为 on
 function paintMarkCells(cells, on){
@@ -2323,12 +2353,28 @@ function applyEntry(e, dir){
     }
     return;
   }
+  // [markUndo] 标记笔画的撤销：只回退进度位，不动图案
+  if (e.t === 'm'){
+    if (!S.progress || S.progress.length !== progressByteCount()) syncProgress();
+    const bits = dir === 'undo' ? e.before : e.after;
+    for (let k = 0; k < e.pos.length; k++){
+      const i = e.pos[k], byte = i >> 3, bit = 1 << (i & 7);
+      if (bits[k]) S.progress[byte] |= bit; else S.progress[byte] &= ~bit;
+      paintMarkBuffer(i);
+    }
+    S.progressHash = progressPatternHash();
+    saveProgress(); renderProgress(); dr.mark(e.pos[0]); requestDraw();
+    if (S.selCell >= 0) inspect(S.selCell);
+    return;
+  }
   const arr = dir === 'undo' ? e.before : e.after;
   for (let k = 0; k < e.pos.length; k++){
     const i = e.pos[k];
     S.cells[i] = arr[k];
     S.base[i] = arr[k];
     paintBuffer(i);
+    // 颜色格变成空/空变成颜色时，标记层也要跟着刷
+    if (typeof paintMarkBuffer === 'function') paintMarkBuffer(i);
   }
   recount(); renderUsage(); renderSimilar(); requestDraw();
   if (S.selCell >= 0) inspect(S.selCell);
@@ -2502,8 +2548,9 @@ function commitShape(endIdx){
   // [layers] 标记层：形状用来框选一批格子做标记，不落颜色
   if (d.mark){
     if (!list.length){ requestDraw(); return; }
+    beginMarkStroke();
     const n = paintMarkCells(list, true);
-    flushMarkStroke();
+    endMarkStroke();
     toast(n ? `已标记 ${n} 格` : '这些格子已经是标记状态');
     requestDraw();
     return;
@@ -2954,21 +3001,25 @@ function act(cellIdx){
   if (S.layer === 'mark' && t !== 'picker'){
     if (S.cells[cellIdx] < 0){ toast('空格子不用标进度'); return; }
     if (t === 'bucket'){
+      beginMarkStroke();
       const n = floodFillMark(cellIdx, S.conn);
+      endMarkStroke();
       toast(n ? `已标记连通区域 ${n} 格` : '这一片已经是目标状态');
       return;
     }
     if (t === 'line' || t === 'rect' || t === 'ellipse'){
+      beginMarkStroke();
       const n = paintMarkCells(shapeIndices(t, cellIdx, cellIdx), true);
-      flushMarkStroke();
+      endMarkStroke();
       toast(n ? `已标记 ${n} 格` : '这些格子已经是标记状态');
       return;
     }
     if (t === 'mark' || t === 'pencil' || t === 'eraser'){
       S.markOn = markStrokePaints(hasProgress(cellIdx));
       S.markSet = new Set(); S.markLast = cellIdx;
+      beginMarkStroke();
       markBrush(cellIdx, S.markOn);
-      flushMarkStroke();
+      endMarkStroke();
       return;
     }
   }
@@ -3140,6 +3191,7 @@ canvas.addEventListener('pointerdown', e => {
     S.markOn = (S.tool === 'eraser') ? false : markStrokePaints(hasProgress(i));
     S.markSet = new Set(); S.markLast = i;
     S.dragging = 'mark';
+    beginMarkStroke();
     markBrush(i, S.markOn);
     S.selCell = i; inspect(i); requestDraw();
     return;
@@ -3159,7 +3211,9 @@ canvas.addEventListener('pointerdown', e => {
     syncProgress();
     // [markFill] 按住 Shift 点：把整块连通区域一次性标成同一种状态（移植自队友版本）
     if (e.shiftKey){
+      beginMarkStroke();
       const n = floodFillMark(i, S.conn);
+      endMarkStroke();
       toast(n ? `连通区域已更新 ${n} 格` : '没有可更新的连通区域');
       requestDraw();
       return;
@@ -3168,6 +3222,7 @@ canvas.addEventListener('pointerdown', e => {
     S.markSet = new Set();                          // 交给 markBrush 自己登记，别预塞起始格
     S.markLast = i;
     S.dragging = 'mark';
+    beginMarkStroke();                              // [markUndo] 整段拖动算一条历史
     markBrush(i, S.markOn);                         // 按当前刷子尺寸落第一笔，拖动期间不逐格落盘
     S.selCell = i;
     inspect(i);
@@ -3233,7 +3288,7 @@ window.addEventListener('pointerup', () => {
   }
   if (S.dragging === 'mark'){
     S.dragging = false; S.markSet = null; S.markLast = -1;
-    flushMarkStroke();      // 松手才落盘 + 刷新统计
+    endMarkStroke();        // 松手：压一条历史 + 落盘 + 刷新统计
   } else if (S.dragging){
     S.dragging = false;
     endStroke();
@@ -3822,6 +3877,27 @@ const TOOL_HINT_MARK = {
   ellipse:'在「标记」层：拖一个椭圆，框住的格子标成已拼。',
   bucket:'在「标记」层：点一格，把相连的同色区域整块标记或取消。'
 };
+/* [paintbar] 按工具 + 层收起无关控件（移植自队友 11-14 版本）。
+   原来笔刷/实心/铅笔色三组永远显示，查看或标记层下那些控件其实用不上。 */
+const PAINTBAR_GROUPS = {
+  inspect: [], mark: [],
+  pencil: ['brush','paint'], eraser: ['brush'], picker: [],
+  line: ['brush','paint'], rect: ['brush','paint','shape'], ellipse: ['brush','paint','shape'],
+  bucket: ['paint']
+};
+function syncPaintbar(){
+  let want = (PAINTBAR_GROUPS[S.tool] || []).slice();
+  if (S.layer === 'mark'){
+    // 标记层是 0/1 状态，不需要选颜色；笔刷和实心仍然有用
+    want = want.filter(k => k !== 'paint');
+    if (S.tool === 'pencil' || S.tool === 'eraser' || S.tool === 'line') want = ['brush'];
+    else if (S.tool === 'rect' || S.tool === 'ellipse') want = ['brush','shape'];
+    else want = [];
+  }
+  document.querySelectorAll('#paintbar .pb-group').forEach(g => {
+    g.hidden = want.indexOf(g.dataset.for) < 0;
+  });
+}
 function updateModeHint(){
   const h = $('modeHint');
   if (!h) return;
@@ -3840,6 +3916,7 @@ document.querySelectorAll('#tools button').forEach(btn => btn.addEventListener('
   panCursor();
   requestDraw();
 }));
+syncPaintbar();   // 初始按当前工具收一次
 // [layers] 层切换：只改作用对象，不动当前工具
 document.querySelectorAll('#layerMode button').forEach(btn => btn.addEventListener('click', () => {
   setLayer(btn.dataset.l);
