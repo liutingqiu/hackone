@@ -1,86 +1,99 @@
-# 拼豆图纸工具 · hackone
+# 拼豆图纸工具 · 平板 APK
 
-把一张图变成能拼的图纸：**自动分板、每板一页 A4、拼装进度可标可核验、38 字符短链分享**。
+把单文件网页 `拼豆图纸工具.html` 包装成 Android 平板 APK，并针对触摸/横屏做了适配。
+原始网页未改动，平板版是独立副本 `tablet/index.html`。
 
-v1.6 起，拍照核验支持**四角框选做透视校正**（斜着拍也能对）：选完照片把四个角拖到图纸边缘即可。
+## 产物
 
-v1.7 起，图纸可以导出成**纯文本 / ZIP 工程文件**（第一行「宽 高」，随后逐行色号），
-任何编辑器都能打开，微信也传得动；「打开图纸」同时收 `.json` / `.txt` / `.zip`。
-标记工具下 **Shift + 点击**可把整片同色区域一次标完。
-
-| | |
+| 文件 | 说明 |
 | --- | --- |
-| 在线使用 | <https://hack.liutingqiu.xyz> |
-| 离线使用 | 双击 `product/index.html`，单文件，无需联网 |
-| 发布说明 | [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md) |
-| 作者 | [@liutingqiu](https://github.com/liutingqiu) · [@sshanersshaner](https://github.com/sshanersshaner) |
+| `dist/拼豆图纸-平板.apk` | 可直接安装的 APK（调试签名，181 KB，v1.0.2） |
+| `dist/pindou-tablet.apk` | 同上，ASCII 文件名，方便命令行/脚本 |
+| `tablet/index.html` | 平板版网页（可单独用浏览器打开） |
+| `拼豆图纸工具.html` | 原网页，保持原样 |
 
-## 目录
+## 平板适配做了什么
+
+- **三栏按比例**：`--lw/--rw = clamp(180px, 19.55vw, 280px/289px)`（比最初 23vw 收窄 15%），
+  1600 宽时左右各 280px，1280 宽时各 250px，1024 宽时各 200px，800 宽时各 180px；
+  中间画布自动占满剩余宽度（含折叠动画同步）。
+- **断点重排**：`≥761px` 三栏常驻（平板），`<761px` 回落为原来的手机单列，互不干扰。
+- **触控热区**：`pointer: coarse` 下按钮/输入/开关/色卡格子放大到 37–46px，
+  行高 46px，字体 13–14px；`#bar`/`#modebar` 内的按钮再缩 20%（37×32 / 37×34），保证横屏单行。
+  顶部条不再显示「网格尺寸 / 颗粒数 / 底板块数 / 坐标取色」，把宽度让给按钮。
+- **全屏**：`windowFullscreen` + `systemUiVisibility` 沉浸式隐藏状态栏/导航栏（边缘滑动可临时呼出），不再有顶部白条。
+  不使用 API 30 的 `WindowInsetsController`，避免老系统类校验失败。
+- **画布手势**：单指按当前工具绘制/擦除/标记；「查看」工具单指拖动平移；
+  双指捏合缩放 + 双指平移（复用原有滚轮缩放的锚点缓动）。
+- **统一导入**：底部居中的「导入」按钮打开系统文件管理（`*/*`），
+  可直接选图片 / ZIP / TXT / JSON 图纸，按文件类型自动分流；
+  空状态不再放「导入图片 / 新建空白图纸 / 拖进来或 Ctrl+V」这些中间按钮与提示。
+- **导出走原生**：PNG → 相册 `Pictures/拼豆图纸`；ZIP/TXT → `Download/拼豆图纸`；
+  A4 拼装图 → 直接合成 A4 PDF 并分享；保存后自动弹系统分享面板。
+- **外部链接**（淘宝/GitHub）交给系统浏览器；返回键先关浮层再退出。
+
+## 目录结构
 
 ```
-.
-├── app/            单文件应用源码（app_template.html + palettes.json）与构建脚本
-├── product/        构建产物，直接部署到 Cloudflare Pages
-├── share/          分享短链服务（Cloudflare Worker + KV）
-├── tests/          运行时回归（node --test）
-├── tools/          小工具（journal.sh 等）
-├── docs/           计划、决策、发布说明、调研、评审材料
-├── org/            部门流水线与交接约定
-├── journal/        每日工作留痕
-├── reference/      参考实现与色板来源
-├── archive/        历史快照（1.1 / 2.0 / 2.1）、废弃的 web 版、旧离线包
-├── .github/        CI：构建 + 产物一致性 + 运行时回归
-└── README.md
+tablet/index.html        平板版页面（构建时复制进 APK 的 assets/www/）
+android/
+  AndroidManifest.xml    包名 com.pindou.pattern，minSdk 24 / targetSdk 34
+  res/                   图标、主题、网络安全配置
+  src/com/pindou/pattern/
+    MainActivity.java    WebView 外壳、文件选择、外链、返回键
+    AssetServer.java     127.0.0.1 本地静态服务（给页面正常 http 源）
+    NativeBridge.java    window.NativeSave 暴露给页面的方法
+    Exporter.java        MediaStore 保存、分享、A4 PDF 合成
+    ShareProvider.java   Android 9 及以下的 content:// 分享
+build-apk.sh             一键构建（aapt2 → javac → d8 → zipalign → apksigner）
+tools/                   图标生成、打包、浏览器端验证脚本
+dist/                    产物与验证截图
 ```
 
-## 快速开始
+## 重新构建
 
 ```bash
-git clone https://github.com/liutingqiu/hackone.git
-cd hackone
-
-open product/index.html            # 直接看效果，不用装任何依赖
-python3 app/build_html.py          # 改完源码重新构建
-node --test tests/runtime.test.cjs # 跑运行时回归
+bash build-apk.sh
 ```
 
-应用没有构建链、没有框架依赖：源码是 `app/app_template.html` 一个文件，构建脚本把
-`palettes.json` 注入后产出 `app/拼豆图纸工具.html`，再复制到 `product/index.html`。
+依赖（本机已装）：
 
-## 部署
+- JDK 17（运行 d8/apksigner），JDK 8（javac，build-tools 34 的 d8 对 JDK 17 的
+  `MethodParameters` 有 NPE，故用 JDK 8 编译）
+- Android SDK：`D:/app/AndroidSdk`（platform-tools、platforms;android-34、build-tools;34.0.0）
+
+## 安装
 
 ```bash
-python3 app/build_html.py
-cp app/拼豆图纸工具.html product/index.html
-npx wrangler pages deploy ./product --project-name hackone --branch main
-
-cd share && npx wrangler deploy     # 短链 Worker（KV，180 天过期，单张上限 400 KB）
+adb install -r "dist/拼豆图纸-平板.apk"
 ```
 
-## 画布操作
+或把 APK 传到平板点击安装（需允许“安装未知来源应用”）。
 
-| 操作 | 手势 |
-| --- | --- |
-| 平移（放大后拖动画布） | 中键拖动 / 空格 + 左键拖动 / 「查看」工具下左键拖动 |
-| 缩放 | 滚轮（以光标为中心） |
-| 适应窗口 | 右上角「显示设置」→ 适应窗口 |
+## 浏览器端验证（无需真机）
 
-## 工具与标记
+```bash
+node tools/verify-layout.js   # 1280×800 / 1024×768 / 800×1280 / 700×1000 布局+触摸绘制+双指缩放
+node tools/verify-bridge.js   # 假 NativeSave，验证 PNG/A4 导出会走原生桥
+node tools/shots-import.js    # 导入示例图并截图
+node tools/verify-import.js   # 图片 / TXT / ZIP 三种导入往返校验
+```
 
-画布上「点格子做什么」只有一档状态：工具条。没有独立的「浏览 / 标记」模式。
+截图在 `dist/screenshots/`。
 
-| 工具 | 点格子会怎样 |
-| --- | --- |
-| 查看 | 看色号、坐标、用量，不改任何东西（也是平移用的工具） |
-| 标记 | 标记「这格拼好了」/ 再点取消，拖动可连续标记；只记进度，不改图案 |
-| 铅笔 / 橡皮 / 吸色 / 直线 / 矩形 / 圆形 / 连选填色 | 改图案 |
-| 翻转 | 动作按钮，左右镜像图案；已标记的进度会跟着镜像 |
+## 已知限制
 
-进度按格子位置记录：整理配色、重新识别、撤销都不会把它清零；画布尺寸变了才重置。
+- APK 真机验证中；启动异常会显示一页堆栈（不再直接闪退），截图反馈即可。
+  仍崩溃时可提供平板 Android 版本，或用 `adb logcat -s AndroidRuntime` 抓日志。
+- `capture` 拍照输入统一走系统文件选择器（未单独接相机）。
+- Android 9 及以下没有分区存储，导出文件落在应用外部目录（仍可分享）。
+- APK 使用本工程调试证书签名，适合自用安装，不适合上架。
+## 这份副本（perler-tool/apk）
 
-## 文档
-
-- 发布说明：[docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md)
-- 方案与决策：[docs/PLAN.md](docs/PLAN.md)、[docs/decisions.md](docs/decisions.md)、[docs/adr.md](docs/adr.md)
-- 评审与测试：[docs/qa/](docs/qa/)、[docs/user-testing/](docs/user-testing/)
-- 工作留痕：[journal/](journal/)
+- 来源：`D:\app\DeepSeek Harness DesKtop\WorkPlace\Pindou`，版本 v1.0.2（2026-11-16）。
+- 内容：平板版页面 `tablet/index.html`、Android 工程 `android/`、构建脚本 `build-apk.sh`、
+  验证脚本 `tools/`（已剔除 `node_modules`，需要跑截图/验证时先 `cd tools && npm i puppeteer-core`）、
+  产物 `dist/`（APK + 验证截图）、原始网页 `拼豆图纸工具.html`。
+- 已在本副本内实测 `bash build-apk.sh` 可独立构建出同签名 APK（versionCode 3 / 1.0.2）。
+- 构建依赖本机路径：`D:/app/AndroidSdk`（SDK）、`C:/Program Files/Microsoft/jdk-17.0.11.9-hotspot`（JDK 17）、
+  `C:/Program Files/BellSoft/LibericaJDK-8/bin/javac.exe`（JDK 8，build-tools 34 的 d8 需要它编译出的 class）。

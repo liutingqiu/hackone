@@ -1,9 +1,0 @@
-# 归档的第三方产物按二进制保存：不做换行转换，保证 sha256 与原始文件一致
-archive/**/*.html -text
-archive/**/*.csv  -text
-
-# 正常源码走自动换行归一
-*.py   text eol=lf
-*.cjs  text eol=lf
-*.js   text eol=lf
-*.md   text eol=lf
