@@ -63,12 +63,7 @@ bash build-apk.sh
 - Android SDK：`D:/app/AndroidSdk`（platform-tools、platforms;android-34、build-tools;34.0.0）
 
 ## 安装
-
-```bash
-adb install -r "dist/拼豆图纸-平板.apk"
-```
-
-或把 APK 传到平板点击安装（需允许“安装未知来源应用”）。
+把 APK 传到平板点击安装
 
 ## 浏览器端验证（无需真机）
 
@@ -78,22 +73,3 @@ node tools/verify-bridge.js   # 假 NativeSave，验证 PNG/A4 导出会走原�
 node tools/shots-import.js    # 导入示例图并截图
 node tools/verify-import.js   # 图片 / TXT / ZIP 三种导入往返校验
 ```
-
-截图在 `dist/screenshots/`。
-
-## 已知限制
-
-- APK 真机验证中；启动异常会显示一页堆栈（不再直接闪退），截图反馈即可。
-  仍崩溃时可提供平板 Android 版本，或用 `adb logcat -s AndroidRuntime` 抓日志。
-- `capture` 拍照输入统一走系统文件选择器（未单独接相机）。
-- Android 9 及以下没有分区存储，导出文件落在应用外部目录（仍可分享）。
-- APK 使用本工程调试证书签名，适合自用安装，不适合上架。
-## 这份副本（perler-tool/apk）
-
-- 来源：`D:\app\DeepSeek Harness DesKtop\WorkPlace\Pindou`，版本 v1.0.2（2026-11-16）。
-- 内容：平板版页面 `tablet/index.html`、Android 工程 `android/`、构建脚本 `build-apk.sh`、
-  验证脚本 `tools/`（已剔除 `node_modules`，需要跑截图/验证时先 `cd tools && npm i puppeteer-core`）、
-  产物 `dist/`（APK + 验证截图）、原始网页 `拼豆图纸工具.html`。
-- 已在本副本内实测 `bash build-apk.sh` 可独立构建出同签名 APK（versionCode 3 / 1.0.2）。
-- 构建依赖本机路径：`D:/app/AndroidSdk`（SDK）、`C:/Program Files/Microsoft/jdk-17.0.11.9-hotspot`（JDK 17）、
-  `C:/Program Files/BellSoft/LibericaJDK-8/bin/javac.exe`（JDK 8，build-tools 34 的 d8 需要它编译出的 class）。
