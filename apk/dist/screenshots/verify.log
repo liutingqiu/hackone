@@ -1,0 +1,288 @@
+[
+  {
+    "name": "landscape-1600x1000",
+    "w": 1600,
+    "h": 1000,
+    "mobile": false,
+    "before": {
+      "appPad": "280px / 289px",
+      "side": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 1000
+      },
+      "right": {
+        "x": 1311,
+        "y": 0,
+        "w": 289,
+        "h": 1000
+      },
+      "view": {
+        "x": 280,
+        "y": 106,
+        "w": 1031,
+        "h": 894
+      },
+      "bar": {
+        "x": 280,
+        "y": 0,
+        "w": 1031,
+        "h": 53
+      },
+      "barInfoShown": "none",
+      "barPosShown": "none",
+      "modebar": {
+        "x": 280,
+        "y": 53,
+        "w": 1031,
+        "h": 53
+      },
+      "barScroll": "1031/1031",
+      "modebarScroll": "1031/1031",
+      "coarse": true,
+      "btnMinH": "42px",
+      "btnFont": "13px",
+      "bodyFont": "14px",
+      "scrollW": 1600,
+      "innerW": 1600,
+      "canvasWH": "300x150"
+    },
+    "draw": null,
+    "pinch": null,
+    "smallTargets": [],
+    "errors": []
+  },
+  {
+    "name": "landscape-1280x800",
+    "w": 1280,
+    "h": 800,
+    "mobile": false,
+    "before": {
+      "appPad": "250.24px / 250.24px",
+      "side": {
+        "x": 0,
+        "y": 0,
+        "w": 250,
+        "h": 800
+      },
+      "right": {
+        "x": 1030,
+        "y": 0,
+        "w": 250,
+        "h": 800
+      },
+      "view": {
+        "x": 250,
+        "y": 106,
+        "w": 780,
+        "h": 694
+      },
+      "bar": {
+        "x": 250,
+        "y": 0,
+        "w": 780,
+        "h": 53
+      },
+      "barInfoShown": "none",
+      "barPosShown": "none",
+      "modebar": {
+        "x": 250,
+        "y": 53,
+        "w": 780,
+        "h": 53
+      },
+      "barScroll": "780/780",
+      "modebarScroll": "780/780",
+      "coarse": true,
+      "btnMinH": "42px",
+      "btnFont": "13px",
+      "bodyFont": "14px",
+      "scrollW": 1280,
+      "innerW": 1280,
+      "canvasWH": "300x150"
+    },
+    "draw": {
+      "before": "—",
+      "after": "1 颗",
+      "painted": true
+    },
+    "pinch": {
+      "before": 640,
+      "after": 717,
+      "zoomed": true
+    },
+    "smallTargets": [],
+    "errors": []
+  },
+  {
+    "name": "landscape-1024x768",
+    "w": 1024,
+    "h": 768,
+    "mobile": false,
+    "before": {
+      "appPad": "200.192px / 200.192px",
+      "side": {
+        "x": 0,
+        "y": 0,
+        "w": 200,
+        "h": 768
+      },
+      "right": {
+        "x": 824,
+        "y": 0,
+        "w": 200,
+        "h": 768
+      },
+      "view": {
+        "x": 200,
+        "y": 106,
+        "w": 624,
+        "h": 662
+      },
+      "bar": {
+        "x": 200,
+        "y": 0,
+        "w": 624,
+        "h": 53
+      },
+      "barInfoShown": "none",
+      "barPosShown": "none",
+      "modebar": {
+        "x": 200,
+        "y": 53,
+        "w": 624,
+        "h": 53
+      },
+      "barScroll": "624/624",
+      "modebarScroll": "624/624",
+      "coarse": true,
+      "btnMinH": "42px",
+      "btnFont": "13px",
+      "bodyFont": "14px",
+      "scrollW": 1024,
+      "innerW": 1024,
+      "canvasWH": "576x576"
+    },
+    "draw": null,
+    "pinch": null,
+    "smallTargets": [],
+    "errors": []
+  },
+  {
+    "name": "portrait-800x1280",
+    "w": 800,
+    "h": 1280,
+    "mobile": true,
+    "before": {
+      "appPad": "180px / 180px",
+      "side": {
+        "x": 0,
+        "y": 0,
+        "w": 180,
+        "h": 1280
+      },
+      "right": {
+        "x": 620,
+        "y": 0,
+        "w": 180,
+        "h": 1280
+      },
+      "view": {
+        "x": 180,
+        "y": 194,
+        "w": 440,
+        "h": 1086
+      },
+      "bar": {
+        "x": 180,
+        "y": 0,
+        "w": 440,
+        "h": 53
+      },
+      "barInfoShown": "none",
+      "barPosShown": "none",
+      "modebar": {
+        "x": 180,
+        "y": 53,
+        "w": 440,
+        "h": 141
+      },
+      "barScroll": "440/440",
+      "modebarScroll": "440/440",
+      "coarse": true,
+      "btnMinH": "42px",
+      "btnFont": "13px",
+      "bodyFont": "14px",
+      "scrollW": 800,
+      "innerW": 800,
+      "canvasWH": "384x384"
+    },
+    "draw": {
+      "before": "—",
+      "after": "1 颗",
+      "painted": true
+    },
+    "pinch": {
+      "before": 384,
+      "after": 430,
+      "zoomed": true
+    },
+    "smallTargets": [],
+    "errors": []
+  },
+  {
+    "name": "phone-700x1000",
+    "w": 700,
+    "h": 1000,
+    "mobile": true,
+    "before": {
+      "appPad": "0px / 0px",
+      "side": {
+        "x": 0,
+        "y": 600,
+        "w": 700,
+        "h": 1523
+      },
+      "right": {
+        "x": 0,
+        "y": 2123,
+        "w": 700,
+        "h": 430
+      },
+      "view": {
+        "x": 0,
+        "y": 152,
+        "w": 700,
+        "h": 448
+      },
+      "bar": {
+        "x": 0,
+        "y": 0,
+        "w": 700,
+        "h": 53
+      },
+      "barInfoShown": "none",
+      "barPosShown": "none",
+      "modebar": {
+        "x": 0,
+        "y": 53,
+        "w": 700,
+        "h": 99
+      },
+      "barScroll": "700/700",
+      "modebarScroll": "700/700",
+      "coarse": true,
+      "btnMinH": "42px",
+      "btnFont": "11px",
+      "bodyFont": "14px",
+      "scrollW": 700,
+      "innerW": 700,
+      "canvasWH": "384x384"
+    },
+    "draw": null,
+    "pinch": null,
+    "smallTargets": [],
+    "errors": []
+  }
+]
